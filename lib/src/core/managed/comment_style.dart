@@ -36,8 +36,13 @@ enum CommentStyle {
     final dot = name.lastIndexOf('.');
     final ext = dot == -1 ? '' : name.substring(dot + 1);
     return switch (ext) {
-      'gradle' || 'kts' || 'dart' || 'java' || 'kt' || 'swift' || 'pbxproj' =>
-        CommentStyle.doubleSlash,
+      'gradle' ||
+      'kts' ||
+      'dart' ||
+      'java' ||
+      'kt' ||
+      'swift' ||
+      'pbxproj' => CommentStyle.doubleSlash,
       'xcconfig' => CommentStyle.xcconfig,
       'xml' || 'xcscheme' || 'plist' || 'html' => CommentStyle.xml,
       'yaml' || 'yml' || 'properties' || 'rb' || 'sh' => CommentStyle.hash,

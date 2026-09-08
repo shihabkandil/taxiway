@@ -78,6 +78,8 @@ class ProjectConfig {
 class AppConfig {
   const AppConfig({
     this.path = '.',
+    this.android,
+    this.ios,
     this.flavors = const <String, FlavorConfig>{},
     this.signing = const SigningConfig(),
     this.targets = const TargetsConfig(),
@@ -90,6 +92,13 @@ class AppConfig {
   /// Flutter app root, relative to the config file.
   final String path;
 
+  /// Android-specific identity. Separate from [ios] because the two platforms
+  /// genuinely disagree: an Android `applicationId` may not contain a hyphen,
+  /// so a project whose bundle id does must carry two base ids, not one.
+  final AndroidAppConfig? android;
+
+  final IosAppConfig? ios;
+
   @JsonKey(fromJson: _flavorsFromJson)
   final Map<String, FlavorConfig> flavors;
   final SigningConfig signing;
@@ -100,10 +109,41 @@ class AppConfig {
 }
 
 @JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
+class AndroidAppConfig {
+  const AndroidAppConfig({this.applicationId});
+
+  factory AndroidAppConfig.fromJson(Map<dynamic, dynamic> json) =>
+      _$AndroidAppConfigFromJson(json);
+
+  /// `defaultConfig.applicationId`, before any flavor suffix.
+  @JsonKey(name: 'application_id')
+  final String? applicationId;
+
+  Map<String, dynamic> toJson() => _$AndroidAppConfigToJson(this);
+}
+
+@JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
+class IosAppConfig {
+  const IosAppConfig({this.bundleId});
+
+  factory IosAppConfig.fromJson(Map<dynamic, dynamic> json) =>
+      _$IosAppConfigFromJson(json);
+
+  /// `PRODUCT_BUNDLE_IDENTIFIER`, before any flavor suffix.
+  @JsonKey(name: 'bundle_id')
+  final String? bundleId;
+
+  Map<String, dynamic> toJson() => _$IosAppConfigToJson(this);
+}
+
+@JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
 class FlavorConfig {
   const FlavorConfig({
     this.suffix = '',
+    this.versionNameSuffix,
+    this.dimension,
     this.displayName,
+    this.entrypoint,
     this.dartDefines = const <String, String>{},
     this.icon,
     this.firebase,
@@ -115,8 +155,29 @@ class FlavorConfig {
   /// Appended to the base bundle id / application id. Empty for production.
   final String suffix;
 
+  /// Appended to the version name on Android, e.g. `-dev`.
+  ///
+  /// Recorded so an imported config describes the project exactly; without it,
+  /// `taxiway status` reports drift the moment it is run.
+  @JsonKey(name: 'version_name_suffix')
+  final String? versionNameSuffix;
+
+  /// The Gradle flavor dimension this flavor belongs to.
+  ///
+  /// Defaults to `environment`, which is what taxiway generates; recorded only
+  /// when a project uses a different one.
+  final String? dimension;
+
   @JsonKey(name: 'display_name')
   final String? displayName;
+
+  /// Dart entrypoint for this flavor.
+  ///
+  /// Defaults to `lib/main_<flavor>.dart`, but is recorded explicitly when a
+  /// project disagrees — flavors named `development`/`production` very often
+  /// have `main_dev.dart`/`main_prod.dart`, and guessing would build the wrong
+  /// app under the right bundle id.
+  final String? entrypoint;
 
   @JsonKey(name: 'dart_defines')
   final Map<String, String> dartDefines;
@@ -298,10 +359,7 @@ class TestflightTarget {
 
 @JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
 class AppstoreTarget {
-  const AppstoreTarget({
-    this.submitForReview = false,
-    this.metadataPath,
-  });
+  const AppstoreTarget({this.submitForReview = false, this.metadataPath});
 
   factory AppstoreTarget.fromJson(Map<dynamic, dynamic> json) =>
       _$AppstoreTargetFromJson(json);
@@ -452,30 +510,43 @@ Map<String, FlavorConfig> _flavorsFromJson(Map<dynamic, dynamic> json) =>
 Map<String, T> _entriesFromJson<T>(
   Map<dynamic, dynamic> json,
   T Function(Map<dynamic, dynamic>) build,
-) =>
-    <String, T>{
-      for (final entry in json.entries)
-        entry.key.toString(): build(
-          entry.value == null
-              ? const <dynamic, dynamic>{}
-              : (entry.value as Map<dynamic, dynamic>),
-        ),
-    };
+) => <String, T>{
+  for (final entry in json.entries)
+    entry.key.toString(): build(
+      entry.value == null
+          ? const <dynamic, dynamic>{}
+          : (entry.value as Map<dynamic, dynamic>),
+    ),
+};
 
 /// Every `*_ref` in a config, paired with the YAML path that carries it.
 ///
 /// Used by the secret-shaped-value validator, by `secrets list`, and by import
 /// when it harvests names from an existing fastlane setup.
-Iterable<({String path, String? value})> secretRefsOf(TaxiwayConfig config) sync* {
-  yield (path: 'notify.slack_webhook_ref', value: config.notify.slackWebhookRef);
+Iterable<({String path, String? value})> secretRefsOf(
+  TaxiwayConfig config,
+) sync* {
+  yield (
+    path: 'notify.slack_webhook_ref',
+    value: config.notify.slackWebhookRef,
+  );
   for (final app in config.apps.entries) {
     final base = 'apps.${app.key}';
     final ios = app.value.signing.ios;
     final android = app.value.signing.android;
-    yield (path: '$base.signing.ios.api_key.key_id_ref', value: ios?.apiKey?.keyIdRef);
-    yield (path: '$base.signing.ios.api_key.issuer_id_ref', value: ios?.apiKey?.issuerIdRef);
+    yield (
+      path: '$base.signing.ios.api_key.key_id_ref',
+      value: ios?.apiKey?.keyIdRef,
+    );
+    yield (
+      path: '$base.signing.ios.api_key.issuer_id_ref',
+      value: ios?.apiKey?.issuerIdRef,
+    );
     yield (path: '$base.signing.ios.api_key.p8_ref', value: ios?.apiKey?.p8Ref);
-    yield (path: '$base.signing.android.keystore_ref', value: android?.keystoreRef);
+    yield (
+      path: '$base.signing.android.keystore_ref',
+      value: android?.keystoreRef,
+    );
     yield (
       path: '$base.signing.android.key_properties.store_password_ref',
       value: android?.keyProperties?.storePasswordRef,

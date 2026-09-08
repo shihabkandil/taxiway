@@ -20,9 +20,9 @@ enum Ownership {
   generated;
 
   static Ownership parse(String value) => Ownership.values.firstWhere(
-        (o) => o.name == value,
-        orElse: () => Ownership.unmanaged,
-      );
+    (o) => o.name == value,
+    orElse: () => Ownership.unmanaged,
+  );
 
   bool get writable => this != Ownership.unmanaged;
 }
@@ -36,9 +36,9 @@ enum WriteMode {
   block;
 
   static WriteMode parse(String value) => WriteMode.values.firstWhere(
-        (m) => m.name == value,
-        orElse: () => WriteMode.full,
-      );
+    (m) => m.name == value,
+    orElse: () => WriteMode.full,
+  );
 }
 
 /// One tracked file's record.
@@ -73,24 +73,22 @@ class LockEntry {
     String? hash,
     String? blockHash,
     DateTime? adoptedAt,
-  }) =>
-      LockEntry(
-        path: path,
-        ownership: ownership ?? this.ownership,
-        mode: mode ?? this.mode,
-        hash: hash ?? this.hash,
-        blockHash: blockHash ?? this.blockHash,
-        adoptedAt: adoptedAt ?? this.adoptedAt,
-      );
+  }) => LockEntry(
+    path: path,
+    ownership: ownership ?? this.ownership,
+    mode: mode ?? this.mode,
+    hash: hash ?? this.hash,
+    blockHash: blockHash ?? this.blockHash,
+    adoptedAt: adoptedAt ?? this.adoptedAt,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'ownership': ownership.name,
-        'mode': mode.name,
-        if (hash != null) 'hash': hash,
-        if (blockHash != null) 'blockHash': blockHash,
-        if (adoptedAt != null)
-          'adoptedAt': adoptedAt!.toUtc().toIso8601String(),
-      };
+    'ownership': ownership.name,
+    'mode': mode.name,
+    if (hash != null) 'hash': hash,
+    if (blockHash != null) 'blockHash': blockHash,
+    if (adoptedAt != null) 'adoptedAt': adoptedAt!.toUtc().toIso8601String(),
+  };
 
   static LockEntry fromJson(String path, Map<String, dynamic> json) =>
       LockEntry(
@@ -142,23 +140,18 @@ class LockFile {
   bool mayWrite(String path) => ownershipOf(path).writable;
 
   void record(LockEntry entry) => _files[_normalise(entry.path)] = LockEntry(
-        path: _normalise(entry.path),
-        ownership: entry.ownership,
-        mode: entry.mode,
-        hash: entry.hash,
-        blockHash: entry.blockHash,
-        adoptedAt: entry.adoptedAt,
-      );
+    path: _normalise(entry.path),
+    ownership: entry.ownership,
+    mode: entry.mode,
+    hash: entry.hash,
+    blockHash: entry.blockHash,
+    adoptedAt: entry.adoptedAt,
+  );
 
   /// Records [path] as discovered-but-untouched, as import does for everything
   /// it reads.
-  void noteUnmanaged(String path, {WriteMode mode = WriteMode.block}) => record(
-        LockEntry(
-          path: path,
-          ownership: Ownership.unmanaged,
-          mode: mode,
-        ),
-      );
+  void noteUnmanaged(String path, {WriteMode mode = WriteMode.block}) =>
+      record(LockEntry(path: path, ownership: Ownership.unmanaged, mode: mode));
 
   void remove(String path) => _files.remove(_normalise(path));
 
@@ -169,25 +162,22 @@ class LockFile {
     return !ContentHash.matches(entry.hash, content);
   }
 
-  static String _normalise(String path) => p.posix.normalize(
-        path.replaceAll(r'\', '/'),
-      );
+  static String _normalise(String path) =>
+      p.posix.normalize(path.replaceAll(r'\', '/'));
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'version': version,
-        'generatedBy': generatedBy,
-        'files': <String, dynamic>{
-          for (final key in _sortedKeys()) key: _files[key]!.toJson(),
-        },
-      };
+    'version': version,
+    'generatedBy': generatedBy,
+    'files': <String, dynamic>{
+      for (final key in _sortedKeys()) key: _files[key]!.toJson(),
+    },
+  };
 
   /// Sorted so the committed file produces stable, reviewable diffs.
   List<String> _sortedKeys() => _files.keys.toList()..sort();
 
-  static LockFile empty() => LockFile(
-        version: currentVersion,
-        generatedBy: packageVersion,
-      );
+  static LockFile empty() =>
+      LockFile(version: currentVersion, generatedBy: packageVersion);
 
   static LockFile fromJson(Map<String, dynamic> json) {
     final rawFiles = json['files'];
@@ -197,10 +187,7 @@ class LockFile {
         final key = _normalise(entry.key.toString());
         final value = entry.value;
         if (value is Map) {
-          files[key] = LockEntry.fromJson(
-            key,
-            value.cast<String, dynamic>(),
-          );
+          files[key] = LockEntry.fromJson(key, value.cast<String, dynamic>());
         }
       }
     }

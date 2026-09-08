@@ -4,10 +4,7 @@ import 'taxiway_config.dart';
 
 /// One `*_ref` that looks like it holds a secret rather than naming one.
 class SecretRefViolation {
-  const SecretRefViolation({
-    required this.path,
-    required this.reason,
-  });
+  const SecretRefViolation({required this.path, required this.reason});
 
   /// Dotted config path, e.g. `apps.main.signing.ios.api_key.p8_ref`.
   final String path;
@@ -62,7 +59,9 @@ abstract final class SecretRefValidator {
   static String? reasonToReject(String? value) {
     if (value == null) return null;
     final trimmed = value.trim();
-    if (trimmed.isEmpty) return 'is empty; give the name of an env var or keychain key';
+    if (trimmed.isEmpty) {
+      return 'is empty; give the name of an env var or keychain key';
+    }
 
     for (final marker in credentialMarkers) {
       if (trimmed.contains(marker)) {

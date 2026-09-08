@@ -68,10 +68,26 @@ AppConfig _$AppConfigFromJson(Map json) => $checkedCreate('AppConfig', json, (
 ) {
   $checkKeys(
     json,
-    allowedKeys: const ['path', 'flavors', 'signing', 'targets', 'versioning'],
+    allowedKeys: const [
+      'path',
+      'android',
+      'ios',
+      'flavors',
+      'signing',
+      'targets',
+      'versioning',
+    ],
   );
   final val = AppConfig(
     path: $checkedConvert('path', (v) => v as String? ?? '.'),
+    android: $checkedConvert(
+      'android',
+      (v) => v == null ? null : AndroidAppConfig.fromJson(v as Map),
+    ),
+    ios: $checkedConvert(
+      'ios',
+      (v) => v == null ? null : IosAppConfig.fromJson(v as Map),
+    ),
     flavors: $checkedConvert(
       'flavors',
       (v) => v == null
@@ -100,11 +116,37 @@ AppConfig _$AppConfigFromJson(Map json) => $checkedCreate('AppConfig', json, (
 
 Map<String, dynamic> _$AppConfigToJson(AppConfig instance) => <String, dynamic>{
   'path': instance.path,
+  'android': ?instance.android?.toJson(),
+  'ios': ?instance.ios?.toJson(),
   'flavors': instance.flavors.map((k, e) => MapEntry(k, e.toJson())),
   'signing': instance.signing.toJson(),
   'targets': instance.targets.toJson(),
   'versioning': instance.versioning.toJson(),
 };
+
+AndroidAppConfig _$AndroidAppConfigFromJson(Map json) =>
+    $checkedCreate('AndroidAppConfig', json, ($checkedConvert) {
+      $checkKeys(json, allowedKeys: const ['application_id']);
+      final val = AndroidAppConfig(
+        applicationId: $checkedConvert('application_id', (v) => v as String?),
+      );
+      return val;
+    }, fieldKeyMap: const {'applicationId': 'application_id'});
+
+Map<String, dynamic> _$AndroidAppConfigToJson(AndroidAppConfig instance) =>
+    <String, dynamic>{'application_id': ?instance.applicationId};
+
+IosAppConfig _$IosAppConfigFromJson(Map json) =>
+    $checkedCreate('IosAppConfig', json, ($checkedConvert) {
+      $checkKeys(json, allowedKeys: const ['bundle_id']);
+      final val = IosAppConfig(
+        bundleId: $checkedConvert('bundle_id', (v) => v as String?),
+      );
+      return val;
+    }, fieldKeyMap: const {'bundleId': 'bundle_id'});
+
+Map<String, dynamic> _$IosAppConfigToJson(IosAppConfig instance) =>
+    <String, dynamic>{'bundle_id': ?instance.bundleId};
 
 FlavorConfig _$FlavorConfigFromJson(Map json) => $checkedCreate(
   'FlavorConfig',
@@ -114,7 +156,10 @@ FlavorConfig _$FlavorConfigFromJson(Map json) => $checkedCreate(
       json,
       allowedKeys: const [
         'suffix',
+        'version_name_suffix',
+        'dimension',
         'display_name',
+        'entrypoint',
         'dart_defines',
         'icon',
         'firebase',
@@ -122,7 +167,13 @@ FlavorConfig _$FlavorConfigFromJson(Map json) => $checkedCreate(
     );
     final val = FlavorConfig(
       suffix: $checkedConvert('suffix', (v) => v as String? ?? ''),
+      versionNameSuffix: $checkedConvert(
+        'version_name_suffix',
+        (v) => v as String?,
+      ),
+      dimension: $checkedConvert('dimension', (v) => v as String?),
       displayName: $checkedConvert('display_name', (v) => v as String?),
+      entrypoint: $checkedConvert('entrypoint', (v) => v as String?),
       dartDefines: $checkedConvert(
         'dart_defines',
         (v) =>
@@ -138,6 +189,7 @@ FlavorConfig _$FlavorConfigFromJson(Map json) => $checkedCreate(
     return val;
   },
   fieldKeyMap: const {
+    'versionNameSuffix': 'version_name_suffix',
     'displayName': 'display_name',
     'dartDefines': 'dart_defines',
   },
@@ -146,7 +198,10 @@ FlavorConfig _$FlavorConfigFromJson(Map json) => $checkedCreate(
 Map<String, dynamic> _$FlavorConfigToJson(FlavorConfig instance) =>
     <String, dynamic>{
       'suffix': instance.suffix,
+      'version_name_suffix': ?instance.versionNameSuffix,
+      'dimension': ?instance.dimension,
       'display_name': ?instance.displayName,
+      'entrypoint': ?instance.entrypoint,
       'dart_defines': instance.dartDefines,
       'icon': ?instance.icon,
       'firebase': ?instance.firebase?.toJson(),

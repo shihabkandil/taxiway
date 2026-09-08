@@ -156,8 +156,10 @@ class SystemProcessRunner implements ProcessRunner {
       );
     }
 
-    final merged =
-        _merge([process.stdout, process.stderr]).transform(utf8.decoder);
+    final merged = _merge([
+      process.stdout,
+      process.stderr,
+    ]).transform(utf8.decoder);
 
     // Redact before splitting into lines: a secret wrapped across a line break
     // is still a secret, and the transformer needs whole-buffer visibility.
@@ -165,10 +167,7 @@ class SystemProcessRunner implements ProcessRunner {
 
     final exit = await process.exitCode;
     if (exit != 0) {
-      throw ProcessExitException(
-        ([executable, ...arguments]).join(' '),
-        exit,
-      );
+      throw ProcessExitException(([executable, ...arguments]).join(' '), exit);
     }
   }
 
