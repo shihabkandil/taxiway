@@ -55,7 +55,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
         valueHelp: 'id',
       );
 
-    addCommand(DoctorCommand(_context));
+    addCommand(DoctorCommand(() => context));
   }
 
   final Logger _logger;
@@ -63,9 +63,9 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
   final ProcessRunner? _injectedRunner;
   final String _workingDirectory;
 
-  /// Built eagerly so commands can hold a reference at construction time, then
-  /// reconfigured from parsed global flags before any command runs.
-  late final RunContext _context = RunContext(
+  /// The context before global flags are parsed. Commands never capture this
+  /// directly; they resolve through [context] at run time.
+  late final RunContext _initialContext = RunContext(
     logger: _logger,
     redactor: _redactor,
     runner: _injectedRunner ?? SystemProcessRunner(redactor: _redactor),
@@ -77,7 +77,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
   );
 
   /// The context commands act on. Replaced once globals are parsed.
-  RunContext get context => _resolved ?? _context;
+  RunContext get context => _resolved ?? _initialContext;
   RunContext? _resolved;
 
   @override
@@ -89,7 +89,12 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
         return TaxiwayExit.success;
       }
       _applyGlobals(topLevel);
-      return await runCommand(topLevel) ?? TaxiwayExit.success;
+      // `overrideAnsiOutput` sets a zone value, which propagates across awaits,
+      // so this covers every colour decision the command makes.
+      return await overrideAnsiOutput(
+        !(topLevel['no-color'] as bool),
+        () async => await runCommand(topLevel) ?? TaxiwayExit.success,
+      );
     } on UsageException catch (e) {
       _logger
         ..err(e.message)
@@ -118,14 +123,10 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
   void _applyGlobals(ArgResults results) {
     final verbose = results['verbose'] as bool;
     if (verbose) _logger.level = Level.verbose;
-    if (results['no-color'] as bool) {
-      // mason_logger reads this to decide whether to emit ANSI codes.
-      ansiOutputEnabled = false;
-    }
     _resolved = RunContext(
       logger: _logger,
       redactor: _redactor,
-      runner: _context.runner,
+      runner: _initialContext.runner,
       projectRoot: _workingDirectory,
       configPath: results['config'] as String?,
       appId: results['app'] as String?,

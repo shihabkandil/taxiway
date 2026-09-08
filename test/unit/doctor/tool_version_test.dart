@@ -148,10 +148,13 @@ Java HotSpot(TM) 64-Bit Server VM (build 18.0.2.1+1-1, mixed mode, sharing)''';
 
     test('equality and hashing agree', () {
       expect(const ToolVersion(1, 2, 3), const ToolVersion(1, 2, 3));
-      expect(
-        {const ToolVersion(1, 2, 3), const ToolVersion(1, 2, 3)},
-        hasLength(1),
-      );
+      // Built at runtime so the analyzer does not fold it into one literal;
+      // the point is that hashCode agrees with ==, not that a set literal
+      // deduplicates.
+      final set = <ToolVersion>{}
+        ..add(const ToolVersion(1, 2, 3))
+        ..add(ToolVersion.tryParse('1.2.3')!);
+      expect(set, hasLength(1));
     });
 
     test('renders as major.minor.patch', () {

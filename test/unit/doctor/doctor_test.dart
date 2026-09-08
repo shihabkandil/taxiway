@@ -1,0 +1,393 @@
+import 'dart:io';
+
+import 'package:taxiway/src/core/config/config_loader.dart';
+import 'package:taxiway/src/doctor/check.dart';
+import 'package:taxiway/src/doctor/checks/project_checks.dart';
+import 'package:taxiway/src/doctor/checks/tool_checks.dart';
+import 'package:taxiway/src/doctor/doctor.dart';
+import 'package:taxiway/src/doctor/platform_deadlines.dart';
+import 'package:test/test.dart';
+
+import '../../support/recording_process_runner.dart';
+
+/// Output from the machine this was developed on. Reused as the "healthy"
+/// baseline so a regression shows up as a diff against a real environment.
+void stubHealthyMachine(RecordingProcessRunner runner) {
+  runner
+    ..stub('flutter --version',
+        stdout: 'Flutter 3.47.2 • channel stable • '
+            'https://github.com/flutter/flutter.git\n'
+            'Tools • Dart 3.13.2 • DevTools 2.60.0')
+    ..stub('dart --version',
+        stdout: 'Dart SDK version: 3.13.2 (stable) on "macos_arm64"')
+    ..stub('xcodebuild -version', stdout: 'Xcode 26.6\nBuild version 17F113')
+    ..stub('pod --version', stdout: '1.17.0')
+    ..stub('ruby --version',
+        stdout: 'ruby 3.4.1p18 (2025-02-18 revision 53f5fc4236) [arm64-darwin23]')
+    ..stub('bundle --version', stdout: 'Bundler version 2.6.3')
+    ..stub('fastlane --version', stdout: 'fastlane 2.238.0')
+    ..stub('gem list xcodeproj', stdout: 'xcodeproj (1.28.1, 1.27.0)')
+    ..stub('java -version', stderr: 'openjdk version "21.0.4" 2024-07-16')
+    ..stub('security list-keychains',
+        stdout: '    "/Users/x/Library/Keychains/login.keychain-db"')
+    ..stub('firebase --version', stdout: '15.28.1')
+    ..stub('flutterfire --version', stdout: '1.3.1');
+}
+
+/// A minimal Flutter-shaped project on disk, so the file-reading checks have
+/// something real to look at.
+Future<Directory> makeProject({
+  String gradleDsl = 'kts',
+  int? targetSdk = 36,
+  bool ios = true,
+  int objectVersion = 60,
+}) async {
+  final dir = await Directory.systemTemp.createTemp('taxiway_doctor');
+  File('${dir.path}/pubspec.yaml').writeAsStringSync('name: demo\n');
+  Directory('${dir.path}/android/app').createSync(recursive: true);
+  final gradleName =
+      gradleDsl == 'kts' ? 'build.gradle.kts' : 'build.gradle';
+  File('${dir.path}/android/app/$gradleName').writeAsStringSync('''
+android {
+    defaultConfig {
+        ${targetSdk == null ? '' : 'targetSdk = $targetSdk'}
+    }
+}
+''');
+  if (ios) {
+    Directory('${dir.path}/ios/Runner.xcodeproj').createSync(recursive: true);
+    File('${dir.path}/ios/Runner.xcodeproj/project.pbxproj')
+        .writeAsStringSync('{ objectVersion = $objectVersion; }');
+  }
+  return dir;
+}
+
+DoctorContext contextFor(
+  RecordingProcessRunner runner,
+  Directory project, {
+  String? configYaml,
+  DateTime? now,
+}) =>
+    DoctorContext(
+      runner: runner,
+      projectRoot: project.path,
+      config: configYaml == null ? null : ConfigLoader.parse(configYaml),
+      now: now ?? DateTime.utc(2026, 9, 8),
+    );
+
+void main() {
+  group('a healthy machine', () {
+    test('passes every check', () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final report = await Doctor().run(contextFor(runner, project));
+
+      expect(report.passed, isTrue);
+      expect(report.count(CheckStatus.fail), 0);
+      final failing = report
+          .withStatus(CheckStatus.warn)
+          .map((e) => '${e.check.id}: ${e.result.detail}');
+      expect(failing, isEmpty, reason: 'unexpected warnings: $failing');
+    });
+  });
+
+  group('this machine, which is the negative fixture', () {
+    /// Ruby 3.1.1 and JDK 18 are deliberately not fixed locally: they are the
+    /// only live proof that the warn path works.
+    test('warns on Ruby 3.1 and JDK 18 but still passes overall', () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      runner
+        ..stub('ruby --version',
+            stdout: 'ruby 3.1.1p18 (2022-02-18 revision 53f5fc4236) '
+                '[arm64-darwin23]')
+        ..stub('java -version',
+            stderr: 'java version "18.0.2.1" 2022-08-18\n'
+                'Java(TM) SE Runtime Environment (build 18.0.2.1+1-1)');
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final report = await Doctor().run(contextFor(runner, project));
+
+      expect(report.passed, isTrue, reason: 'warnings must not block shipping');
+      expect(
+        report.withStatus(CheckStatus.warn).map((e) => e.check.id),
+        containsAll(<String>['ruby', 'jdk']),
+      );
+      final ruby = report.entries.firstWhere((e) => e.check.id == 'ruby');
+      expect(ruby.result.detail, contains('3.1.1'));
+      expect(ruby.result.fixHint, contains('fastlane targets Ruby 3.3+'));
+      final jdk = report.entries.firstWhere((e) => e.check.id == 'jdk');
+      expect(jdk.result.fixHint, contains('--deep'));
+    });
+  });
+
+  group('a broken environment fails with an actionable hint', () {
+    test('Ruby 2.7 fails rather than warns', () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      runner.stub('ruby --version', stdout: 'ruby 2.7.6p219 (2022-04-12)');
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final report = await Doctor().run(contextFor(runner, project));
+      final ruby = report.entries.firstWhere((e) => e.check.id == 'ruby');
+
+      expect(ruby.result.status, CheckStatus.fail);
+      expect(ruby.result.detail, contains('2.7.6 found, 3.0.0 or later'));
+      expect(ruby.result.fixHint, contains('rbenv'));
+      expect(report.passed, isFalse);
+    });
+
+    test('xcodeproj 1.22 fails and names the Xcode 16 symptom', () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      runner.stub('gem list xcodeproj', stdout: 'xcodeproj (1.22.0)');
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final report = await Doctor().run(contextFor(runner, project));
+      final gem = report.entries.firstWhere((e) => e.check.id == 'xcodeproj_gem');
+
+      expect(gem.result.status, CheckStatus.fail);
+      expect(gem.result.fixHint, contains('gem update xcodeproj'));
+      expect(gem.result.fixHint, contains('PBXFileSystemSynchronizedRootGroup'));
+      expect(report.passed, isFalse);
+    });
+
+    test('an Xcode older than 26 fails, citing the store requirement', () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      runner.stub('xcodebuild -version', stdout: 'Xcode 15.4\nBuild version 15F31d');
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final report = await Doctor().run(contextFor(runner, project));
+      final xcode = report.entries.firstWhere((e) => e.check.id == 'xcode');
+
+      expect(xcode.result.status, CheckStatus.fail);
+      expect(xcode.result.fixHint, contains('2026-04-28'));
+    });
+
+    test('a missing tool fails with an install hint, not a crash', () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      runner.stub('fastlane --version', exitCode: 127, stderr: 'not found');
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final report = await Doctor().run(contextFor(runner, project));
+      final fastlane = report.entries.firstWhere((e) => e.check.id == 'fastlane');
+
+      expect(fastlane.result.status, CheckStatus.fail);
+      expect(fastlane.result.fixHint, contains('gem install fastlane'));
+    });
+  });
+
+  group('project-shape checks', () {
+    test('detects both Gradle DSLs', () async {
+      final runner = RecordingProcessRunner();
+      for (final entry in {'kts': 'Kotlin', 'groovy': 'Groovy'}.entries) {
+        final project = await makeProject(gradleDsl: entry.key);
+        addTearDown(() => project.delete(recursive: true));
+        final result =
+            await GradleDslCheck().run(contextFor(runner, project));
+        expect(result.status, CheckStatus.ok);
+        expect(result.detail, contains(entry.value));
+      }
+    });
+
+    test('warns on objectVersion 70 without failing', () async {
+      final runner = RecordingProcessRunner();
+      final project = await makeProject(objectVersion: 70);
+      addTearDown(() => project.delete(recursive: true));
+
+      final result =
+          await PbxprojObjectVersionCheck().run(contextFor(runner, project));
+
+      expect(result.status, CheckStatus.warn);
+      expect(result.detail, contains('synchronized folders'));
+      expect(result.fixHint, contains('.taxiway/backups/'));
+    });
+
+    test('accepts objectVersion 60', () async {
+      final runner = RecordingProcessRunner();
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+      final result =
+          await PbxprojObjectVersionCheck().run(contextFor(runner, project));
+      expect(result.status, CheckStatus.ok);
+    });
+
+    test('warns when targetSdk is below the Play floor', () async {
+      final runner = RecordingProcessRunner();
+      final project = await makeProject(targetSdk: 34);
+      addTearDown(() => project.delete(recursive: true));
+
+      final result =
+          await PlayTargetSdkCheck().run(contextFor(runner, project));
+
+      expect(result.status, CheckStatus.warn);
+      expect(result.detail, contains('targetSdk 34'));
+      // The extension date, not the original, is what actually binds.
+      expect(result.fixHint, contains('2026-11-01'));
+    });
+
+    test('accepts targetSdk at the floor', () async {
+      final runner = RecordingProcessRunner();
+      final project = await makeProject(targetSdk: 36);
+      addTearDown(() => project.delete(recursive: true));
+      expect(
+        (await PlayTargetSdkCheck().run(contextFor(runner, project))).status,
+        CheckStatus.ok,
+      );
+    });
+
+    test('skips iOS checks when there is no ios/ directory', () async {
+      final runner = RecordingProcessRunner();
+      final project = await makeProject(ios: false);
+      addTearDown(() => project.delete(recursive: true));
+      expect(
+        (await XcodeprojGemCheck().run(contextFor(runner, project))).status,
+        CheckStatus.skip,
+      );
+    });
+
+    test('reports a leftover taxiway keychain', () async {
+      final runner = RecordingProcessRunner()
+        ..stub('security list-keychains',
+            stdout: '    "/Users/x/Library/Keychains/login.keychain-db"\n'
+                '    "/Users/x/Library/Keychains/taxiway.keychain-db"');
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final result = await KeychainCheck().run(contextFor(runner, project));
+      if (Platform.isMacOS) {
+        expect(result.status, CheckStatus.warn);
+        expect(result.fixHint, contains('doctor-keychain'));
+      } else {
+        expect(result.status, CheckStatus.skip);
+      }
+    });
+  });
+
+  group('Flutter floor comes from the config when declared', () {
+    test('fails when the project asks for a newer Flutter than is installed',
+        () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final report = await Doctor(checks: [FlutterCheck()]).run(
+        contextFor(runner, project, configYaml: '''
+version: 1
+project:
+  name: demo
+  flutter_min: "3.99.0"
+apps:
+  main:
+'''),
+      );
+
+      final flutter = report.entries.single;
+      expect(flutter.result.status, CheckStatus.fail);
+      expect(flutter.result.detail, contains('3.99.0 or later required'));
+      expect(flutter.result.fixHint, contains('flutter_min'));
+    });
+  });
+
+  group('firebase checks activate on demand', () {
+    test('skip without firebase config, run with it', () async {
+      final runner = RecordingProcessRunner()
+        ..stub('flutterfire --version', exitCode: 127, stderr: 'not found');
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+      final check =
+          FirebaseToolingCheck(executable: 'flutterfire', name: 'flutterfire');
+
+      expect(
+        (await check.run(contextFor(runner, project))).status,
+        CheckStatus.skip,
+      );
+
+      final withFirebase = await check.run(
+        contextFor(runner, project, configYaml: '''
+version: 1
+project:
+  name: demo
+apps:
+  main:
+    targets:
+      firebase:
+        groups: [testers]
+'''),
+      );
+      expect(withFirebase.status, CheckStatus.warn);
+      expect(withFirebase.fixHint, contains('flutterfire_cli'));
+    });
+  });
+
+  group('report', () {
+    test('a crashing check degrades to a warning, not a lost report', () async {
+      final report = await Doctor(checks: [_ExplodingCheck()]).run(
+        contextFor(RecordingProcessRunner(), await makeProject()),
+      );
+      expect(report.entries.single.result.status, CheckStatus.warn);
+      expect(report.entries.single.result.detail, contains('crashed'));
+      expect(report.passed, isTrue);
+    });
+
+    test('JSON carries every documented field', () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final json =
+          (await Doctor().run(contextFor(runner, project))).toJson();
+
+      expect(json['passed'], isTrue);
+      expect(json['summary'], isA<Map<String, int>>());
+      expect(json['deadlineDataLastVerified'], isA<String>());
+      expect(json['deadlineDataStale'], isFalse);
+      final checks = json['checks'] as List<dynamic>;
+      expect(checks, isNotEmpty);
+      for (final entry in checks.cast<Map<String, dynamic>>()) {
+        expect(entry['id'], isA<String>());
+        expect(entry['title'], isA<String>());
+        expect(entry['status'], isIn(<String>['ok', 'warn', 'fail', 'skip']));
+        expect(entry['detail'], isA<String>());
+      }
+    });
+
+    test('flags deadline data as stale once it ages out', () async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      final stale = PlatformDeadlines.lastVerified
+          .add(const Duration(days: PlatformDeadlines.staleAfterDays + 1));
+      final json = (await Doctor()
+              .run(contextFor(runner, project, now: stale)))
+          .toJson();
+      expect(json['deadlineDataStale'], isTrue);
+    });
+  });
+}
+
+class _ExplodingCheck extends Check {
+  @override
+  String get id => 'boom';
+
+  @override
+  String get title => 'Boom';
+
+  @override
+  Future<CheckResult> run(DoctorContext context) async =>
+      throw StateError('kaboom');
+}

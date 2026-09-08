@@ -10,6 +10,13 @@ import '../core/io/process_runner.dart';
 import '../core/io/redactor.dart';
 import '../core/managed/lock_file.dart';
 
+/// Supplies the current [RunContext].
+///
+/// Commands are constructed before global flags are parsed, so they must look
+/// the context up when they run rather than capture it at construction — or
+/// `--config`, `--app`, `--verbose` and `--yes` are silently ignored.
+typedef ContextProvider = RunContext Function();
+
 /// Everything a command needs, resolved once by the runner.
 ///
 /// Commands take this rather than reaching for globals, so a test can hand one

@@ -16,7 +16,7 @@ import '../run_context.dart';
 /// and the thing they come back to when a build breaks for reasons that have
 /// nothing to do with their code.
 class DoctorCommand extends Command<int> {
-  DoctorCommand(this._context) {
+  DoctorCommand(this._contextProvider) {
     argParser
       ..addFlag('json', negatable: false, help: 'Emit the report as JSON.')
       ..addMultiOption(
@@ -26,7 +26,9 @@ class DoctorCommand extends Command<int> {
       );
   }
 
-  final RunContext _context;
+  final ContextProvider _contextProvider;
+
+  RunContext get _context => _contextProvider();
 
   @override
   String get name => 'doctor';
