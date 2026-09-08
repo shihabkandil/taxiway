@@ -1,0 +1,26 @@
+tags:
+  # Needs Ruby plus the xcodeproj gem.
+  ruby:
+  # Needs a real Flutter project on disk; slow.
+  integration:
+  # Runs real builds against real toolchains. Nightly only.
+  e2e:
+  # Never applied to any test. Exists so a preset can exclude nothing, which
+  # the runner has no other way to express.
+  never:
+
+# A clean checkout must be fast and green with no Ruby, Xcode or Gradle
+# installed, so anything touching a real toolchain is opt-in:
+#   dart test            unit + golden only, no toolchain required
+#   dart test -P full    adds the Ruby/Xcode integration tests
+#   dart test -P e2e     everything, including real builds
+#
+# Use the presets rather than `--tags`: a bare `--tags ruby` conflicts with the
+# exclusion below and the runner refuses it.
+exclude_tags: "ruby || integration || e2e"
+
+presets:
+  full:
+    exclude_tags: "e2e"
+  e2e:
+    exclude_tags: "never"
