@@ -11,6 +11,7 @@ import '../core/managed/managed_block.dart';
 import '../version.dart';
 import 'commands/doctor_command.dart';
 import 'commands/import_command.dart';
+import 'commands/init_command.dart';
 import 'commands/status_command.dart';
 import 'exit_codes.dart';
 import 'run_context.dart';
@@ -58,6 +59,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
       );
 
     addCommand(DoctorCommand(() => context));
+    addCommand(InitCommand(() => context));
     addCommand(ImportCommand(() => context));
     addCommand(StatusCommand(() => context));
   }
