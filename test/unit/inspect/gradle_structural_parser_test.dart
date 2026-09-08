@@ -338,6 +338,89 @@ android {
     });
   });
 
+  group('real-world argument shapes', () {
+    test('reads a Kotlin named-argument resValue', () {
+      // Real projects write this form; a positional-only parser drops the
+      // display name silently, which is worse than failing.
+      final result = parseKts('''
+android {
+    productFlavors {
+        create("development") {
+            resValue(type = "string", name = "app_name", value = "Lahent Dev")
+        }
+    }
+}
+''');
+      expect(
+        result.android.flavors['development']!.resValues['app_name'],
+        'Lahent Dev',
+      );
+      expect(result.uncertainties, isEmpty);
+    });
+
+    test('reads named arguments given out of order', () {
+      final result = parseKts('''
+android {
+    productFlavors {
+        create("dev") {
+            resValue(value = "Acme Dev", type = "string", name = "app_name")
+        }
+    }
+}
+''');
+      expect(result.android.flavors['dev']!.resValues['app_name'], 'Acme Dev');
+    });
+
+    test('reads Kotlin indexed manifestPlaceholders', () {
+      final result = parseKts('''
+android {
+    productFlavors {
+        create("dev") {
+            manifestPlaceholders["deepLinkHost"] = "dev.lahent.sa"
+        }
+    }
+}
+''');
+      expect(
+        result.android.flavors['dev']!.manifestPlaceholders['deepLinkHost'],
+        'dev.lahent.sa',
+      );
+    });
+
+    test('reads a Groovy manifestPlaceholders map literal', () {
+      final result = parseGroovy('''
+android {
+    productFlavors {
+        dev {
+            manifestPlaceholders = [deepLinkHost: "dev.lahent.sa"]
+        }
+    }
+}
+''');
+      expect(
+        result.android.flavors['dev']!.manifestPlaceholders['deepLinkHost'],
+        'dev.lahent.sa',
+      );
+    });
+
+    test('a non-literal placeholder is flagged rather than dropped', () {
+      final result = parseKts('''
+android {
+    productFlavors {
+        create("dev") {
+            manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("k")
+        }
+    }
+}
+''');
+      expect(result.android.flavors['dev']!.manifestPlaceholders, isEmpty);
+      expect(
+        result.uncertainties.single.field,
+        'android.flavors.dev.manifestPlaceholders',
+      );
+    });
+  });
+
   group('comments and strings do not confuse the parser', () {
     test('a commented-out flavor is not read as real', () {
       final result = parseKts('''

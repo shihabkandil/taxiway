@@ -187,6 +187,15 @@ class GradleStructuralParser {
       );
     }
 
+    final placeholders = GradleValues.manifestPlaceholders(body);
+    for (final expression in placeholders.expressions) {
+      log.nonLiteral(
+        field: 'android.flavors.$name.manifestPlaceholders',
+        expression: expression,
+        source: buildFilePath,
+      );
+    }
+
     return AndroidFlavor(
       name: name,
       dimension: literalOrLog('dimension'),
@@ -195,6 +204,7 @@ class GradleStructuralParser {
       versionNameSuffix: literalOrLog('versionNameSuffix'),
       signingConfig: GradleValues.signingConfigReference(body),
       resValues: resValues.values,
+      manifestPlaceholders: placeholders.values,
     );
   }
 

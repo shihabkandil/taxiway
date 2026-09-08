@@ -138,7 +138,12 @@ abstract final class GradleValues {
     return _splitTopLevel(text, ',');
   }
 
-  /// Reads `resValue("string", "app_name", "Acme")` in both dialects.
+  /// Reads `resValue` in every shape both dialects allow.
+  ///
+  /// Positional — `resValue("string", "app_name", "Acme")` and Groovy's
+  /// `resValue "string", "app_name", "Acme"` — and Kotlin's named form,
+  /// `resValue(type = "string", name = "app_name", value = "Acme")`, which real
+  /// projects use and which a positional-only parser drops silently.
   static ({Map<String, String> values, List<String> expressions}) resValues(
     String body,
   ) {
@@ -151,19 +156,93 @@ abstract final class GradleValues {
       if (args.endsWith(')')) args = args.substring(0, args.length - 1);
       final parts = _splitTopLevel(args, ',');
       if (parts.length < 3) continue;
-      final key = stringLiteral(parts[1]);
-      final value = stringLiteral(parts[2]);
+
+      final named = _namedArguments(parts);
+      final keyArg = named['name'] ?? parts[1];
+      final valueArg = named['value'] ?? parts[2];
+
+      final key = stringLiteral(keyArg);
+      final value = stringLiteral(valueArg);
       if (key == null) {
         expressions.add(args);
         continue;
       }
       if (value == null) {
-        expressions.add('resValue $key = ${parts[2].trim()}');
+        expressions.add('resValue $key = ${valueArg.trim()}');
         continue;
       }
       values[key] = value;
     }
     return (values: values, expressions: expressions);
+  }
+
+  /// Splits `name = value` arguments into a map; empty for a positional call.
+  static Map<String, String> _namedArguments(List<String> parts) {
+    final named = <String, String>{};
+    for (final part in parts) {
+      final match = RegExp(
+        r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$',
+      ).firstMatch(part);
+      if (match == null) continue;
+      named[match.group(1)!] = match.group(2)!;
+    }
+    return named;
+  }
+
+  /// Reads `manifestPlaceholders`, which the two dialects spell differently:
+  /// Kotlin assigns by index, Groovy assigns a map literal.
+  static ({Map<String, String> values, List<String> expressions})
+  manifestPlaceholders(String body) {
+    final values = <String, String>{};
+    final expressions = <String>[];
+
+    for (final match in RegExp(
+      r'''(?:^|\n)\s*manifestPlaceholders\s*\[\s*["']([^"']+)["']\s*\]\s*=\s*([^\n]+)''',
+    ).allMatches(body)) {
+      final key = match.group(1)!;
+      final value = classify(match.group(2)!);
+      final literal = value.literalOrNull;
+      if (literal == null) {
+        expressions.add('manifestPlaceholders[$key] = $value');
+      } else {
+        values[key] = literal;
+      }
+    }
+
+    final assignment = RegExp(
+      r'(?:^|\n)\s*manifestPlaceholders\s*=\s*([^\n]+)',
+    ).firstMatch(body);
+    if (assignment != null) {
+      final raw = _stripTrailingComment(assignment.group(1)!.trim());
+      for (final entry in _splitTopLevel(_unwrapMap(raw), ',')) {
+        final pair = RegExp(
+          r'^\s*(.+?)\s*(?::|\bto\b)\s*(.+)$',
+        ).firstMatch(entry);
+        if (pair == null) continue;
+        final key = stringLiteral(pair.group(1)!) ?? pair.group(1)!.trim();
+        final value = stringLiteral(pair.group(2)!);
+        if (value == null) {
+          expressions.add(entry.trim());
+        } else {
+          values[key] = value;
+        }
+      }
+    }
+
+    return (values: values, expressions: expressions);
+  }
+
+  /// Unwraps `mapOf(...)` or `[...]` to its comma-separated entries.
+  static String _unwrapMap(String raw) {
+    final text = raw.trim();
+    final call = RegExp(
+      r'^(?:mapOf|mutableMapOf)\s*\((.*)\)$',
+    ).firstMatch(text);
+    if (call != null) return call.group(1)!;
+    if (text.startsWith('[') && text.endsWith(']')) {
+      return text.substring(1, text.length - 1);
+    }
+    return text;
   }
 
   /// Reads the name a `signingConfig` statement references.
