@@ -141,6 +141,7 @@ class Doctor {
     PbxprojObjectVersionCheck(),
     JdkCheck(),
     GradleDslCheck(),
+    GradleWrapperCheck(),
     PlayTargetSdkCheck(),
     FirebaseToolingCheck(executable: 'firebase', name: 'Firebase CLI'),
     FirebaseToolingCheck(executable: 'flutterfire', name: 'flutterfire'),

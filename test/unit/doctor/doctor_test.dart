@@ -41,6 +41,7 @@ Future<Directory> makeProject({
   int? targetSdk = 36,
   bool ios = true,
   int objectVersion = 60,
+  String gradleWrapper = '8.14',
 }) async {
   final dir = await Directory.systemTemp.createTemp('taxiway_doctor');
   File('${dir.path}/pubspec.yaml').writeAsStringSync('name: demo\n');
@@ -54,6 +55,14 @@ android {
     }
 }
 ''');
+  final wrapperProperties =
+      File('${dir.path}/android/gradle/wrapper/gradle-wrapper.properties')
+        ..parent.createSync(recursive: true);
+  wrapperProperties.writeAsStringSync(
+    r'distributionUrl=https\://services.gradle.org/distributions/'
+    'gradle-$gradleWrapper-all.zip\n',
+  );
+
   if (ios) {
     Directory('${dir.path}/ios/Runner.xcodeproj').createSync(recursive: true);
     File('${dir.path}/ios/Runner.xcodeproj/project.pbxproj')
@@ -220,6 +229,51 @@ void main() {
       final result =
           await PbxprojObjectVersionCheck().run(contextFor(runner, project));
       expect(result.status, CheckStatus.ok);
+    });
+
+    test('warns when the Gradle wrapper is below Flutter\'s minimum', () async {
+      final runner = RecordingProcessRunner();
+      final project = await makeProject(gradleWrapper: '8.12');
+      addTearDown(() => project.delete(recursive: true));
+
+      final result = await GradleWrapperCheck().run(contextFor(runner, project));
+
+      expect(result.status, CheckStatus.warn);
+      expect(result.detail, contains('8.12.0'));
+      expect(result.fixHint, contains('gradlew wrapper --gradle-version'));
+      // It also explains the knock-on effect, which is otherwise baffling.
+      expect(result.fixHint, contains('--deep'));
+    });
+
+    test('accepts a wrapper at or above the floor', () async {
+      final runner = RecordingProcessRunner();
+      for (final version in const <String>['8.14', '9.3.1']) {
+        final project = await makeProject(gradleWrapper: version);
+        addTearDown(() => project.delete(recursive: true));
+        expect(
+          (await GradleWrapperCheck().run(contextFor(runner, project))).status,
+          CheckStatus.ok,
+          reason: 'Gradle $version should pass',
+        );
+      }
+    });
+
+    test('reads the version past the escaped colon in a properties file', () {
+      // A properties file escapes the colon, and the version may be two- or
+      // three-component; both forms are real.
+      expect(
+        GradleWrapperCheck.readWrapperVersion(
+          r'distributionUrl=https\://services.gradle.org/distributions/gradle-8.14-all.zip',
+        ).toString(),
+        '8.14.0',
+      );
+      expect(
+        GradleWrapperCheck.readWrapperVersion(
+          r'distributionUrl=https\://services.gradle.org/distributions/gradle-9.3.1-bin.zip',
+        ).toString(),
+        '9.3.1',
+      );
+      expect(GradleWrapperCheck.readWrapperVersion('nothing here'), isNull);
     });
 
     test('warns when targetSdk is below the Play floor', () async {

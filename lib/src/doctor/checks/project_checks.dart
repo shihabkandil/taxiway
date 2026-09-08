@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import '../check.dart';
 import '../platform_deadlines.dart';
+import '../tool_version.dart';
 
 /// Which Gradle DSL the project uses.
 ///
@@ -94,6 +95,73 @@ class PbxprojObjectVersionCheck extends Check {
       );
     }
     return CheckResult.ok('objectVersion $version');
+  }
+}
+
+/// The project's Gradle wrapper version.
+///
+/// Flutter refuses to build below its minimum, and the resulting error names a
+/// Gradle version rather than anything a user would search for. It also gates
+/// `taxiway import --deep`, which needs a project that configures.
+class GradleWrapperCheck extends Check {
+  @override
+  String get id => 'gradle_wrapper';
+
+  @override
+  String get title => 'Gradle wrapper';
+
+  static const String propertiesPath =
+      'android/gradle/wrapper/gradle-wrapper.properties';
+
+  @override
+  Future<CheckResult> run(DoctorContext context) async {
+    if (!context.hasProject) {
+      return const CheckResult.skip('Not inside a Flutter project.');
+    }
+    final file = File(p.join(context.projectRoot, propertiesPath));
+    if (!file.existsSync()) {
+      return const CheckResult.warn(
+        'No $propertiesPath found.',
+        fixHint:
+            'Run `flutter build apk --config-only` once to generate the '
+            'Gradle wrapper.',
+      );
+    }
+
+    final version = readWrapperVersion(await file.readAsString());
+    if (version == null) {
+      return const CheckResult.warn(
+        'Could not read a Gradle version from the wrapper properties.',
+      );
+    }
+
+    final floor = PlatformDeadlines.gradleWrapper;
+    final minimum = ToolVersion.tryParse(floor.minimum)!;
+    if (version >= minimum) return CheckResult.ok('$version', version: version);
+
+    return CheckResult.warn(
+      '$version, but Flutter requires $minimum or later.',
+      version: version,
+      fixHint:
+          'Run `./gradlew wrapper --gradle-version $minimum` in android/, '
+          'or edit distributionUrl in $propertiesPath. Until then Flutter will '
+          'refuse to build, and `taxiway import --deep` cannot run.',
+      docsUrl: floor.sourceUrl,
+    );
+  }
+
+  /// Pulls the version out of `distributionUrl`.
+  ///
+  /// The colon is backslash-escaped in a properties file, and the version may
+  /// be two- or three-component (`8.14` and `9.3.1` are both real).
+  static ToolVersion? readWrapperVersion(String properties) {
+    for (final line in properties.split('\n')) {
+      final trimmed = line.trim();
+      if (!trimmed.startsWith('distributionUrl')) continue;
+      final match = RegExp(r'gradle-(\d+(?:\.\d+){1,2})-').firstMatch(trimmed);
+      if (match != null) return ToolVersion.tryParse(match.group(1)!);
+    }
+    return null;
   }
 }
 

@@ -52,6 +52,21 @@ abstract final class PlatformDeadlines {
   /// Minimum `targetSdk` for Play submissions.
   static const int playTargetSdk = 36;
 
+  /// Minimum Gradle the current Flutter stable will build with.
+  ///
+  /// Flutter raises this floor over time and fails the build outright when a
+  /// project's wrapper is below it, so it belongs here with the other facts
+  /// about the world that go stale rather than in a check's own source.
+  static const ToolFloor gradleWrapper = ToolFloor(
+    id: 'gradle_wrapper',
+    name: 'Gradle wrapper',
+    minimum: '8.14.0',
+    reason:
+        'Flutter refuses to build when the project Gradle version is below '
+        'its minimum.',
+    sourceUrl: 'https://docs.flutter.dev/release/breaking-changes',
+  );
+
   static final PlatformDeadline appStoreXcode26 = PlatformDeadline(
     id: 'app-store-xcode-26',
     summary: 'App Store Connect requires builds made with Xcode 26 or later.',
