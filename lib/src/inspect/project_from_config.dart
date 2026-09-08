@@ -56,10 +56,11 @@ abstract final class ProjectFromConfig {
         for (final entry in app.flavors.entries)
           entry.key: AndroidFlavor(
             name: entry.key,
-            dimension: 'environment',
+            dimension: entry.value.dimension ?? 'environment',
             applicationIdSuffix: entry.value.suffix.isEmpty
                 ? null
                 : entry.value.suffix,
+            versionNameSuffix: entry.value.versionNameSuffix,
             resValues: <String, String>{
               if (entry.value.displayName != null)
                 'app_name': entry.value.displayName!,
