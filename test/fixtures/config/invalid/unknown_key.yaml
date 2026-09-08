@@ -1,0 +1,6 @@
+version: 1
+project:
+  name: app
+  flavour_min: "3.35.0"
+apps:
+  main: {}

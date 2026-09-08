@@ -4,7 +4,7 @@ version: 0.1.0-dev
 repository: https://github.com/shihabkandil/taxiway
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.8.0
 
 executables:
   taxiway: taxiway
@@ -15,7 +15,7 @@ dependencies:
   cli_completion: ^0.6.0
   collection: ^1.19.1
   crypto: ^3.0.7
-  json_annotation: ^4.9.0
+  json_annotation: ^4.12.0
   json_schema: ^5.2.2
   mason_logger: ^0.3.5
   meta: ^1.19.0

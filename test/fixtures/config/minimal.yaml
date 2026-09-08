@@ -1,0 +1,6 @@
+version: 1
+project:
+  name: minimal_app
+apps:
+  main:
+    path: .

@@ -1,0 +1,8 @@
+version: 1
+project:
+  name: app
+apps:
+  main:
+    targets:
+      play:
+        track: nightly

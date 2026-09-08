@@ -1,0 +1,10 @@
+version: 1
+project:
+  name: app
+apps:
+  main:
+    flavors:
+      dev:
+        suffix: .dev
+      staging:
+        suffix: .dev

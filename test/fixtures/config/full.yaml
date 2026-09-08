@@ -1,0 +1,62 @@
+version: 1
+project:
+  name: acme_app
+  pubspec: pubspec.yaml
+  flutter_min: "3.35.0"
+apps:
+  main:
+    path: .
+    flavors:
+      dev:
+        suffix: .dev
+        display_name: "Acme Dev"
+        dart_defines: { ENV: dev, API: "https://dev.api" }
+        icon: assets/icon/dev.png
+        firebase:
+          android: android/app/src/dev/google-services.json
+          ios: ios/flavors/dev/GoogleService-Info.plist
+      prod:
+        suffix: ""
+        display_name: "Acme"
+        dart_defines: { ENV: prod, API: "https://api" }
+    signing:
+      ios:
+        match_git_url: git@github.com:acme/certs.git
+        match_storage: git
+        team_id: ABCDE12345
+        api_key:
+          key_id_ref: ASC_KEY_ID
+          issuer_id_ref: ASC_ISSUER_ID
+          p8_ref: ASC_KEY_P8_BASE64
+      android:
+        keystore_ref: ANDROID_KEYSTORE_BASE64
+        key_properties:
+          store_password_ref: ANDROID_STORE_PASSWORD
+          key_password_ref: ANDROID_KEY_PASSWORD
+          key_alias: upload
+    targets:
+      testflight:
+        groups: [internal, qa]
+        distribute_external: false
+        changelog_from: git
+      appstore:
+        submit_for_review: false
+        metadata_path: ios/fastlane/metadata
+      play:
+        track: internal
+        release_status: inProgress
+        rollout: 0.1
+        artifact: aab
+        service_account_ref: PLAY_SERVICE_ACCOUNT_JSON
+      firebase:
+        android_app_id_ref: FB_ANDROID_APP_ID
+        ios_app_id_ref: FB_IOS_APP_ID
+        groups: [testers]
+    versioning:
+      strategy: remote
+      sync_ios_android: true
+secrets:
+  dotenv: .env.{flavor}
+  keychain: true
+notify:
+  slack_webhook_ref: SLACK_WEBHOOK
