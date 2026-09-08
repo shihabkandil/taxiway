@@ -7,6 +7,7 @@ import 'android_inspector.dart';
 import 'dart_inspector.dart';
 import 'fastlane_inspector.dart';
 import 'firebase_inspector.dart';
+import 'gradle_deep_reader.dart';
 import 'ios_inspector.dart';
 import 'xcodeproj_bridge.dart';
 
@@ -23,7 +24,9 @@ class ProjectInspector {
     this.dart = const DartInspector(),
     this.fastlane = const FastlaneInspector(),
     this.firebase = const FirebaseInspector(),
-  }) : _bridgeScriptPath = bridgeScriptPath ?? XcodeprojBridge.locateScript();
+    String? deepScriptPath,
+  }) : _bridgeScriptPath = bridgeScriptPath ?? XcodeprojBridge.locateScript(),
+       _deepScriptPath = deepScriptPath ?? GradleDeepReader.locateScript();
 
   final ProcessRunner runner;
   final AndroidInspector android;
@@ -32,11 +35,17 @@ class ProjectInspector {
   final FirebaseInspector firebase;
 
   final String? _bridgeScriptPath;
+  final String? _deepScriptPath;
 
   Future<ProjectModel> readFromDisk(String root, {bool deep = false}) async {
     final log = UncertaintyLog();
 
-    final androidResult = await android.inspect(root);
+    final androidResult = await android.inspect(
+      root,
+      deep: deep,
+      runner: runner,
+      deepScriptPath: _deepScriptPath,
+    );
     log.addAll(androidResult.uncertainties);
 
     final iosResult = await _inspectIos(root, log);

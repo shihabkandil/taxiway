@@ -1,0 +1,150 @@
+// taxiway's deep-read init script.
+//
+// The fast structural parser reads the build file as text and is honest about
+// what it cannot resolve: a value built from an `ext` property, a flavor
+// created in a loop, configuration pulled in by `apply from:`. This script
+// answers those questions authoritatively by asking Gradle itself, after the
+// project has been evaluated and every one of those constructs has already run.
+//
+// Written in Groovy rather than Kotlin DSL on purpose: it reads AGP's extension
+// reflectively, so it never needs AGP on its own classpath and works the same
+// against a Kotlin-DSL or Groovy-DSL build. A Kotlin init script would need
+// compile-time types it cannot have here.
+//
+// Invoked as:
+//   ./gradlew -I <this file> :app:taxiwayDumpVariants --quiet
+//
+// It reads and prints. It configures nothing and writes nothing to the project.
+
+import groovy.json.JsonOutput
+
+// Delimited so the JSON can be recovered from Gradle's output, which carries
+// daemon notices and warnings that no amount of --quiet reliably suppresses.
+def BEGIN = '<<<TAXIWAY_JSON_BEGIN>>>'
+def END = '<<<TAXIWAY_JSON_END>>>'
+
+static def readProperty(obj, String name) {
+    try {
+        def value = obj."$name"
+        return value == null ? null : value
+    } catch (Throwable ignored) {
+        return null
+    }
+}
+
+static def asText(value) {
+    if (value == null) return null
+    return value.toString()
+}
+
+static def asInt(value) {
+    if (value == null) return null
+    try {
+        return Integer.parseInt(value.toString().replaceAll('[^0-9]', ''))
+    } catch (Throwable ignored) {
+        return null
+    }
+}
+
+// resValues are keyed like "string/app_name"; the caller only cares about the
+// name and the value.
+static def readResValues(container) {
+    def out = [:]
+    try {
+        container.resValues.each { key, entry ->
+            def name = readProperty(entry, 'name')
+            def value = readProperty(entry, 'value')
+            if (name != null) out[asText(name)] = asText(value)
+        }
+    } catch (Throwable ignored) {
+    }
+    return out
+}
+
+static def readFlavor(flavor) {
+    return [
+        name               : asText(readProperty(flavor, 'name')),
+        dimension          : asText(readProperty(flavor, 'dimension')),
+        applicationId      : asText(readProperty(flavor, 'applicationId')),
+        applicationIdSuffix: asText(readProperty(flavor, 'applicationIdSuffix')),
+        versionNameSuffix  : asText(readProperty(flavor, 'versionNameSuffix')),
+        signingConfig      : asText(readProperty(readProperty(flavor, 'signingConfig'), 'name')),
+        resValues          : readResValues(flavor),
+    ]
+}
+
+gradle.projectsEvaluated {
+    gradle.rootProject.allprojects { proj ->
+        def android = proj.extensions.findByName('android')
+        if (android == null) return
+
+        proj.tasks.register('taxiwayDumpVariants') {
+            it.group = 'taxiway'
+            it.description = 'Print the resolved Android build model as JSON.'
+            it.doLast {
+                def defaultConfig = readProperty(android, 'defaultConfig')
+
+                def flavors = []
+                try {
+                    android.productFlavors.each { flavors << readFlavor(it) }
+                } catch (Throwable ignored) {
+                }
+
+                def buildTypes = []
+                try {
+                    android.buildTypes.each { buildTypes << asText(readProperty(it, 'name')) }
+                } catch (Throwable ignored) {
+                }
+
+                def signingConfigs = []
+                try {
+                    android.signingConfigs.each { config ->
+                        signingConfigs << [
+                            name     : asText(readProperty(config, 'name')),
+                            storeFile: asText(readProperty(config, 'storeFile')),
+                            keyAlias : asText(readProperty(config, 'keyAlias')),
+                        ]
+                    }
+                } catch (Throwable ignored) {
+                }
+
+                def sourceSets = []
+                try {
+                    android.sourceSets.each { sourceSets << asText(readProperty(it, 'name')) }
+                } catch (Throwable ignored) {
+                }
+
+                def dimensions = []
+                try {
+                    def declared = readProperty(android, 'flavorDimensions')
+                    if (declared != null) declared.each { dimensions << asText(it) }
+                } catch (Throwable ignored) {
+                }
+
+                def payload = [
+                    ok           : true,
+                    schema       : 1,
+                    projectPath  : proj.path,
+                    agpApplied   : true,
+                    namespace    : asText(readProperty(android, 'namespace')),
+                    compileSdk   : asInt(readProperty(android, 'compileSdk')
+                        ?: readProperty(android, 'compileSdkVersion')),
+                    applicationId: asText(readProperty(defaultConfig, 'applicationId')),
+                    minSdk       : asInt(readProperty(defaultConfig, 'minSdk')
+                        ?: readProperty(defaultConfig, 'minSdkVersion')),
+                    targetSdk    : asInt(readProperty(defaultConfig, 'targetSdk')
+                        ?: readProperty(defaultConfig, 'targetSdkVersion')),
+                    flavorDimensions: dimensions,
+                    productFlavors  : flavors,
+                    buildTypes      : buildTypes,
+                    signingConfigs  : signingConfigs,
+                    sourceSets      : sourceSets,
+                ]
+
+                println(BEGIN)
+                println(JsonOutput.toJson(payload))
+                println(END)
+            }
+        }
+    }
+}

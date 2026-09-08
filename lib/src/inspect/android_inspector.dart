@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../core/io/process_runner.dart';
 import '../core/model/android_model.dart';
 import '../core/model/uncertainty.dart';
+import 'gradle_deep_reader.dart';
 import 'gradle_structural_parser.dart';
 
 /// Reads a project's Android build configuration.
@@ -30,7 +32,78 @@ class AndroidInspector {
     return null;
   }
 
-  Future<GradleParseResult> inspect(String root) async {
+  /// Reads the Android build configuration.
+  ///
+  /// When [deep] is set, the structural parse is refined by asking Gradle for
+  /// the resolved model. A failed deep read is reported and then ignored: the
+  /// user is never left worse off than they would have been without `--deep`.
+  Future<GradleParseResult> inspect(
+    String root, {
+    bool deep = false,
+    ProcessRunner? runner,
+    String? deepScriptPath,
+  }) async {
+    final fast = await _inspectFast(root);
+    if (!deep || !fast.android.exists || runner == null) return fast;
+
+    final scriptPath = deepScriptPath ?? GradleDeepReader.locateScript();
+    if (scriptPath == null) {
+      return GradleParseResult(
+        android: fast.android,
+        uncertainties: <Uncertainty>[
+          ...fast.uncertainties,
+          const Uncertainty(
+            field: 'android',
+            reason:
+                'taxiway could not find its own Gradle init script '
+                '(tool/gradle/taxiway_dump.gradle), so `--deep` was skipped.',
+            remedy:
+                'Reinstall taxiway. This is a packaging bug, not a problem '
+                'with your project.',
+            severity: UncertaintySeverity.defect,
+          ),
+        ],
+      );
+    }
+
+    final result = await GradleDeepReader(
+      runner: runner,
+      scriptPath: scriptPath,
+    ).read(root);
+
+    final resolvedModel = result.android;
+    if (!result.succeeded || resolvedModel == null) {
+      return GradleParseResult(
+        android: fast.android,
+        uncertainties: <Uncertainty>[
+          ...fast.uncertainties,
+          Uncertainty(
+            field: 'android',
+            reason: '`--deep` could not run: ${result.failureReason}',
+            remedy: result.failureRemedy ?? 'The fast parse was used instead.',
+            source: fast.android.buildFilePath,
+          ),
+        ],
+      );
+    }
+
+    final merged = GradleDeepReader.merge(fast.android, resolvedModel);
+    final resolved = GradleDeepReader.resolvedBy(
+      fast.uncertainties,
+      merged,
+    ).toSet();
+
+    return GradleParseResult(
+      android: merged,
+      // Anything the deep read answered is no longer uncertain, and leaving it
+      // in the report would tell the user to do something already done.
+      uncertainties: fast.uncertainties
+          .where((u) => !resolved.contains(u))
+          .toList(),
+    );
+  }
+
+  Future<GradleParseResult> _inspectFast(String root) async {
     final located = locateBuildFile(root);
     if (located == null) {
       final log = UncertaintyLog()
