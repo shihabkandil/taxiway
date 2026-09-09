@@ -111,3 +111,45 @@ re-asserts the inherited base configuration on every run, and
 taxiway wrote it and it is still byte-for-byte what taxiway wrote. One that has
 been edited is left alone and reported, because deleting somebody's build
 settings is worse than leaving a file nothing references.
+
+## The error classifier is seeded from reproduced failures, not only the catalog
+
+The plan supplies an error-classifier table. Roughly half of it is reproduced in
+`classifier.dart` unchanged; the rest of the entries were added because the
+Phase 2 spike hit them, and two of the plan's own entries turned out to be
+wrong or incomplete for a current Flutter.
+
+Each signature is marked `verified` or `catalog` in the source, so a reader can
+tell which ones have been seen fail and which are taken on trust.
+
+The notable additions:
+
+| Signature | Why it is not in the plan |
+|---|---|
+| `Could not resolve package dependencies` + `Flutter/ephemeral` | The modern form of "fastlane archived a Flutter app". Since Flutter resolves through Swift Package Manager, this fails long before the plan's `exportArchive` message, which no longer appears. |
+| `exportArchive No Team Found in Archive` | Only happens under the `gym` export shape, because a `--no-codesign` archive records an empty `Team`. |
+| `Ambiguous choice. Please choose one of` | Not an error: gym prompting for a scheme, which makes a non-interactive run hang forever rather than fail. Costly precisely because nothing is reported. |
+| `errSecInternalComponent` | A per-key keychain ACL. The message names nothing searchable, and it is what a developer hits the first time they build from a script rather than from Xcode. |
+| `Could not find <gem> in locally installed gems` | A Homebrew fastlane displacing bundler's `GEM_HOME`. Reads like a corrupt bundle, so people reinstall gems instead of fixing the shim. |
+| `version solving has failed` | Pins that are not mutually satisfiable on the running Ruby. `bundle install` does not degrade here; it installs nothing. |
+| `Version Number: Missing` | Not a failure at all — `flutter build` exits zero. It is the only outward sign of the flavored-xcconfig defect, and App Store Connect rejects the resulting upload. |
+
+That last one is why `taxiway build` classifies the output of *successful*
+builds as well as failed ones. An exit code of zero is not evidence that the
+artifact can be shipped.
+
+## `bundle exec fastlane` is not sufficient on its own
+
+The plan's rule — always `bundle exec fastlane`, never bare — is right and is
+what the generated Gemfile says. It is also not enough.
+
+Homebrew installs `fastlane` as a bash script that sets `GEM_HOME` and
+`GEM_PATH` to its own directories and prepends its own Ruby to `PATH` before
+exec'ing the real binary. It therefore discards everything bundler arranged, and
+`bundle exec fastlane` runs a different fastlane against a different gem set.
+The symptom is `Could not find <gem> in locally installed gems`, which looks
+like a broken bundle rather than a hijacked one.
+
+`doctor` now reads the `fastlane` on `PATH` and warns when it is a wrapper of
+this shape, recommending a binstub — `bundle binstubs fastlane`, then
+`./bin/fastlane` — which cannot be shadowed. Reproduced on this machine.

@@ -1,4 +1,5 @@
 import 'check.dart';
+import 'checks/fastlane_checks.dart';
 import 'checks/project_checks.dart';
 import 'checks/tool_checks.dart';
 import 'platform_deadlines.dart';
@@ -146,6 +147,8 @@ class Doctor {
     FirebaseToolingCheck(executable: 'firebase', name: 'Firebase CLI'),
     FirebaseToolingCheck(executable: 'flutterfire', name: 'flutterfire'),
     KeychainCheck(),
+    FastlaneShimCheck(),
+    GemfileSolvableCheck(),
   ];
 
   /// Runs every check.

@@ -10,6 +10,7 @@ import '../core/io/redactor.dart';
 import '../core/managed/managed_block.dart';
 import '../version.dart';
 import 'commands/adopt_command.dart';
+import 'commands/build_command.dart';
 import 'commands/doctor_command.dart';
 import 'commands/generate_command.dart';
 import 'commands/import_command.dart';
@@ -66,6 +67,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
     addCommand(StatusCommand(() => context));
     addCommand(GenerateCommand(() => context));
     addCommand(AdoptCommand(() => context));
+    addCommand(BuildCommand(() => context));
   }
 
   final Logger _logger;

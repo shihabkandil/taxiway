@@ -1,5 +1,6 @@
 import 'package:taxiway/src/core/config/taxiway_config.dart';
 import 'package:taxiway/src/core/model/android_model.dart';
+import 'package:taxiway/src/core/toolchain/fastlane_pins.dart';
 import 'package:taxiway/src/generators/fastfile_generator.dart';
 import 'package:taxiway/src/generators/fastlane_generators.dart';
 import 'package:taxiway/src/generators/generated_file.dart';
