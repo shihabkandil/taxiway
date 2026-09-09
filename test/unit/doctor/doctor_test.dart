@@ -14,22 +14,31 @@ import '../../support/recording_process_runner.dart';
 /// baseline so a regression shows up as a diff against a real environment.
 void stubHealthyMachine(RecordingProcessRunner runner) {
   runner
-    ..stub('flutter --version',
-        stdout: 'Flutter 3.47.2 • channel stable • '
-            'https://github.com/flutter/flutter.git\n'
-            'Tools • Dart 3.13.2 • DevTools 2.60.0')
-    ..stub('dart --version',
-        stdout: 'Dart SDK version: 3.13.2 (stable) on "macos_arm64"')
+    ..stub(
+      'flutter --version',
+      stdout:
+          'Flutter 3.47.2 • channel stable • '
+          'https://github.com/flutter/flutter.git\n'
+          'Tools • Dart 3.13.2 • DevTools 2.60.0',
+    )
+    ..stub(
+      'dart --version',
+      stdout: 'Dart SDK version: 3.13.2 (stable) on "macos_arm64"',
+    )
     ..stub('xcodebuild -version', stdout: 'Xcode 26.6\nBuild version 17F113')
     ..stub('pod --version', stdout: '1.17.0')
-    ..stub('ruby --version',
-        stdout: 'ruby 3.4.1p18 (2025-02-18 revision 53f5fc4236) [arm64-darwin23]')
+    ..stub(
+      'ruby --version',
+      stdout: 'ruby 3.4.1p18 (2025-02-18 revision 53f5fc4236) [arm64-darwin23]',
+    )
     ..stub('bundle --version', stdout: 'Bundler version 2.6.3')
     ..stub('fastlane --version', stdout: 'fastlane 2.238.0')
     ..stub('gem list xcodeproj', stdout: 'xcodeproj (1.28.1, 1.27.0)')
     ..stub('java -version', stderr: 'openjdk version "21.0.4" 2024-07-16')
-    ..stub('security list-keychains',
-        stdout: '    "/Users/x/Library/Keychains/login.keychain-db"')
+    ..stub(
+      'security list-keychains',
+      stdout: '    "/Users/x/Library/Keychains/login.keychain-db"',
+    )
     ..stub('firebase --version', stdout: '15.28.1')
     ..stub('flutterfire --version', stdout: '1.3.1');
 }
@@ -46,8 +55,7 @@ Future<Directory> makeProject({
   final dir = await Directory.systemTemp.createTemp('taxiway_doctor');
   File('${dir.path}/pubspec.yaml').writeAsStringSync('name: demo\n');
   Directory('${dir.path}/android/app').createSync(recursive: true);
-  final gradleName =
-      gradleDsl == 'kts' ? 'build.gradle.kts' : 'build.gradle';
+  final gradleName = gradleDsl == 'kts' ? 'build.gradle.kts' : 'build.gradle';
   File('${dir.path}/android/app/$gradleName').writeAsStringSync('''
 android {
     defaultConfig {
@@ -55,9 +63,9 @@ android {
     }
 }
 ''');
-  final wrapperProperties =
-      File('${dir.path}/android/gradle/wrapper/gradle-wrapper.properties')
-        ..parent.createSync(recursive: true);
+  final wrapperProperties = File(
+    '${dir.path}/android/gradle/wrapper/gradle-wrapper.properties',
+  )..parent.createSync(recursive: true);
   wrapperProperties.writeAsStringSync(
     r'distributionUrl=https\://services.gradle.org/distributions/'
     'gradle-$gradleWrapper-all.zip\n',
@@ -65,8 +73,9 @@ android {
 
   if (ios) {
     Directory('${dir.path}/ios/Runner.xcodeproj').createSync(recursive: true);
-    File('${dir.path}/ios/Runner.xcodeproj/project.pbxproj')
-        .writeAsStringSync('{ objectVersion = $objectVersion; }');
+    File(
+      '${dir.path}/ios/Runner.xcodeproj/project.pbxproj',
+    ).writeAsStringSync('{ objectVersion = $objectVersion; }');
   }
   return dir;
 }
@@ -76,13 +85,12 @@ DoctorContext contextFor(
   Directory project, {
   String? configYaml,
   DateTime? now,
-}) =>
-    DoctorContext(
-      runner: runner,
-      projectRoot: project.path,
-      config: configYaml == null ? null : ConfigLoader.parse(configYaml),
-      now: now ?? DateTime.utc(2026, 9, 8),
-    );
+}) => DoctorContext(
+  runner: runner,
+  projectRoot: project.path,
+  config: configYaml == null ? null : ConfigLoader.parse(configYaml),
+  now: now ?? DateTime.utc(2026, 9, 8),
+);
 
 void main() {
   group('a healthy machine', () {
@@ -110,12 +118,18 @@ void main() {
       final runner = RecordingProcessRunner();
       stubHealthyMachine(runner);
       runner
-        ..stub('ruby --version',
-            stdout: 'ruby 3.1.1p18 (2022-02-18 revision 53f5fc4236) '
-                '[arm64-darwin23]')
-        ..stub('java -version',
-            stderr: 'java version "18.0.2.1" 2022-08-18\n'
-                'Java(TM) SE Runtime Environment (build 18.0.2.1+1-1)');
+        ..stub(
+          'ruby --version',
+          stdout:
+              'ruby 3.1.1p18 (2022-02-18 revision 53f5fc4236) '
+              '[arm64-darwin23]',
+        )
+        ..stub(
+          'java -version',
+          stderr:
+              'java version "18.0.2.1" 2022-08-18\n'
+              'Java(TM) SE Runtime Environment (build 18.0.2.1+1-1)',
+        );
       final project = await makeProject();
       addTearDown(() => project.delete(recursive: true));
 
@@ -159,27 +173,38 @@ void main() {
       addTearDown(() => project.delete(recursive: true));
 
       final report = await Doctor().run(contextFor(runner, project));
-      final gem = report.entries.firstWhere((e) => e.check.id == 'xcodeproj_gem');
+      final gem = report.entries.firstWhere(
+        (e) => e.check.id == 'xcodeproj_gem',
+      );
 
       expect(gem.result.status, CheckStatus.fail);
       expect(gem.result.fixHint, contains('gem update xcodeproj'));
-      expect(gem.result.fixHint, contains('PBXFileSystemSynchronizedRootGroup'));
+      expect(
+        gem.result.fixHint,
+        contains('PBXFileSystemSynchronizedRootGroup'),
+      );
       expect(report.passed, isFalse);
     });
 
-    test('an Xcode older than 26 fails, citing the store requirement', () async {
-      final runner = RecordingProcessRunner();
-      stubHealthyMachine(runner);
-      runner.stub('xcodebuild -version', stdout: 'Xcode 15.4\nBuild version 15F31d');
-      final project = await makeProject();
-      addTearDown(() => project.delete(recursive: true));
+    test(
+      'an Xcode older than 26 fails, citing the store requirement',
+      () async {
+        final runner = RecordingProcessRunner();
+        stubHealthyMachine(runner);
+        runner.stub(
+          'xcodebuild -version',
+          stdout: 'Xcode 15.4\nBuild version 15F31d',
+        );
+        final project = await makeProject();
+        addTearDown(() => project.delete(recursive: true));
 
-      final report = await Doctor().run(contextFor(runner, project));
-      final xcode = report.entries.firstWhere((e) => e.check.id == 'xcode');
+        final report = await Doctor().run(contextFor(runner, project));
+        final xcode = report.entries.firstWhere((e) => e.check.id == 'xcode');
 
-      expect(xcode.result.status, CheckStatus.fail);
-      expect(xcode.result.fixHint, contains('2026-04-28'));
-    });
+        expect(xcode.result.status, CheckStatus.fail);
+        expect(xcode.result.fixHint, contains('2026-04-28'));
+      },
+    );
 
     test('a missing tool fails with an install hint, not a crash', () async {
       final runner = RecordingProcessRunner();
@@ -189,7 +214,9 @@ void main() {
       addTearDown(() => project.delete(recursive: true));
 
       final report = await Doctor().run(contextFor(runner, project));
-      final fastlane = report.entries.firstWhere((e) => e.check.id == 'fastlane');
+      final fastlane = report.entries.firstWhere(
+        (e) => e.check.id == 'fastlane',
+      );
 
       expect(fastlane.result.status, CheckStatus.fail);
       expect(fastlane.result.fixHint, contains('gem install fastlane'));
@@ -202,8 +229,7 @@ void main() {
       for (final entry in {'kts': 'Kotlin', 'groovy': 'Groovy'}.entries) {
         final project = await makeProject(gradleDsl: entry.key);
         addTearDown(() => project.delete(recursive: true));
-        final result =
-            await GradleDslCheck().run(contextFor(runner, project));
+        final result = await GradleDslCheck().run(contextFor(runner, project));
         expect(result.status, CheckStatus.ok);
         expect(result.detail, contains(entry.value));
       }
@@ -214,8 +240,9 @@ void main() {
       final project = await makeProject(objectVersion: 70);
       addTearDown(() => project.delete(recursive: true));
 
-      final result =
-          await PbxprojObjectVersionCheck().run(contextFor(runner, project));
+      final result = await PbxprojObjectVersionCheck().run(
+        contextFor(runner, project),
+      );
 
       expect(result.status, CheckStatus.warn);
       expect(result.detail, contains('synchronized folders'));
@@ -226,8 +253,9 @@ void main() {
       final runner = RecordingProcessRunner();
       final project = await makeProject();
       addTearDown(() => project.delete(recursive: true));
-      final result =
-          await PbxprojObjectVersionCheck().run(contextFor(runner, project));
+      final result = await PbxprojObjectVersionCheck().run(
+        contextFor(runner, project),
+      );
       expect(result.status, CheckStatus.ok);
     });
 
@@ -236,7 +264,9 @@ void main() {
       final project = await makeProject(gradleWrapper: '8.12');
       addTearDown(() => project.delete(recursive: true));
 
-      final result = await GradleWrapperCheck().run(contextFor(runner, project));
+      final result = await GradleWrapperCheck().run(
+        contextFor(runner, project),
+      );
 
       expect(result.status, CheckStatus.warn);
       expect(result.detail, contains('8.12.0'));
@@ -281,8 +311,9 @@ void main() {
       final project = await makeProject(targetSdk: 34);
       addTearDown(() => project.delete(recursive: true));
 
-      final result =
-          await PlayTargetSdkCheck().run(contextFor(runner, project));
+      final result = await PlayTargetSdkCheck().run(
+        contextFor(runner, project),
+      );
 
       expect(result.status, CheckStatus.warn);
       expect(result.detail, contains('targetSdk 34'));
@@ -312,9 +343,12 @@ void main() {
 
     test('reports a leftover taxiway keychain', () async {
       final runner = RecordingProcessRunner()
-        ..stub('security list-keychains',
-            stdout: '    "/Users/x/Library/Keychains/login.keychain-db"\n'
-                '    "/Users/x/Library/Keychains/taxiway.keychain-db"');
+        ..stub(
+          'security list-keychains',
+          stdout:
+              '    "/Users/x/Library/Keychains/login.keychain-db"\n'
+              '    "/Users/x/Library/Keychains/taxiway.keychain-db"',
+        );
       final project = await makeProject();
       addTearDown(() => project.delete(recursive: true));
 
@@ -329,29 +363,35 @@ void main() {
   });
 
   group('Flutter floor comes from the config when declared', () {
-    test('fails when the project asks for a newer Flutter than is installed',
-        () async {
-      final runner = RecordingProcessRunner();
-      stubHealthyMachine(runner);
-      final project = await makeProject();
-      addTearDown(() => project.delete(recursive: true));
+    test(
+      'fails when the project asks for a newer Flutter than is installed',
+      () async {
+        final runner = RecordingProcessRunner();
+        stubHealthyMachine(runner);
+        final project = await makeProject();
+        addTearDown(() => project.delete(recursive: true));
 
-      final report = await Doctor(checks: [FlutterCheck()]).run(
-        contextFor(runner, project, configYaml: '''
+        final report = await Doctor(checks: [FlutterCheck()]).run(
+          contextFor(
+            runner,
+            project,
+            configYaml: '''
 version: 1
 project:
   name: demo
   flutter_min: "3.99.0"
 apps:
   main:
-'''),
-      );
+''',
+          ),
+        );
 
-      final flutter = report.entries.single;
-      expect(flutter.result.status, CheckStatus.fail);
-      expect(flutter.result.detail, contains('3.99.0 or later required'));
-      expect(flutter.result.fixHint, contains('flutter_min'));
-    });
+        final flutter = report.entries.single;
+        expect(flutter.result.status, CheckStatus.fail);
+        expect(flutter.result.detail, contains('3.99.0 or later required'));
+        expect(flutter.result.fixHint, contains('flutter_min'));
+      },
+    );
   });
 
   group('firebase checks activate on demand', () {
@@ -360,8 +400,10 @@ apps:
         ..stub('flutterfire --version', exitCode: 127, stderr: 'not found');
       final project = await makeProject();
       addTearDown(() => project.delete(recursive: true));
-      final check =
-          FirebaseToolingCheck(executable: 'flutterfire', name: 'flutterfire');
+      final check = FirebaseToolingCheck(
+        executable: 'flutterfire',
+        name: 'flutterfire',
+      );
 
       expect(
         (await check.run(contextFor(runner, project))).status,
@@ -369,7 +411,10 @@ apps:
       );
 
       final withFirebase = await check.run(
-        contextFor(runner, project, configYaml: '''
+        contextFor(
+          runner,
+          project,
+          configYaml: '''
 version: 1
 project:
   name: demo
@@ -378,7 +423,8 @@ apps:
     targets:
       firebase:
         groups: [testers]
-'''),
+''',
+        ),
       );
       expect(withFirebase.status, CheckStatus.warn);
       expect(withFirebase.fixHint, contains('flutterfire_cli'));
@@ -387,9 +433,9 @@ apps:
 
   group('report', () {
     test('a crashing check degrades to a warning, not a lost report', () async {
-      final report = await Doctor(checks: [_ExplodingCheck()]).run(
-        contextFor(RecordingProcessRunner(), await makeProject()),
-      );
+      final report = await Doctor(
+        checks: [_ExplodingCheck()],
+      ).run(contextFor(RecordingProcessRunner(), await makeProject()));
       expect(report.entries.single.result.status, CheckStatus.warn);
       expect(report.entries.single.result.detail, contains('crashed'));
       expect(report.passed, isTrue);
@@ -401,8 +447,7 @@ apps:
       final project = await makeProject();
       addTearDown(() => project.delete(recursive: true));
 
-      final json =
-          (await Doctor().run(contextFor(runner, project))).toJson();
+      final json = (await Doctor().run(contextFor(runner, project))).toJson();
 
       expect(json['passed'], isTrue);
       expect(json['summary'], isA<Map<String, int>>());
@@ -424,11 +469,12 @@ apps:
       final project = await makeProject();
       addTearDown(() => project.delete(recursive: true));
 
-      final stale = PlatformDeadlines.lastVerified
-          .add(const Duration(days: PlatformDeadlines.staleAfterDays + 1));
-      final json = (await Doctor()
-              .run(contextFor(runner, project, now: stale)))
-          .toJson();
+      final stale = PlatformDeadlines.lastVerified.add(
+        const Duration(days: PlatformDeadlines.staleAfterDays + 1),
+      );
+      final json = (await Doctor().run(
+        contextFor(runner, project, now: stale),
+      )).toJson();
       expect(json['deadlineDataStale'], isTrue);
     });
   });

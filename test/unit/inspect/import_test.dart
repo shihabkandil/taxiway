@@ -72,8 +72,7 @@ Future<FixtureProject> handrolledProject(RecordingProcessRunner runner) async {
   project
     ..withPubspec(name: 'handrolled_app')
     // applicationId comes from an ext property the fast parser cannot resolve.
-    ..withGradle(
-      '''
+    ..withGradle('''
 android {
     defaultConfig {
         applicationId appId
@@ -90,15 +89,17 @@ android {
         }
     }
 }
-''',
-      kotlin: false,
-    )
+''', kotlin: false)
     ..withSourceSet('dev')
     ..withEntrypoint('dev')
     ..withIosProject()
     // Shared for `dev`; `Dev` on iOS differs only by case.
-    ..withUserScheme('Dev',
-        owner: 'alice', launch: 'Debug-Dev', archive: 'Release-Dev');
+    ..withUserScheme(
+      'Dev',
+      owner: 'alice',
+      launch: 'Debug-Dev',
+      archive: 'Release-Dev',
+    );
 
   stubBridge(
     runner,
@@ -122,9 +123,9 @@ void main() {
   setUp(() => runner = RecordingProcessRunner());
 
   Future<ProjectModel> read(FixtureProject project) => ProjectInspector(
-        runner: runner,
-        bridgeScriptPath: 'tool/ruby/xcodeproj_bridge.rb',
-      ).readFromDisk(project.path);
+    runner: runner,
+    bridgeScriptPath: 'tool/ruby/xcodeproj_bridge.rb',
+  ).readFromDisk(project.path);
 
   group('a well-formed project imports cleanly', () {
     test('derives an accurate config', () async {
@@ -185,8 +186,9 @@ void main() {
       model = await read(project);
     });
 
-    String findingsText() =>
-        model.uncertainties.map((u) => '${u.field} ${u.reason} ${u.remedy}').join('\n');
+    String findingsText() => model.uncertainties
+        .map((u) => '${u.field} ${u.reason} ${u.remedy}')
+        .join('\n');
 
     test('the ext-property applicationId is an uncertainty, not a guess', () {
       expect(model.android.applicationId, isNull);
@@ -210,14 +212,16 @@ void main() {
       expect(casing.reason, contains('`Dev` on iOS'));
     });
 
-    test('the Android-only staging flavor is reported as a cross-platform gap',
-        () {
-      final gap = model.uncertainties.firstWhere(
-        (u) => u.field == 'flavors.staging',
-      );
-      expect(gap.reason, contains('no iOS build configurations'));
-      expect(gap.remedy, contains('Debug-staging'));
-    });
+    test(
+      'the Android-only staging flavor is reported as a cross-platform gap',
+      () {
+        final gap = model.uncertainties.firstWhere(
+          (u) => u.field == 'flavors.staging',
+        );
+        expect(gap.reason, contains('no iOS build configurations'));
+        expect(gap.remedy, contains('Debug-staging'));
+      },
+    );
 
     test('the missing staging entrypoint is reported', () {
       expect(findingsText(), contains('lib/main_staging.dart'));
@@ -277,7 +281,9 @@ android {
       addTearDown(project.dispose);
       project
         ..withPubspec()
-        ..withGradle('android { defaultConfig { applicationId = "com.acme.f" } }')
+        ..withGradle(
+          'android { defaultConfig { applicationId = "com.acme.f" } }',
+        )
         ..withIosProject()
         ..withFastlane(
           'ios/fastlane',
@@ -320,7 +326,10 @@ type "appstore"
 
       expect(setup.directory, 'ios/fastlane');
       expect(setup.laneNames, <String>['build_dev', 'helper']);
-      expect(setup.lanes.firstWhere((l) => l.name == 'helper').isPrivate, isTrue);
+      expect(
+        setup.lanes.firstWhere((l) => l.name == 'helper').isPrivate,
+        isTrue,
+      );
       expect(setup.lanes.first.platform, 'ios');
       expect(setup.teamId, 'TEAM123456');
       expect(setup.matchGitUrl, 'git@github.com:acme/certs.git');
@@ -343,27 +352,31 @@ type "appstore"
       expect(signing.ios!.apiKey!.p8Ref, 'MY_ASC_P8_BASE64');
     });
 
-    test('the harvested config passes the secret-shaped-value validator',
-        () async {
-      final project = await FixtureProject.create();
-      addTearDown(project.dispose);
-      project
-        ..withPubspec()
-        ..withGradle('android { defaultConfig { applicationId = "com.a.b" } }')
-        ..withFastlane(
-          'ios/fastlane',
-          fastfile: 'lane :x do\n  key(ENV["ASC_KEY_ID"])\nend\n',
-        );
+    test(
+      'the harvested config passes the secret-shaped-value validator',
+      () async {
+        final project = await FixtureProject.create();
+        addTearDown(project.dispose);
+        project
+          ..withPubspec()
+          ..withGradle(
+            'android { defaultConfig { applicationId = "com.a.b" } }',
+          )
+          ..withFastlane(
+            'ios/fastlane',
+            fastfile: 'lane :x do\n  key(ENV["ASC_KEY_ID"])\nend\n',
+          );
 
-      final yaml = ConfigWriter.render(
-        ConfigFromProject.build(await read(project)),
-        generatedBy: packageVersion,
-        generatedAt: DateTime.utc(2026, 9, 9),
-      );
-      // Parsing runs the validator; a harvested name must never look like a
-      // pasted secret.
-      expect(() => ConfigLoader.parse(yaml), returnsNormally);
-    });
+        final yaml = ConfigWriter.render(
+          ConfigFromProject.build(await read(project)),
+          generatedBy: packageVersion,
+          generatedAt: DateTime.utc(2026, 9, 9),
+        );
+        // Parsing runs the validator; a harvested name must never look like a
+        // pasted secret.
+        expect(() => ConfigLoader.parse(yaml), returnsNormally);
+      },
+    );
   });
 
   group('the safety property', () {
@@ -373,8 +386,11 @@ type "appstore"
 
       final before = project.allFiles();
       await read(project);
-      expect(project.allFiles(), before,
-          reason: 'the readers must not touch the project');
+      expect(
+        project.allFiles(),
+        before,
+        reason: 'the readers must not touch the project',
+      );
     });
 
     test('import records everything it found as unmanaged', () async {

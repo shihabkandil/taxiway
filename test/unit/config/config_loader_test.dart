@@ -54,8 +54,7 @@ void main() {
       expect(dev.displayName, 'Acme Dev');
       expect(dev.dartDefines, {'ENV': 'dev', 'API': 'https://dev.api'});
       expect(dev.icon, 'assets/icon/dev.png');
-      expect(dev.firebase!.android,
-          'android/app/src/dev/google-services.json');
+      expect(dev.firebase!.android, 'android/app/src/dev/google-services.json');
 
       expect(app.signing.ios!.teamId, 'ABCDE12345');
       expect(app.signing.ios!.matchStorage, MatchStorage.git);
@@ -107,7 +106,10 @@ apps:
   group('invalid configs each report an actionable message', () {
     expectInvalid('unknown_key.yaml', contains('flavour_min'));
     expectInvalid('missing_project_name.yaml', contains('name'));
-    expectInvalid('bad_version.yaml', contains('Unsupported config version 99'));
+    expectInvalid(
+      'bad_version.yaml',
+      contains('Unsupported config version 99'),
+    );
     expectInvalid('no_apps.yaml', contains('`apps` is empty'));
     expectInvalid('ambiguous_apps.yaml', contains('none is named `main`'));
     expectInvalid('duplicate_suffix.yaml', contains('both use suffix ".dev"'));

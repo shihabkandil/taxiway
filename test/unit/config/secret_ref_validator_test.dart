@@ -45,12 +45,18 @@ void main() {
     });
 
     test('known credential prefixes', () {
-      expect(SecretRefValidator.reasonToReject('ghp_abcdefghijklmnop'),
-          contains('ghp_'));
-      expect(SecretRefValidator.reasonToReject('xoxb-1-2-abcdef'),
-          contains('xoxb-'));
-      expect(SecretRefValidator.reasonToReject('AKIAIOSFODNN7EXAMPLE'),
-          contains('AKIA'));
+      expect(
+        SecretRefValidator.reasonToReject('ghp_abcdefghijklmnop'),
+        contains('ghp_'),
+      );
+      expect(
+        SecretRefValidator.reasonToReject('xoxb-1-2-abcdef'),
+        contains('xoxb-'),
+      );
+      expect(
+        SecretRefValidator.reasonToReject('AKIAIOSFODNN7EXAMPLE'),
+        contains('AKIA'),
+      );
     });
 
     test('an empty string', () {
@@ -116,7 +122,8 @@ apps:
 
 /// Base64 of [bytes] bytes of filler.
 String base64Of(int bytes) {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const alphabet =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   final raw = List<int>.generate(bytes, (i) => alphabet.codeUnitAt(i % 62));
   return _b64(raw);
 }

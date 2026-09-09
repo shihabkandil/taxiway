@@ -25,9 +25,9 @@ void main() {
   setUp(() => runner = RecordingProcessRunner());
 
   Future<ProjectModel> read(FixtureProject project) => ProjectInspector(
-        runner: runner,
-        bridgeScriptPath: 'tool/ruby/xcodeproj_bridge.rb',
-      ).readFromDisk(project.path);
+    runner: runner,
+    bridgeScriptPath: 'tool/ruby/xcodeproj_bridge.rb',
+  ).readFromDisk(project.path);
 
   /// Reads, derives a config, renders and reparses it, rebuilds a model, and
   /// diffs it against what was read. Goes through YAML deliberately: a field
@@ -83,8 +83,7 @@ void main() {
 
     project
       ..withPubspec(name: 'acme_app')
-      ..withGradle(
-        '''
+      ..withGradle('''
 android {
     defaultConfig {
         applicationId ${kotlin ? '= ' : ''}"com.acme.app"
@@ -92,9 +91,7 @@ android {
     flavorDimensions ${kotlin ? '+= ' : ''}"$dimension"
 $flavors
 }
-''',
-        kotlin: kotlin,
-      )
+''', kotlin: kotlin)
       ..withSourceSet('dev')
       ..withSourceSet('prod')
       ..withEntrypoint('dev')
@@ -139,18 +136,25 @@ $flavors
       });
 
       test('versionNameSuffix survives the round trip', () async {
-        final project =
-            await flavoredProject(kotlin: kotlin, versionNameSuffix: '-alpha');
+        final project = await flavoredProject(
+          kotlin: kotlin,
+          versionNameSuffix: '-alpha',
+        );
         addTearDown(project.dispose);
 
         final config = ConfigFromProject.build(await read(project));
-        expect(config.apps['main']!.flavors['dev']!.versionNameSuffix, '-alpha');
+        expect(
+          config.apps['main']!.flavors['dev']!.versionNameSuffix,
+          '-alpha',
+        );
         expect((await roundTrip(project)).isEmpty, isTrue);
       });
 
       test('a non-default flavor dimension survives the round trip', () async {
-        final project =
-            await flavoredProject(kotlin: kotlin, dimension: 'tier');
+        final project = await flavoredProject(
+          kotlin: kotlin,
+          dimension: 'tier',
+        );
         addTearDown(project.dispose);
 
         final config = ConfigFromProject.build(await read(project));
@@ -161,16 +165,18 @@ $flavors
   }
 
   group('the default dimension stays implicit', () {
-    test('is omitted from the config when it is the one taxiway generates',
-        () async {
-      final project = await flavoredProject(kotlin: true);
-      addTearDown(project.dispose);
+    test(
+      'is omitted from the config when it is the one taxiway generates',
+      () async {
+        final project = await flavoredProject(kotlin: true);
+        addTearDown(project.dispose);
 
-      final config = ConfigFromProject.build(await read(project));
-      // Writing `dimension: environment` on every flavor would be noise that
-      // only restates the convention.
-      expect(config.apps['main']!.flavors['dev']!.dimension, isNull);
-    });
+        final config = ConfigFromProject.build(await read(project));
+        // Writing `dimension: environment` on every flavor would be noise that
+        // only restates the convention.
+        expect(config.apps['main']!.flavors['dev']!.dimension, isNull);
+      },
+    );
   });
 
   group('drift is detected when the project moves', () {
@@ -212,15 +218,13 @@ android {
 ''');
 
       final diff = compare(
-        ProjectFromConfig.build(
-          ConfigLoader.parse(yaml),
-          root: project.path,
-        ),
+        ProjectFromConfig.build(ConfigLoader.parse(yaml), root: project.path),
         await read(project),
       );
 
-      final change = diff.changes
-          .firstWhere((c) => c.path == 'android.flavors.staging');
+      final change = diff.changes.firstWhere(
+        (c) => c.path == 'android.flavors.staging',
+      );
       expect(change.kind, ChangeKind.onlyInProject);
       expect(change.describe(), contains('not in taxiway.yaml'));
     });
@@ -236,10 +240,7 @@ android {
       ).replaceAll('suffix: .dev', 'suffix: .development');
 
       final diff = compare(
-        ProjectFromConfig.build(
-          ConfigLoader.parse(yaml),
-          root: project.path,
-        ),
+        ProjectFromConfig.build(ConfigLoader.parse(yaml), root: project.path),
         await read(project),
       );
 

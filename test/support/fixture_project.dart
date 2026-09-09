@@ -17,7 +17,9 @@ class FixtureProject {
 
   String get path => directory.path;
 
-  static Future<FixtureProject> create({String prefix = 'taxiway_fixture'}) async {
+  static Future<FixtureProject> create({
+    String prefix = 'taxiway_fixture',
+  }) async {
     final dir = await Directory.systemTemp.createTemp(prefix);
     return FixtureProject._(dir);
   }
@@ -43,12 +45,13 @@ class FixtureProject {
       write(relative, const JsonEncoder.withIndent('  ').convert(value));
 
   /// Relative paths of every file, so a test can assert nothing else appeared.
-  List<String> allFiles() => directory
-      .listSync(recursive: true, followLinks: false)
-      .whereType<File>()
-      .map((f) => p.relative(f.path, from: path).replaceAll(r'\', '/'))
-      .toList()
-    ..sort();
+  List<String> allFiles() =>
+      directory
+          .listSync(recursive: true, followLinks: false)
+          .whereType<File>()
+          .map((f) => p.relative(f.path, from: path).replaceAll(r'\', '/'))
+          .toList()
+        ..sort();
 
   /// The minimum a Flutter project needs for the readers to engage.
   FixtureProject withPubspec({
@@ -68,7 +71,9 @@ class FixtureProject {
   }
 
   FixtureProject withSourceSet(String name) {
-    Directory(p.join(path, 'android/app/src', name)).createSync(recursive: true);
+    Directory(
+      p.join(path, 'android/app/src', name),
+    ).createSync(recursive: true);
     return this;
   }
 
@@ -120,20 +125,26 @@ class FixtureProject {
     return this;
   }
 
-  FixtureProject withAndroidGoogleServices(String sourceSet, {String? package}) {
-    writeJson('android/app/src/$sourceSet/google-services.json', <String, Object>{
-      'project_info': <String, Object>{'project_id': 'demo-project'},
-      'client': <Object>[
-        <String, Object>{
-          'client_info': <String, Object>{
-            'mobilesdk_app_id': '1:1234:android:abcd',
-            'android_client_info': <String, Object>{
-              'package_name': package ?? 'com.example.demo',
+  FixtureProject withAndroidGoogleServices(
+    String sourceSet, {
+    String? package,
+  }) {
+    writeJson(
+      'android/app/src/$sourceSet/google-services.json',
+      <String, Object>{
+        'project_info': <String, Object>{'project_id': 'demo-project'},
+        'client': <Object>[
+          <String, Object>{
+            'client_info': <String, Object>{
+              'mobilesdk_app_id': '1:1234:android:abcd',
+              'android_client_info': <String, Object>{
+                'package_name': package ?? 'com.example.demo',
+              },
             },
           },
-        },
-      ],
-    });
+        ],
+      },
+    );
     return this;
   }
 
@@ -166,7 +177,8 @@ class FixtureProject {
     return this;
   }
 
-  static String _scheme({String? launch, String? archive}) => '''
+  static String _scheme({String? launch, String? archive}) =>
+      '''
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion = "1510" version = "1.7">
   <BuildAction buildImplicitDependencies = "YES" parallelizeBuildables = "YES">
@@ -198,17 +210,16 @@ String stubBridgeJson({
   List<Map<String, Object?>> shellScriptPhases = const <Map<String, Object?>>[],
 }) {
   List<Map<String, Object?>> buildConfigurations() => <Map<String, Object?>>[
-        for (final entry in configurations.entries)
-          <String, Object?>{
-            'name': entry.key,
-            'buildSettings': <String, Object?>{
-              'PRODUCT_BUNDLE_IDENTIFIER': entry.value,
-              if (developmentTeam != null) 'DEVELOPMENT_TEAM': developmentTeam,
-            },
-            'baseConfigurationReference':
-                baseConfigurationReferences?[entry.key],
-          },
-      ];
+    for (final entry in configurations.entries)
+      <String, Object?>{
+        'name': entry.key,
+        'buildSettings': <String, Object?>{
+          'PRODUCT_BUNDLE_IDENTIFIER': entry.value,
+          if (developmentTeam != null) 'DEVELOPMENT_TEAM': developmentTeam,
+        },
+        'baseConfigurationReference': baseConfigurationReferences?[entry.key],
+      },
+  ];
 
   return jsonEncode(<String, Object?>{
     'ok': true,
@@ -220,7 +231,10 @@ String stubBridgeJson({
       'rootObject': <String, Object?>{
         'buildConfigurations': <Map<String, Object?>>[
           for (final name in configurations.keys)
-            <String, Object?>{'name': name, 'buildSettings': <String, Object?>{}},
+            <String, Object?>{
+              'name': name,
+              'buildSettings': <String, Object?>{},
+            },
         ],
       },
       'targets': <Map<String, Object?>>[

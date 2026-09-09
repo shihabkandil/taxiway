@@ -63,9 +63,10 @@ String? _importedLayer(String fromPath, String import) {
 }
 
 Iterable<String> _importsOf(String source) sync* {
-  for (final match
-      in RegExp(r'''^\s*import\s+['"]([^'"]+)['"]''', multiLine: true)
-          .allMatches(source)) {
+  for (final match in RegExp(
+    r'''^\s*import\s+['"]([^'"]+)['"]''',
+    multiLine: true,
+  ).allMatches(source)) {
     yield match.group(1)!;
   }
 }
@@ -91,9 +92,13 @@ void main() {
           }
         }
       }
-      expect(violations, isEmpty,
-          reason: 'Dependencies must point at the base:\n'
-              '${violations.join('\n')}');
+      expect(
+        violations,
+        isEmpty,
+        reason:
+            'Dependencies must point at the base:\n'
+            '${violations.join('\n')}',
+      );
     });
 
     test('nothing in core imports cli', () {
@@ -121,8 +126,11 @@ void main() {
           violations.add('$relative calls Process directly');
         }
       }
-      expect(violations, isEmpty,
-          reason: 'Use core/io/ProcessRunner:\n${violations.join('\n')}');
+      expect(
+        violations,
+        isEmpty,
+        reason: 'Use core/io/ProcessRunner:\n${violations.join('\n')}',
+      );
     });
 
     test('readers and writers never spawn processes', () {
@@ -142,8 +150,9 @@ void main() {
 
   group('redaction is not optional', () {
     test('SystemProcessRunner requires a Redactor', () {
-      final source =
-          File('lib/src/core/io/process_runner.dart').readAsStringSync();
+      final source = File(
+        'lib/src/core/io/process_runner.dart',
+      ).readAsStringSync();
       // Retrofitting redaction is how secrets leak, so it is a required
       // constructor argument rather than an opt-in.
       expect(source, contains('SystemProcessRunner({required this.redactor})'));

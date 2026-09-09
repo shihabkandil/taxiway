@@ -73,8 +73,9 @@ class RecordingProcessRunner implements ProcessRunner {
   /// The single invocation containing [needle]; fails loudly if absent or
   /// ambiguous, because a silent "no match" makes a green test meaningless.
   RecordedInvocation invocation(String needle) {
-    final matches =
-        invocations.where((i) => i.commandLine.contains(needle)).toList();
+    final matches = invocations
+        .where((i) => i.commandLine.contains(needle))
+        .toList();
     if (matches.isEmpty) {
       throw StateError(
         'No command matched "$needle". Ran:\n  ${commandLines.join('\n  ')}',
@@ -126,10 +127,7 @@ class RecordingProcessRunner implements ProcessRunner {
     }
     final exit = stub?.exitCode ?? 0;
     if (exit != 0) {
-      throw ProcessExitException(
-        ([executable, ...arguments]).join(' '),
-        exit,
-      );
+      throw ProcessExitException(([executable, ...arguments]).join(' '), exit);
     }
   }
 

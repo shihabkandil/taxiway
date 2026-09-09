@@ -34,10 +34,10 @@ void main() {
   late RecordingProcessRunner runner;
 
   TaxiwayCommandRunner build({String? cwd}) => TaxiwayCommandRunner(
-        logger: logger,
-        runner: runner,
-        workingDirectory: cwd ?? '.',
-      );
+    logger: logger,
+    runner: runner,
+    workingDirectory: cwd ?? '.',
+  );
 
   setUp(() {
     logger = _CapturingLogger();
@@ -89,15 +89,17 @@ void main() {
       expect(logger.output, contains('2.6.0 found'));
     });
 
-    test('--only with an unknown id is a user error listing valid ids',
-        () async {
-      expect(
-        await build().run(['doctor', '--only', 'banana']),
-        TaxiwayExit.userError,
-      );
-      expect(logger.output, contains('Available:'));
-      expect(logger.output, contains('fastlane'));
-    });
+    test(
+      '--only with an unknown id is a user error listing valid ids',
+      () async {
+        expect(
+          await build().run(['doctor', '--only', 'banana']),
+          TaxiwayExit.userError,
+        );
+        expect(logger.output, contains('Available:'));
+        expect(logger.output, contains('fastlane'));
+      },
+    );
 
     test('--json emits parseable output', () async {
       runner.stub('ruby --version', stdout: 'ruby 3.4.1p18');
@@ -125,23 +127,26 @@ void main() {
   });
 
   group('config errors', () {
-    test('a broken config does not stop doctor reporting on the environment',
-        () async {
-      runner.stub('ruby --version', stdout: 'ruby 3.4.1p18');
-      final exit = await TaxiwayCommandRunner(
-        logger: logger,
-        runner: runner,
-        workingDirectory: 'test/fixtures/config/invalid',
-      ).run([
-        'doctor',
-        '--only',
-        'ruby',
-        '--config',
-        'test/fixtures/config/invalid/bad_version.yaml',
-      ]);
-      expect(exit, TaxiwayExit.success);
-      expect(logger.output, contains('Could not read taxiway.yaml'));
-      expect(logger.output, contains('Ruby'));
-    });
+    test(
+      'a broken config does not stop doctor reporting on the environment',
+      () async {
+        runner.stub('ruby --version', stdout: 'ruby 3.4.1p18');
+        final exit =
+            await TaxiwayCommandRunner(
+              logger: logger,
+              runner: runner,
+              workingDirectory: 'test/fixtures/config/invalid',
+            ).run([
+              'doctor',
+              '--only',
+              'ruby',
+              '--config',
+              'test/fixtures/config/invalid/bad_version.yaml',
+            ]);
+        expect(exit, TaxiwayExit.success);
+        expect(logger.output, contains('Could not read taxiway.yaml'));
+        expect(logger.output, contains('Ruby'));
+      },
+    );
   });
 }

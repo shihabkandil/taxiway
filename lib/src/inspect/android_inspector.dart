@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../core/io/process_runner.dart';
+import '../core/gradle/gradle_layout.dart';
 import '../core/model/android_model.dart';
 import '../core/model/uncertainty.dart';
 import 'gradle_deep_reader.dart';
@@ -19,18 +20,12 @@ class AndroidInspector {
   final GradleStructuralParser parser;
 
   /// Relative path of the app module, which is where flavors are declared.
-  static const String appModule = 'android/app';
+  static const String appModule = GradleLayout.appModule;
 
-  /// Locates the app build file, preferring Kotlin when both somehow exist.
-  static ({GradleDsl dsl, String path})? locateBuildFile(String root) {
-    for (final dsl in <GradleDsl>[GradleDsl.kotlin, GradleDsl.groovy]) {
-      final relative = p.posix.join(appModule, dsl.buildFileName);
-      if (File(p.join(root, relative)).existsSync()) {
-        return (dsl: dsl, path: relative);
-      }
-    }
-    return null;
-  }
+  /// Locates the app build file. Delegates to [GradleLayout], which the writers
+  /// and `doctor` share.
+  static ({GradleDsl dsl, String path})? locateBuildFile(String root) =>
+      GradleLayout.locateBuildFile(root);
 
   /// Reads the Android build configuration.
   ///

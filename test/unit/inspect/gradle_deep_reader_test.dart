@@ -11,7 +11,8 @@ import '../../support/recording_process_runner.dart';
 
 /// Wraps a payload the way the init script prints it, fenced and surrounded by
 /// the daemon noise `--quiet` does not suppress.
-String gradleOutput(Map<String, Object?> payload, {String noise = ''}) => '''
+String gradleOutput(Map<String, Object?> payload, {String noise = ''}) =>
+    '''
 $noise
 ${GradleDeepReader.beginMarker}
 ${jsonEncode(payload)}
@@ -21,33 +22,33 @@ ${GradleDeepReader.endMarker}
 /// The resolved model for a project whose applicationId comes from an `ext`
 /// property — the case the fast parser must flag and `--deep` must answer.
 Map<String, Object?> resolvedPayload() => <String, Object?>{
-      'ok': true,
-      'schema': 1,
-      'applicationId': 'com.acme.resolved',
-      'namespace': 'com.acme.resolved',
-      'compileSdk': 36,
-      'minSdk': 24,
-      'targetSdk': 36,
-      'flavorDimensions': <String>['environment'],
-      'productFlavors': <Map<String, Object?>>[
-        <String, Object?>{
-          'name': 'dev',
-          'dimension': 'environment',
-          'applicationIdSuffix': '.dev',
-          'versionNameSuffix': '-dev',
-          'resValues': <String, String>{'app_name': 'Acme Dev'},
-        },
-        <String, Object?>{
-          'name': 'prod',
-          'dimension': 'environment',
-          'resValues': <String, String>{'app_name': 'Acme'},
-        },
-      ],
-      'buildTypes': <String>['debug', 'release'],
-      'signingConfigs': <Map<String, Object?>>[
-        <String, Object?>{'name': 'release', 'keyAlias': 'upload'},
-      ],
-    };
+  'ok': true,
+  'schema': 1,
+  'applicationId': 'com.acme.resolved',
+  'namespace': 'com.acme.resolved',
+  'compileSdk': 36,
+  'minSdk': 24,
+  'targetSdk': 36,
+  'flavorDimensions': <String>['environment'],
+  'productFlavors': <Map<String, Object?>>[
+    <String, Object?>{
+      'name': 'dev',
+      'dimension': 'environment',
+      'applicationIdSuffix': '.dev',
+      'versionNameSuffix': '-dev',
+      'resValues': <String, String>{'app_name': 'Acme Dev'},
+    },
+    <String, Object?>{
+      'name': 'prod',
+      'dimension': 'environment',
+      'resValues': <String, String>{'app_name': 'Acme'},
+    },
+  ],
+  'buildTypes': <String>['debug', 'release'],
+  'signingConfigs': <Map<String, Object?>>[
+    <String, Object?>{'name': 'release', 'keyAlias': 'upload'},
+  ],
+};
 
 void main() {
   late RecordingProcessRunner runner;
@@ -96,7 +97,11 @@ android {
         result.uncertainties.map((u) => u.field),
         contains('android.applicationId'),
       );
-      expect(runner.invocations, isEmpty, reason: 'no Gradle run without --deep');
+      expect(
+        runner.invocations,
+        isEmpty,
+        reason: 'no Gradle run without --deep',
+      );
     });
   });
 
@@ -106,7 +111,8 @@ android {
         'taxiwayDumpVariants',
         stdout: gradleOutput(
           resolvedPayload(),
-          noise: 'Daemon will be stopped at the end of the build\n'
+          noise:
+              'Daemon will be stopped at the end of the build\n'
               'Note: Some input files use deprecated API.',
         ),
       );
@@ -126,14 +132,22 @@ android {
       );
     });
 
-    test('flavors created in a loop are recovered with their suffixes',
-        () async {
-      final result = await inspect(deep: true);
-      expect(result.android.flavors.keys, containsAll(<String>['dev', 'prod']));
-      expect(result.android.flavors['dev']!.applicationIdSuffix, '.dev');
-      expect(result.android.flavors['dev']!.versionNameSuffix, '-dev');
-      expect(result.android.flavors['dev']!.resValues['app_name'], 'Acme Dev');
-    });
+    test(
+      'flavors created in a loop are recovered with their suffixes',
+      () async {
+        final result = await inspect(deep: true);
+        expect(
+          result.android.flavors.keys,
+          containsAll(<String>['dev', 'prod']),
+        );
+        expect(result.android.flavors['dev']!.applicationIdSuffix, '.dev');
+        expect(result.android.flavors['dev']!.versionNameSuffix, '-dev');
+        expect(
+          result.android.flavors['dev']!.resValues['app_name'],
+          'Acme Dev',
+        );
+      },
+    );
 
     test('the DSL and build file still come from the file on disk', () async {
       final result = await inspect(deep: true);
@@ -168,7 +182,8 @@ android {
       runner.stub(
         'taxiwayDumpVariants',
         exitCode: 1,
-        stdout: 'FAILURE: Build failed with an exception.\n'
+        stdout:
+            'FAILURE: Build failed with an exception.\n'
             'Unsupported class file major version 62',
       );
 
@@ -181,8 +196,9 @@ android {
         result.uncertainties.map((u) => u.field),
         contains('android.applicationId'),
       );
-      final failure = result.uncertainties
-          .firstWhere((u) => u.reason.contains('could not run'));
+      final failure = result.uncertainties.firstWhere(
+        (u) => u.reason.contains('could not run'),
+      );
       expect(failure.reason, contains('Unsupported class file'));
     });
 
@@ -199,8 +215,9 @@ android {
         runner: runner,
         deepScriptPath: 'tool/gradle/taxiway_dump.gradle',
       );
-      final failure = result.uncertainties
-          .firstWhere((u) => u.reason.contains('could not run'));
+      final failure = result.uncertainties.firstWhere(
+        (u) => u.reason.contains('could not run'),
+      );
       expect(failure.reason, contains('gradlew'));
       expect(failure.remedy, contains('--config-only'));
     });
@@ -219,10 +236,10 @@ android {
   group('extractJson', () {
     test('finds the payload among daemon noise', () {
       final json = GradleDeepReader.extractJson(
-        gradleOutput(
-          <String, Object?>{'ok': true, 'applicationId': 'com.x'},
-          noise: 'Starting a Gradle Daemon\nwarning: something',
-        ),
+        gradleOutput(<String, Object?>{
+          'ok': true,
+          'applicationId': 'com.x',
+        }, noise: 'Starting a Gradle Daemon\nwarning: something'),
       );
       expect(json!['applicationId'], 'com.x');
     });
@@ -246,40 +263,41 @@ android {
   });
 
   group('merge', () {
-    test('the deep read wins but never erases what only the fast parse knew',
-        () {
-      const fast = AndroidModel(
-        gradleDsl: GradleDsl.groovy,
-        buildFilePath: 'android/app/build.gradle',
-        applicationId: null,
-        sourceSets: <String>['dev', 'main'],
-        flavors: <String, AndroidFlavor>{
-          'dev': AndroidFlavor(
-            name: 'dev',
-            manifestPlaceholders: <String, String>{'KEY': 'value'},
-          ),
-        },
-      );
-      const deep = AndroidModel(
-        gradleDsl: null,
-        applicationId: 'com.acme.resolved',
-        flavors: <String, AndroidFlavor>{
-          'dev': AndroidFlavor(name: 'dev', applicationIdSuffix: '.dev'),
-        },
-      );
+    test(
+      'the deep read wins but never erases what only the fast parse knew',
+      () {
+        const fast = AndroidModel(
+          gradleDsl: GradleDsl.groovy,
+          buildFilePath: 'android/app/build.gradle',
+          applicationId: null,
+          sourceSets: <String>['dev', 'main'],
+          flavors: <String, AndroidFlavor>{
+            'dev': AndroidFlavor(
+              name: 'dev',
+              manifestPlaceholders: <String, String>{'KEY': 'value'},
+            ),
+          },
+        );
+        const deep = AndroidModel(
+          gradleDsl: null,
+          applicationId: 'com.acme.resolved',
+          flavors: <String, AndroidFlavor>{
+            'dev': AndroidFlavor(name: 'dev', applicationIdSuffix: '.dev'),
+          },
+        );
 
-      final merged = GradleDeepReader.merge(fast, deep);
-      expect(merged.applicationId, 'com.acme.resolved');
-      expect(merged.gradleDsl, GradleDsl.groovy);
-      expect(merged.buildFilePath, 'android/app/build.gradle');
-      expect(merged.flavors['dev']!.applicationIdSuffix, '.dev');
-      // Source sets are a filesystem fact Gradle does not report the same way.
-      expect(merged.sourceSets, <String>['dev', 'main']);
-      expect(
-        merged.flavors['dev']!.manifestPlaceholders,
-        <String, String>{'KEY': 'value'},
-      );
-    });
+        final merged = GradleDeepReader.merge(fast, deep);
+        expect(merged.applicationId, 'com.acme.resolved');
+        expect(merged.gradleDsl, GradleDsl.groovy);
+        expect(merged.buildFilePath, 'android/app/build.gradle');
+        expect(merged.flavors['dev']!.applicationIdSuffix, '.dev');
+        // Source sets are a filesystem fact Gradle does not report the same way.
+        expect(merged.sourceSets, <String>['dev', 'main']);
+        expect(merged.flavors['dev']!.manifestPlaceholders, <String, String>{
+          'KEY': 'value',
+        });
+      },
+    );
   });
 
   group('resolvedBy', () {

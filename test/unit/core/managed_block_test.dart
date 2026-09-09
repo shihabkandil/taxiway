@@ -19,7 +19,10 @@ android {
       final block = ManagedBlock.find(content)!;
       expect(block.indent, '    ');
       expect(block.body, 'flavorDimensions += "env"');
-      expect(content.substring(block.start, block.end), contains('END taxiway'));
+      expect(
+        content.substring(block.start, block.end),
+        contains('END taxiway'),
+      );
     });
 
     test('rejects a BEGIN with no END rather than guessing', () {
@@ -109,7 +112,11 @@ android {
         body: 'a\nb',
         style: CommentStyle.hash,
       );
-      final twice = ManagedBlock.upsert(once, body: 'a\nb', style: CommentStyle.hash);
+      final twice = ManagedBlock.upsert(
+        once,
+        body: 'a\nb',
+        style: CommentStyle.hash,
+      );
       expect(twice, once);
     });
 
@@ -144,15 +151,21 @@ android {
 
   group('CommentStyle.forPath', () {
     test('picks the right style per file kind', () {
-      expect(CommentStyle.forPath('android/app/build.gradle.kts'),
-          CommentStyle.doubleSlash);
-      expect(CommentStyle.forPath('android/app/build.gradle'),
-          CommentStyle.doubleSlash);
+      expect(
+        CommentStyle.forPath('android/app/build.gradle.kts'),
+        CommentStyle.doubleSlash,
+      );
+      expect(
+        CommentStyle.forPath('android/app/build.gradle'),
+        CommentStyle.doubleSlash,
+      );
       expect(CommentStyle.forPath('.gitignore'), CommentStyle.hash);
       expect(CommentStyle.forPath('ios/Podfile'), CommentStyle.hash);
       expect(CommentStyle.forPath('ios/fastlane/Fastfile'), CommentStyle.hash);
-      expect(CommentStyle.forPath('ios/Flutter/dev.xcconfig'),
-          CommentStyle.xcconfig);
+      expect(
+        CommentStyle.forPath('ios/Flutter/dev.xcconfig'),
+        CommentStyle.xcconfig,
+      );
       expect(CommentStyle.forPath('a/Runner.xcscheme'), CommentStyle.xml);
     });
   });

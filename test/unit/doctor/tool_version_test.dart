@@ -97,8 +97,11 @@ xcodeproj (1.28.1, 1.27.0, 1.23.0)''';
         ToolVersion.extract(output, preferLine: 'xcodeproj', highest: true),
         const ToolVersion(1, 28, 1),
       );
-      expect(ToolVersion.extract(output), const ToolVersion(0, 2, 0),
-          reason: 'demonstrates why preferLine is required here');
+      expect(
+        ToolVersion.extract(output),
+        const ToolVersion(0, 2, 0),
+        reason: 'demonstrates why preferLine is required here',
+      );
     });
 
     test('java, which reports to stderr and quotes its version', () {
@@ -114,13 +117,17 @@ Java HotSpot(TM) 64-Bit Server VM (build 18.0.2.1+1-1, mixed mode, sharing)''';
 
     test('openjdk 17 and 21 banners', () {
       expect(
-        ToolVersion.extract('openjdk version "17.0.9" 2023-10-17',
-            preferLine: 'version'),
+        ToolVersion.extract(
+          'openjdk version "17.0.9" 2023-10-17',
+          preferLine: 'version',
+        ),
         const ToolVersion(17, 0, 9),
       );
       expect(
-        ToolVersion.extract('openjdk version "21.0.4" 2024-07-16',
-            preferLine: 'version'),
+        ToolVersion.extract(
+          'openjdk version "21.0.4" 2024-07-16',
+          preferLine: 'version',
+        ),
         const ToolVersion(21, 0, 4),
       );
     });
@@ -130,10 +137,7 @@ Java HotSpot(TM) 64-Bit Server VM (build 18.0.2.1+1-1, mixed mode, sharing)''';
     });
 
     test('returns null for a not-found message', () {
-      expect(
-        ToolVersion.extract('command not found: flutterfire'),
-        isNull,
-      );
+      expect(ToolVersion.extract('command not found: flutterfire'), isNull);
     });
   });
 
@@ -141,7 +145,10 @@ Java HotSpot(TM) 64-Bit Server VM (build 18.0.2.1+1-1, mixed mode, sharing)''';
     test('compares component by component', () {
       expect(const ToolVersion(3, 1, 1) >= const ToolVersion(3, 0, 0), isTrue);
       expect(const ToolVersion(3, 1, 1) >= const ToolVersion(3, 3, 0), isFalse);
-      expect(const ToolVersion(2, 238, 0) > const ToolVersion(2, 220, 0), isTrue);
+      expect(
+        const ToolVersion(2, 238, 0) > const ToolVersion(2, 220, 0),
+        isTrue,
+      );
       expect(const ToolVersion(1, 9, 0) < const ToolVersion(1, 10, 0), isTrue);
       expect(const ToolVersion(26, 6) >= const ToolVersion(26, 0), isTrue);
     });

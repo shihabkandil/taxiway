@@ -133,7 +133,10 @@ void main() {
         });
 
         test('reads both flavors with their suffixes', () {
-          expect(result.android.flavors.keys, <String>['development', 'production']);
+          expect(result.android.flavors.keys, <String>[
+            'development',
+            'production',
+          ]);
           final dev = result.android.flavors['development']!;
           expect(dev.dimension, 'environment');
           expect(dev.applicationIdSuffix, '.dev');
@@ -147,13 +150,15 @@ void main() {
 
         test('derives the effective application id per flavor', () {
           expect(
-            result.android.flavors['development']!
-                .effectiveApplicationId(result.android.applicationId),
+            result.android.flavors['development']!.effectiveApplicationId(
+              result.android.applicationId,
+            ),
             'com.acme.app.dev',
           );
           expect(
-            result.android.flavors['production']!
-                .effectiveApplicationId(result.android.applicationId),
+            result.android.flavors['production']!.effectiveApplicationId(
+              result.android.applicationId,
+            ),
             'com.acme.app',
           );
         });
@@ -161,14 +166,14 @@ void main() {
         test('reads signing configs and build types', () {
           expect(result.android.signingConfigs.keys, <String>['release']);
           expect(result.android.signingConfigs['release']!.keyAlias, 'upload');
-          expect(result.android.buildTypes, containsAll(<String>['release', 'debug']));
+          expect(
+            result.android.buildTypes,
+            containsAll(<String>['release', 'debug']),
+          );
         });
 
         test('reports no uncertainties for a fully literal build file', () {
-          expect(
-            result.uncertainties.map((u) => u.toString()),
-            isEmpty,
-          );
+          expect(result.uncertainties.map((u) => u.toString()), isEmpty);
         });
       });
     }
@@ -183,8 +188,11 @@ android {
     }
 }
 ''');
-      expect(result.android.applicationId, isNull,
-          reason: 'must not guess a value it cannot see');
+      expect(
+        result.android.applicationId,
+        isNull,
+        reason: 'must not guess a value it cannot see',
+      );
       final uncertainty = result.uncertainties.single;
       expect(uncertainty.field, 'android.applicationId');
       expect(uncertainty.reason, contains('appId'));
@@ -260,18 +268,16 @@ android {
     defaultConfig { }
 }
 ''');
-      final note = result.uncertainties
-          .firstWhere((u) => u.severity == UncertaintySeverity.informational);
+      final note = result.uncertainties.firstWhere(
+        (u) => u.severity == UncertaintySeverity.informational,
+      );
       expect(note.reason, contains('flavors.gradle'));
     });
 
     test('a missing android block is a defect, not a crash', () {
       final result = parseKts('plugins { id("x") }\n');
       expect(result.android.exists, isFalse);
-      expect(
-        result.uncertainties.single.severity,
-        UncertaintySeverity.defect,
-      );
+      expect(result.uncertainties.single.severity, UncertaintySeverity.defect);
     });
   });
 
@@ -444,8 +450,10 @@ android {
     }
 }
 ''');
-      expect(result.android.flavors['dev']!.resValues['app_name'],
-          'Acme { Dev }');
+      expect(
+        result.android.flavors['dev']!.resValues['app_name'],
+        'Acme { Dev }',
+      );
     });
   });
 }

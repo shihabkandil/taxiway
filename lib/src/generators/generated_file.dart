@@ -1,0 +1,198 @@
+import '../core/managed/comment_style.dart';
+import '../core/model/android_model.dart';
+import '../core/managed/lock_file.dart';
+
+/// Where to put a managed block in a file taxiway does not own outright.
+///
+/// Declarative rather than a callback so a generator stays a pure function and
+/// its output can be compared in a golden test.
+class BlockAnchor {
+  const BlockAnchor({required this.insideBlock, this.atEnd = false});
+
+  /// Name of the enclosing brace-matched block to insert into, e.g. `android`.
+  final String insideBlock;
+
+  /// Insert just before the block's closing brace rather than just after its
+  /// opening one.
+  final bool atEnd;
+}
+
+/// One file a generator wants written.
+class GeneratedFile {
+  const GeneratedFile({
+    required this.path,
+    required this.contents,
+    required this.mode,
+    CommentStyle? commentStyle,
+    this.anchor,
+    this.description,
+  }) : _commentStyle = commentStyle;
+
+  /// Fully-managed file: taxiway owns the whole thing.
+  const GeneratedFile.full({
+    required String path,
+    required String contents,
+    String? description,
+  }) : this(
+         path: path,
+         contents: contents,
+         mode: WriteMode.full,
+         description: description,
+       );
+
+  /// Block-managed file: taxiway owns only the marked region.
+  const GeneratedFile.block({
+    required String path,
+    required String contents,
+    BlockAnchor? anchor,
+    CommentStyle? commentStyle,
+    String? description,
+  }) : this(
+         path: path,
+         contents: contents,
+         mode: WriteMode.block,
+         anchor: anchor,
+         commentStyle: commentStyle,
+         description: description,
+       );
+
+  /// Path relative to the project root, always POSIX-separated.
+  final String path;
+
+  /// The whole file for [WriteMode.full]; the block body for
+  /// [WriteMode.block].
+  final String contents;
+
+  final WriteMode mode;
+
+  final CommentStyle? _commentStyle;
+
+  /// Comment syntax for the managed markers, defaulting to the one this file
+  /// type conventionally uses.
+  CommentStyle get commentStyle => _commentStyle ?? CommentStyle.forPath(path);
+
+  /// Where a new block goes. Null means append to the end of the file.
+  final BlockAnchor? anchor;
+
+  /// One line for `--dry-run`, saying what this file is for.
+  final String? description;
+}
+
+/// Turns configuration into files.
+///
+/// Pure: no I/O, no processes, no clock. That is what makes golden testing
+/// trivial and what keeps the decision of *what* to write separate from the far
+/// more delicate question of *whether* taxiway is allowed to write it.
+abstract class Generator {
+  /// Stable identifier, used by `taxiway generate <name>`.
+  String get name;
+
+  /// One line describing what this generator produces.
+  String get description;
+
+  List<GeneratedFile> render(ResolvedApp app);
+}
+
+/// A config narrowed to one app, with the values every generator needs already
+/// resolved.
+///
+/// Generators receive this rather than the raw config so that the rules about
+/// defaults — an entrypoint's conventional path, a flavor's effective bundle
+/// id — are applied once, here, instead of being re-derived slightly
+/// differently by each generator.
+class ResolvedApp {
+  const ResolvedApp({
+    required this.appId,
+    required this.projectName,
+    required this.flavors,
+    required this.androidApplicationId,
+    required this.iosBundleId,
+    required this.gradleDsl,
+    this.iosTeamId,
+    this.iosSchemeTemplate,
+  });
+
+  final String appId;
+  final String projectName;
+
+  /// In declaration order, which is the order they are written in.
+  final List<ResolvedFlavor> flavors;
+
+  /// Unsuffixed Android application id, or null when the config does not say.
+  final String? androidApplicationId;
+
+  /// Unsuffixed iOS bundle id, or null when the config does not say.
+  final String? iosBundleId;
+
+  /// Which dialect the Android generator must emit.
+  final GradleDsl gradleDsl;
+
+  final String? iosTeamId;
+
+  /// The project's existing `Runner.xcscheme`, used as the basis for every
+  /// generated scheme.
+  ///
+  /// Carried on the resolved app rather than read by the generator so the
+  /// generator stays pure, and so a project with no readable scheme produces no
+  /// schemes instead of broken ones.
+  final String? iosSchemeTemplate;
+
+  bool get hasFlavors => flavors.isNotEmpty;
+
+  ResolvedFlavor? flavor(String name) {
+    for (final flavor in flavors) {
+      if (flavor.name == name) return flavor;
+    }
+    return null;
+  }
+}
+
+/// One flavor with every derived value already computed.
+class ResolvedFlavor {
+  const ResolvedFlavor({
+    required this.name,
+    required this.suffix,
+    required this.entrypoint,
+    required this.dimension,
+    this.versionNameSuffix,
+    this.displayName,
+    this.dartDefines = const <String, String>{},
+    this.androidApplicationId,
+    this.iosBundleId,
+    this.firebaseAndroid,
+    this.firebaseIos,
+  });
+
+  final String name;
+
+  /// Appended to the base id. Empty for the production flavor.
+  final String suffix;
+
+  /// Path to this flavor's Dart entrypoint, defaulted if the config is silent.
+  final String entrypoint;
+
+  final String dimension;
+  final String? versionNameSuffix;
+  final String? displayName;
+  final Map<String, String> dartDefines;
+
+  /// Full application id for this flavor, null when the base is unknown.
+  final String? androidApplicationId;
+
+  final String? iosBundleId;
+
+  final String? firebaseAndroid;
+  final String? firebaseIos;
+
+  /// The iOS build configuration names this flavor requires.
+  List<String> get iosConfigurations => <String>[
+    'Debug-$name',
+    'Release-$name',
+    'Profile-$name',
+  ];
+
+  /// The display name, falling back to something sensible rather than null so
+  /// generated resources never contain an empty string.
+  String displayNameOr(String projectName) =>
+      displayName ?? (suffix.isEmpty ? projectName : '$projectName $name');
+}

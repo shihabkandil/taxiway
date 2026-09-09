@@ -17,17 +17,13 @@ Future<Directory> fixtureApp(ProcessRunner runner) async {
     return Directory(existing);
   }
   final temp = await Directory.systemTemp.createTemp('taxiway_bridge');
-  final result = await runner.run(
-    'flutter',
-    const <String>[
-      'create',
-      '--org',
-      'com.example',
-      '--platforms=ios,android',
-      'demo_app',
-    ],
-    workingDirectory: temp.path,
-  );
+  final result = await runner.run('flutter', const <String>[
+    'create',
+    '--org',
+    'com.example',
+    '--platforms=ios,android',
+    'demo_app',
+  ], workingDirectory: temp.path);
   if (!result.ok) {
     throw StateError('flutter create failed: ${result.output}');
   }
@@ -70,35 +66,36 @@ void main() {
       expect(project['synchronizedRootGroups'], isA<List<dynamic>>());
     });
 
-    test('reports the Runner target with Flutter\'s three configurations',
-        () async {
-      final project =
-          (await readBridge())['project'] as Map<String, dynamic>;
-      final targets = (project['targets'] as List<dynamic>)
-          .cast<Map<String, dynamic>>();
+    test(
+      'reports the Runner target with Flutter\'s three configurations',
+      () async {
+        final project = (await readBridge())['project'] as Map<String, dynamic>;
+        final targets = (project['targets'] as List<dynamic>)
+            .cast<Map<String, dynamic>>();
 
-      final runnerTarget = targets.firstWhere((t) => t['name'] == 'Runner');
-      expect(runnerTarget['type'], 'com.apple.product-type.application');
+        final runnerTarget = targets.firstWhere((t) => t['name'] == 'Runner');
+        expect(runnerTarget['type'], 'com.apple.product-type.application');
 
-      final configs = (runnerTarget['buildConfigurations'] as List<dynamic>)
-          .cast<Map<String, dynamic>>();
-      // Flutter requires exactly these three names; flavors extend them as
-      // `<Config>-<flavor>`, which is what the iOS inspector keys off.
-      expect(
-        configs.map((c) => c['name']),
-        containsAll(<String>['Debug', 'Release', 'Profile']),
-      );
-    });
+        final configs = (runnerTarget['buildConfigurations'] as List<dynamic>)
+            .cast<Map<String, dynamic>>();
+        // Flutter requires exactly these three names; flavors extend them as
+        // `<Config>-<flavor>`, which is what the iOS inspector keys off.
+        expect(
+          configs.map((c) => c['name']),
+          containsAll(<String>['Debug', 'Release', 'Profile']),
+        );
+      },
+    );
 
     test('exposes PRODUCT_BUNDLE_IDENTIFIER per configuration', () async {
-      final project =
-          (await readBridge())['project'] as Map<String, dynamic>;
+      final project = (await readBridge())['project'] as Map<String, dynamic>;
       final runnerTarget = (project['targets'] as List<dynamic>)
           .cast<Map<String, dynamic>>()
           .firstWhere((t) => t['name'] == 'Runner');
 
-      for (final config in (runnerTarget['buildConfigurations'] as List<dynamic>)
-          .cast<Map<String, dynamic>>()) {
+      for (final config
+          in (runnerTarget['buildConfigurations'] as List<dynamic>)
+              .cast<Map<String, dynamic>>()) {
         final settings = config['buildSettings'] as Map<String, dynamic>;
         expect(
           settings['PRODUCT_BUNDLE_IDENTIFIER'],
@@ -108,37 +105,40 @@ void main() {
       }
     });
 
-    test('follows the xcconfig chain, where a flavor bundle id often lives',
-        () async {
-      final project =
-          (await readBridge())['project'] as Map<String, dynamic>;
-      final runnerTarget = (project['targets'] as List<dynamic>)
-          .cast<Map<String, dynamic>>()
-          .firstWhere((t) => t['name'] == 'Runner');
-      final debug = (runnerTarget['buildConfigurations'] as List<dynamic>)
-          .cast<Map<String, dynamic>>()
-          .firstWhere((c) => c['name'] == 'Debug');
+    test(
+      'follows the xcconfig chain, where a flavor bundle id often lives',
+      () async {
+        final project = (await readBridge())['project'] as Map<String, dynamic>;
+        final runnerTarget = (project['targets'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .firstWhere((t) => t['name'] == 'Runner');
+        final debug = (runnerTarget['buildConfigurations'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .firstWhere((c) => c['name'] == 'Debug');
 
-      expect(debug['baseConfigurationReference'], endsWith('Debug.xcconfig'));
-    });
+        expect(debug['baseConfigurationReference'], endsWith('Debug.xcconfig'));
+      },
+    );
 
-    test('reports shell script phases so an existing flavor setup is visible',
-        () async {
-      final project =
-          (await readBridge())['project'] as Map<String, dynamic>;
-      final runnerTarget = (project['targets'] as List<dynamic>)
-          .cast<Map<String, dynamic>>()
-          .firstWhere((t) => t['name'] == 'Runner');
-      final phases = (runnerTarget['buildPhases'] as List<dynamic>)
-          .cast<Map<String, dynamic>>();
+    test(
+      'reports shell script phases so an existing flavor setup is visible',
+      () async {
+        final project = (await readBridge())['project'] as Map<String, dynamic>;
+        final runnerTarget = (project['targets'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .firstWhere((t) => t['name'] == 'Runner');
+        final phases = (runnerTarget['buildPhases'] as List<dynamic>)
+            .cast<Map<String, dynamic>>();
 
-      final scripts =
-          phases.where((p) => p['isa'] == 'PBXShellScriptBuildPhase').toList();
-      expect(scripts, isNotEmpty);
-      // Overwriting a phase that copies a per-flavor GoogleService-Info.plist
-      // would silently break Firebase, so the reader must see the script body.
-      expect(scripts.first['shellScript'], isA<String>());
-    });
+        final scripts = phases
+            .where((p) => p['isa'] == 'PBXShellScriptBuildPhase')
+            .toList();
+        expect(scripts, isNotEmpty);
+        // Overwriting a phase that copies a per-flavor GoogleService-Info.plist
+        // would silently break Firebase, so the reader must see the script body.
+        expect(scripts.first['shellScript'], isA<String>());
+      },
+    );
   });
 
   group('failure contract', () {

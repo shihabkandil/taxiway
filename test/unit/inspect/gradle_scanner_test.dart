@@ -1,4 +1,4 @@
-import 'package:taxiway/src/inspect/gradle_scanner.dart';
+import 'package:taxiway/src/core/gradle/gradle_scanner.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -32,9 +32,9 @@ android {
 ''';
       final android = GradleScanner.findBlock(source, 'android')!;
       expect(android.body, contains('buildTypes'));
-      final inner = GradleScanner.blocksIn(android.body)
-          .map((b) => b.declaredName)
-          .toList();
+      final inner = GradleScanner.blocksIn(
+        android.body,
+      ).map((b) => b.declaredName).toList();
       expect(inner, <String>['defaultConfig', 'buildTypes']);
     });
 

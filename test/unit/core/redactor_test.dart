@@ -31,10 +31,7 @@ void main() {
     test('redacts the base64 form of a registered value', () {
       final redactor = Redactor()..register('keystore-password');
       // What a lane would print if it base64'd the value before use.
-      expect(
-        redactor.redact('a2V5c3RvcmUtcGFzc3dvcmQ='),
-        contains('***'),
-      );
+      expect(redactor.redact('a2V5c3RvcmUtcGFzc3dvcmQ='), contains('***'));
     });
 
     test('redacts the URL-encoded form', () {

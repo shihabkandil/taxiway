@@ -17,11 +17,11 @@ void main() {
   });
 
   Future<IosInspectResult> inspect() => IosInspector(
-        bridge: XcodeprojBridge(
-          runner: runner,
-          scriptPath: 'tool/ruby/xcodeproj_bridge.rb',
-        ),
-      ).inspect(project.path);
+    bridge: XcodeprojBridge(
+      runner: runner,
+      scriptPath: 'tool/ruby/xcodeproj_bridge.rb',
+    ),
+  ).inspect(project.path);
 
   List<Uncertainty> defectsOf(IosInspectResult result) => result.uncertainties
       .where((u) => u.severity == UncertaintySeverity.defect)
@@ -32,10 +32,12 @@ void main() {
       project
         ..withPubspec()
         ..withIosProject()
-        ..withSharedScheme('dev',
-            launch: 'Debug-dev', archive: 'Release-dev')
-        ..withSharedScheme('prod',
-            launch: 'Debug-prod', archive: 'Release-prod');
+        ..withSharedScheme('dev', launch: 'Debug-dev', archive: 'Release-dev')
+        ..withSharedScheme(
+          'prod',
+          launch: 'Debug-prod',
+          archive: 'Release-prod',
+        );
       stubBridge(
         runner,
         stubBridgeJson(
@@ -68,14 +70,16 @@ void main() {
       );
     });
 
-    test('reads shared schemes with their launch and archive configurations',
-        () async {
-      final result = await inspect();
-      final dev = result.ios.schemes['dev']!;
-      expect(dev.shared, isTrue);
-      expect(dev.buildConfiguration, 'Debug-dev');
-      expect(dev.archiveConfiguration, 'Release-dev');
-    });
+    test(
+      'reads shared schemes with their launch and archive configurations',
+      () async {
+        final result = await inspect();
+        final dev = result.ios.schemes['dev']!;
+        expect(dev.shared, isTrue);
+        expect(dev.buildConfiguration, 'Debug-dev');
+        expect(dev.archiveConfiguration, 'Release-dev');
+      },
+    );
 
     test('reports no defects', () async {
       expect(defectsOf(await inspect()), isEmpty);
@@ -87,8 +91,7 @@ void main() {
       project
         ..withPubspec()
         ..withIosProject()
-        ..withSharedScheme('dev',
-            launch: 'debug-dev', archive: 'release-dev');
+        ..withSharedScheme('dev', launch: 'debug-dev', archive: 'release-dev');
       stubBridge(
         runner,
         stubBridgeJson(
@@ -104,45 +107,55 @@ void main() {
         ),
       );
 
-      final casing = defectsOf(await inspect())
-          .firstWhere((d) => d.field.contains('release-dev'));
+      final casing = defectsOf(
+        await inspect(),
+      ).firstWhere((d) => d.field.contains('release-dev'));
       expect(casing.reason, contains('case-sensitively'));
       expect(casing.remedy, contains('Release-dev'));
     });
 
-    test('`Release-Dev` is valid on its own — it declares a flavor named `Dev`',
-        () async {
-      // The casing problem people actually hit is that Android declares `dev`
-      // while Xcode declares `Dev`. That is a cross-platform mismatch, not a
-      // malformed configuration, so the iOS reader alone must not flag it.
-      project
-        ..withPubspec()
-        ..withIosProject()
-        ..withSharedScheme('Dev',
-            launch: 'Debug-Dev', archive: 'Release-Dev');
-      stubBridge(
-        runner,
-        stubBridgeJson(
-          configurations: <String, String>{
-            'Debug': 'com.acme.app',
-            'Release': 'com.acme.app',
-            'Profile': 'com.acme.app',
-            'Debug-Dev': 'com.acme.app.dev',
-            'Release-Dev': 'com.acme.app.dev',
-            'Profile-Dev': 'com.acme.app.dev',
-          },
-        ),
-      );
+    test(
+      '`Release-Dev` is valid on its own — it declares a flavor named `Dev`',
+      () async {
+        // The casing problem people actually hit is that Android declares `dev`
+        // while Xcode declares `Dev`. That is a cross-platform mismatch, not a
+        // malformed configuration, so the iOS reader alone must not flag it.
+        project
+          ..withPubspec()
+          ..withIosProject()
+          ..withSharedScheme(
+            'Dev',
+            launch: 'Debug-Dev',
+            archive: 'Release-Dev',
+          );
+        stubBridge(
+          runner,
+          stubBridgeJson(
+            configurations: <String, String>{
+              'Debug': 'com.acme.app',
+              'Release': 'com.acme.app',
+              'Profile': 'com.acme.app',
+              'Debug-Dev': 'com.acme.app.dev',
+              'Release-Dev': 'com.acme.app.dev',
+              'Profile-Dev': 'com.acme.app.dev',
+            },
+          ),
+        );
 
-      expect(defectsOf(await inspect()), isEmpty);
-    });
+        expect(defectsOf(await inspect()), isEmpty);
+      },
+    );
 
     test('a scheme living only in xcuserdata is called out', () async {
       project
         ..withPubspec()
         ..withIosProject()
-        ..withUserScheme('dev',
-            owner: 'alice', launch: 'Debug-dev', archive: 'Release-dev');
+        ..withUserScheme(
+          'dev',
+          owner: 'alice',
+          launch: 'Debug-dev',
+          archive: 'Release-dev',
+        );
       stubBridge(
         runner,
         stubBridgeJson(
@@ -161,8 +174,9 @@ void main() {
       expect(result.ios.schemes['dev']!.shared, isFalse);
       expect(result.ios.schemes['dev']!.owner, 'alice');
 
-      final defect = defectsOf(result)
-          .firstWhere((d) => d.field == 'ios.schemes.dev');
+      final defect = defectsOf(
+        result,
+      ).firstWhere((d) => d.field == 'ios.schemes.dev');
       expect(defect.reason, contains('xcuserdata'));
       expect(defect.reason, contains('alice'));
       expect(defect.remedy, contains('Shared'));
@@ -173,8 +187,7 @@ void main() {
         ..withPubspec()
         ..withIosProject()
         ..withUserScheme('dev', owner: 'alice', launch: 'Debug')
-        ..withSharedScheme('dev',
-            launch: 'Debug-dev', archive: 'Release-dev');
+        ..withSharedScheme('dev', launch: 'Debug-dev', archive: 'Release-dev');
       stubBridge(
         runner,
         stubBridgeJson(
@@ -194,39 +207,48 @@ void main() {
       expect(result.ios.schemes['dev']!.buildConfiguration, 'Debug-dev');
     });
 
-    test('a flavor missing one build type is reported with the missing name',
-        () async {
-      project
-        ..withPubspec()
-        ..withIosProject()
-        ..withSharedScheme('dev',
-            launch: 'Debug-dev', archive: 'Release-dev');
-      stubBridge(
-        runner,
-        stubBridgeJson(
-          configurations: <String, String>{
-            'Debug': 'com.acme.app',
-            'Release': 'com.acme.app',
-            'Profile': 'com.acme.app',
-            'Debug-dev': 'com.acme.app.dev',
-            'Release-dev': 'com.acme.app.dev',
-            // Profile-dev is absent: the flavor works until someone runs a
-            // profile build.
-          },
-        ),
-      );
+    test(
+      'a flavor missing one build type is reported with the missing name',
+      () async {
+        project
+          ..withPubspec()
+          ..withIosProject()
+          ..withSharedScheme(
+            'dev',
+            launch: 'Debug-dev',
+            archive: 'Release-dev',
+          );
+        stubBridge(
+          runner,
+          stubBridgeJson(
+            configurations: <String, String>{
+              'Debug': 'com.acme.app',
+              'Release': 'com.acme.app',
+              'Profile': 'com.acme.app',
+              'Debug-dev': 'com.acme.app.dev',
+              'Release-dev': 'com.acme.app.dev',
+              // Profile-dev is absent: the flavor works until someone runs a
+              // profile build.
+            },
+          ),
+        );
 
-      final defect = defectsOf(await inspect())
-          .firstWhere((d) => d.field == 'ios.flavors.dev');
-      expect(defect.reason, contains('Profile-dev'));
-    });
+        final defect = defectsOf(
+          await inspect(),
+        ).firstWhere((d) => d.field == 'ios.flavors.dev');
+        expect(defect.reason, contains('Profile-dev'));
+      },
+    );
 
     test('a scheme pointing at a configuration that does not exist', () async {
       project
         ..withPubspec()
         ..withIosProject()
-        ..withSharedScheme('dev',
-            launch: 'Debug-dev', archive: 'Release-ghost');
+        ..withSharedScheme(
+          'dev',
+          launch: 'Debug-dev',
+          archive: 'Release-ghost',
+        );
       stubBridge(
         runner,
         stubBridgeJson(
@@ -241,36 +263,39 @@ void main() {
         ),
       );
 
-      final defect = defectsOf(await inspect()).firstWhere(
-        (d) => d.reason.contains('Release-ghost'),
-      );
+      final defect = defectsOf(
+        await inspect(),
+      ).firstWhere((d) => d.reason.contains('Release-ghost'));
       expect(defect.remedy, contains('existing configuration'));
     });
 
-    test('a flavor with configurations but no scheme cannot be selected',
-        () async {
-      project
-        ..withPubspec()
-        ..withIosProject();
-      stubBridge(
-        runner,
-        stubBridgeJson(
-          configurations: <String, String>{
-            'Debug': 'com.acme.app',
-            'Release': 'com.acme.app',
-            'Profile': 'com.acme.app',
-            'Debug-dev': 'com.acme.app.dev',
-            'Release-dev': 'com.acme.app.dev',
-            'Profile-dev': 'com.acme.app.dev',
-          },
-        ),
-      );
+    test(
+      'a flavor with configurations but no scheme cannot be selected',
+      () async {
+        project
+          ..withPubspec()
+          ..withIosProject();
+        stubBridge(
+          runner,
+          stubBridgeJson(
+            configurations: <String, String>{
+              'Debug': 'com.acme.app',
+              'Release': 'com.acme.app',
+              'Profile': 'com.acme.app',
+              'Debug-dev': 'com.acme.app.dev',
+              'Release-dev': 'com.acme.app.dev',
+              'Profile-dev': 'com.acme.app.dev',
+            },
+          ),
+        );
 
-      final defect = defectsOf(await inspect())
-          .firstWhere((d) => d.field == 'ios.schemes');
-      expect(defect.reason, contains('no scheme'));
-      expect(defect.remedy, contains('shared scheme named `dev`'));
-    });
+        final defect = defectsOf(
+          await inspect(),
+        ).firstWhere((d) => d.field == 'ios.schemes');
+        expect(defect.reason, contains('no scheme'));
+        expect(defect.remedy, contains('shared scheme named `dev`'));
+      },
+    );
   });
 
   group('xcconfig resolution', () {
@@ -279,8 +304,7 @@ void main() {
         ..withPubspec()
         ..withIosProject()
         ..withXcconfig('dev', 'FLAVOR_BUNDLE_SUFFIX = .dev\n')
-        ..withSharedScheme('dev',
-            launch: 'Debug-dev', archive: 'Release-dev');
+        ..withSharedScheme('dev', launch: 'Debug-dev', archive: 'Release-dev');
       stubBridge(
         runner,
         stubBridgeJson(
@@ -302,49 +326,56 @@ void main() {
 
       final result = await inspect();
       expect(
-        result.ios.applicationTarget!
+        result
+            .ios
+            .applicationTarget!
             .buildConfigurations['Release-dev']!
             .bundleIdentifier,
         'com.acme.app.dev',
       );
     });
 
-    test('an unresolvable reference becomes an uncertainty, not a bad value',
-        () async {
-      project
-        ..withPubspec()
-        ..withIosProject()
-        ..withSharedScheme('dev',
-            launch: 'Debug-dev', archive: 'Release-dev');
-      stubBridge(
-        runner,
-        stubBridgeJson(
-          configurations: <String, String>{
-            'Debug': 'com.acme.app',
-            'Release': 'com.acme.app',
-            'Profile': 'com.acme.app',
-            'Debug-dev': r'com.acme.app$(MISSING_VAR)',
-            'Release-dev': r'com.acme.app$(MISSING_VAR)',
-            'Profile-dev': r'com.acme.app$(MISSING_VAR)',
-          },
-        ),
-      );
+    test(
+      'an unresolvable reference becomes an uncertainty, not a bad value',
+      () async {
+        project
+          ..withPubspec()
+          ..withIosProject()
+          ..withSharedScheme(
+            'dev',
+            launch: 'Debug-dev',
+            archive: 'Release-dev',
+          );
+        stubBridge(
+          runner,
+          stubBridgeJson(
+            configurations: <String, String>{
+              'Debug': 'com.acme.app',
+              'Release': 'com.acme.app',
+              'Profile': 'com.acme.app',
+              'Debug-dev': r'com.acme.app$(MISSING_VAR)',
+              'Release-dev': r'com.acme.app$(MISSING_VAR)',
+              'Profile-dev': r'com.acme.app$(MISSING_VAR)',
+            },
+          ),
+        );
 
-      final result = await inspect();
-      expect(
-        result.ios.applicationTarget!
-            .buildConfigurations['Release-dev']!
-            .bundleIdentifier,
-        isNull,
-        reason: 'must not report a half-substituted string as fact',
-      );
-      expect(
-        result.uncertainties.any(
-          (u) => u.reason.contains(r'$(MISSING_VAR)'),
-        ),
-        isTrue,
-      );
-    });
+        final result = await inspect();
+        expect(
+          result
+              .ios
+              .applicationTarget!
+              .buildConfigurations['Release-dev']!
+              .bundleIdentifier,
+          isNull,
+          reason: 'must not report a half-substituted string as fact',
+        );
+        expect(
+          result.uncertainties.any((u) => u.reason.contains(r'$(MISSING_VAR)')),
+          isTrue,
+        );
+      },
+    );
   });
 
   group('bridge failures degrade gracefully', () {
@@ -355,7 +386,8 @@ void main() {
       runner.stub(
         'xcodeproj_bridge.rb read',
         exitCode: 1,
-        stdout: '{"ok":false,"error":{"code":"gem_too_old",'
+        stdout:
+            '{"ok":false,"error":{"code":"gem_too_old",'
             '"message":"xcodeproj 1.22.0 is installed.",'
             '"remedy":"Run `gem update xcodeproj`."}}',
       );

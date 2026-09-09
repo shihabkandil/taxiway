@@ -1,6 +1,6 @@
 import '../core/model/android_model.dart';
 import '../core/model/uncertainty.dart';
-import 'gradle_scanner.dart';
+import '../core/gradle/gradle_scanner.dart';
 import 'gradle_values.dart';
 
 /// The result of a fast structural parse.

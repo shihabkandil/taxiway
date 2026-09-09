@@ -23,8 +23,10 @@ void main() {
   group('LockFile', () {
     test('treats an unheard-of file as unmanaged', () {
       final lock = LockFile.empty();
-      expect(lock.ownershipOf('android/app/build.gradle.kts'),
-          Ownership.unmanaged);
+      expect(
+        lock.ownershipOf('android/app/build.gradle.kts'),
+        Ownership.unmanaged,
+      );
       expect(lock.mayWrite('android/app/build.gradle.kts'), isFalse);
     });
 
@@ -109,15 +111,14 @@ void main() {
       final dir = await Directory.systemTemp.createTemp('taxiway_lock');
       addTearDown(() => dir.delete(recursive: true));
 
-      await (LockFile.empty()
-            ..record(
-              LockEntry(
-                path: 'p',
-                ownership: Ownership.adopted,
-                mode: WriteMode.block,
-                blockHash: ContentHash.of('body'),
-              ),
-            ))
+      await (LockFile.empty()..record(
+            LockEntry(
+              path: 'p',
+              ownership: Ownership.adopted,
+              mode: WriteMode.block,
+              blockHash: ContentHash.of('body'),
+            ),
+          ))
           .save(dir.path);
 
       expect(File(LockFile.pathFor(dir.path)).existsSync(), isTrue);
@@ -126,13 +127,15 @@ void main() {
       expect(loaded['p']!.blockHash, ContentHash.of('body'));
     });
 
-    test('loads an empty lockfile for a project taxiway has never touched',
-        () async {
-      final dir = await Directory.systemTemp.createTemp('taxiway_lock');
-      addTearDown(() => dir.delete(recursive: true));
-      final loaded = await LockFile.load(dir.path);
-      expect(loaded.files, isEmpty);
-    });
+    test(
+      'loads an empty lockfile for a project taxiway has never touched',
+      () async {
+        final dir = await Directory.systemTemp.createTemp('taxiway_lock');
+        addTearDown(() => dir.delete(recursive: true));
+        final loaded = await LockFile.load(dir.path);
+        expect(loaded.files, isEmpty);
+      },
+    );
   });
 
   group('ContentHash', () {

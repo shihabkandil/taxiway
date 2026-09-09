@@ -91,10 +91,10 @@ android {
   });
 
   Future<int> run(List<String> args) => TaxiwayCommandRunner(
-        logger: logger,
-        runner: runner,
-        workingDirectory: project.path,
-      ).run(<String>['--no-color', ...args]);
+    logger: logger,
+    runner: runner,
+    workingDirectory: project.path,
+  ).run(<String>['--no-color', ...args]);
 
   group('taxiway import', () {
     test('writes exactly one file and says so', () async {
