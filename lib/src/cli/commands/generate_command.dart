@@ -7,6 +7,7 @@ import '../../core/model/project_model.dart';
 import '../../generators/generator_registry.dart';
 import '../../inspect/xcodeproj_bridge.dart';
 import '../../platform/ios/info_plist_mutator.dart';
+import '../../platform/ios/legacy_xcconfig_cleanup.dart';
 import '../../platform/ios/xcode_project_mutator.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
@@ -101,10 +102,10 @@ class GenerateCommand extends Command<int> {
 
     final exit = _report(results_, dryRun: dryRun);
 
-    // The Xcode project is mutated after the generators, because the build
-    // configurations it creates point at xcconfigs the generators just wrote.
-    // Skipped when anything was blocked: half-configuring a project is worse
-    // than not touching it.
+    // The Xcode project is mutated after the generators, because the schemes
+    // they write name the build configurations this creates. Skipped when
+    // anything was blocked: half-configuring a project is worse than not
+    // touching it.
     if (_touchesIos(generators) && app.hasFlavors) {
       final mutation = await _configureXcodeProject(
         app,
@@ -121,7 +122,7 @@ class GenerateCommand extends Command<int> {
 
   /// True when the selected generators include anything iOS-shaped.
   bool _touchesIos(List<Generator> generators) =>
-      generators.any((g) => g.name == 'ios-schemes' || g.name == 'xcconfigs');
+      generators.any((g) => g.name == 'ios-schemes');
 
   /// Creates the `<BuildType>-<flavor>` configurations, points Info.plist at
   /// the display-name build setting, and adds the Firebase copy step — backing
@@ -161,10 +162,10 @@ class GenerateCommand extends Command<int> {
           ),
       ...XcodeProjectMutator.configurationsFor(
         app.flavors.map((f) => f.name),
-        xcconfigFor: (flavor) => 'Flutter/$flavor.xcconfig',
         bundleIdFor: (flavor) => app.flavor(flavor)?.iosBundleId,
         displayNameFor: (flavor) =>
             app.flavor(flavor)?.displayNameOr(app.projectName),
+        teamId: app.iosTeamId,
       ),
     ];
 
@@ -270,7 +271,39 @@ class GenerateCommand extends Command<int> {
         '"${baseDisplayName ?? app.projectName}".',
       );
     }
+
+    await _cleanUpLegacyXcconfigs(app);
     return mutation;
+  }
+
+  /// Deletes the per-flavor xcconfigs an earlier taxiway attached to the
+  /// flavored configurations, now that they are pointed back at the stock ones.
+  Future<void> _cleanUpLegacyXcconfigs(ResolvedApp app) async {
+    final context = _context;
+    final logger = context.logger;
+    final lock = await context.loadLockFile();
+
+    final result = await LegacyXcconfigCleanup.run(
+      root: context.projectRoot,
+      lock: lock,
+      flavors: app.flavors.map((f) => f.name),
+    );
+    if (result.isEmpty) return;
+
+    if (result.removed.isNotEmpty) {
+      await lock.save(context.projectRoot);
+      logger.info(
+        '  removed ${result.removed.join(', ')} — a flavor configuration now '
+        'inherits the same xcconfig its build type uses, so these were doing '
+        'nothing.',
+      );
+    }
+    for (final path in result.kept) {
+      logger.info(
+        '  $path is no longer referenced by any build configuration. taxiway '
+        'left it alone because you have edited it.',
+      );
+    }
   }
 
   /// Which plist each configuration should copy, keyed by configuration name.

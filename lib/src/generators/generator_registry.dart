@@ -16,7 +16,6 @@ abstract final class GeneratorRegistry {
   static const List<Generator> all = <Generator>[
     AndroidFlavorGenerator(),
     IosSchemeGenerator(),
-    XcconfigGenerator(),
     DartEntrypointGenerator(),
     DartDefinesGenerator(),
     GitignoreGenerator(),
@@ -27,14 +26,12 @@ abstract final class GeneratorRegistry {
     'flavors': <String>[
       'android-flavors',
       'ios-schemes',
-      'xcconfigs',
       'entrypoints',
       'dart-defines',
     ],
     'all': <String>[
       'android-flavors',
       'ios-schemes',
-      'xcconfigs',
       'entrypoints',
       'dart-defines',
       'gitignore',

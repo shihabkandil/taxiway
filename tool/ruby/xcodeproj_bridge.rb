@@ -246,6 +246,27 @@ def configure_project(project, request)
         changes << "#{candidate.name}/#{name} #{key}"
       end
 
+      # A flavor configuration must keep the base configuration of the build
+      # type it derives from — `Release-dev` reads `Release.xcconfig`, exactly
+      # as a hand-made flavor setup does. That file is what pulls in
+      # `Generated.xcconfig`, and with it FLUTTER_TARGET, DART_DEFINES and the
+      # version numbers; a configuration pointed anywhere else builds the
+      # default entrypoint with no defines and ships an Info.plist with no
+      # CFBundleVersion. Re-asserted on every run rather than only at creation,
+      # because taxiway used to attach a per-flavor xcconfig here and those
+      # projects have to be repaired.
+      if spec['inheritBaseConfiguration']
+        source = candidate.build_configuration_list
+                          .build_configurations
+                          .find { |c| c.name == based_on }
+        inherited = source&.base_configuration_reference
+        if !inherited.nil? && configuration.base_configuration_reference != inherited
+          configuration.base_configuration_reference = inherited
+          changes << "#{candidate.name}/#{name} xcconfig"
+        end
+        next
+      end
+
       xcconfig = spec['xcconfig']
       next if xcconfig.nil?
 

@@ -41,6 +41,7 @@ class DesiredConfiguration {
     required this.name,
     required this.basedOn,
     this.xcconfig,
+    this.inheritBaseConfiguration = false,
     this.buildSettings = const <String, String>{},
   });
 
@@ -53,6 +54,20 @@ class DesiredConfiguration {
   /// Path to the flavor's xcconfig, relative to `ios/`.
   final String? xcconfig;
 
+  /// Take the base configuration from [basedOn] rather than naming a file.
+  ///
+  /// The only correct choice for a flavor configuration. `Release-dev` must
+  /// read whatever `Release` reads — normally `ios/Flutter/Release.xcconfig`,
+  /// which is what includes `Generated.xcconfig` and, in a CocoaPods project,
+  /// the generated `Pods-Runner` config. Pointing it at a taxiway-written
+  /// xcconfig instead displaces all of that: the build loses FLUTTER_TARGET
+  /// and compiles `lib/main.dart` whatever `-t` said, loses every
+  /// `--dart-define`, and produces an Info.plist with no CFBundleVersion.
+  ///
+  /// Read from the project rather than assumed, because a project is free to
+  /// point `Profile` somewhere other than `Release.xcconfig`.
+  final bool inheritBaseConfiguration;
+
   /// Settings written onto the configuration itself.
   ///
   /// A target's own build settings take precedence over its base configuration,
@@ -63,6 +78,7 @@ class DesiredConfiguration {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'name': name,
     'basedOn': basedOn,
+    if (inheritBaseConfiguration) 'inheritBaseConfiguration': true,
     if (xcconfig != null) 'xcconfig': xcconfig,
     if (buildSettings.isNotEmpty) 'buildSettings': buildSettings,
   };
@@ -314,26 +330,30 @@ class XcodeProjectMutator {
   /// The configurations a set of flavors requires, paired with their xcconfigs.
   static List<DesiredConfiguration> configurationsFor(
     Iterable<String> flavors, {
-    String Function(String flavor)? xcconfigFor,
     String? Function(String flavor)? bundleIdFor,
     String? Function(String flavor)? displayNameFor,
+    String? teamId,
   }) => <DesiredConfiguration>[
     for (final flavor in flavors)
       for (final buildType in flutterBuildTypes)
         DesiredConfiguration(
           name: '$buildType-$flavor',
           basedOn: buildType,
-          xcconfig: xcconfigFor?.call(flavor),
+          // Never a taxiway-written xcconfig: see [inheritBaseConfiguration].
+          inheritBaseConfiguration: true,
+          // Everything per-flavor lives here, on the configuration itself.
+          // That is both what a target's own settings winning over its base
+          // configuration requires, and what a hand-made flavor setup does.
           buildSettings: <String, String>{
-            // Written onto the configuration itself, because a target's own
-            // settings win over its base configuration: a bundle id left only
-            // in the xcconfig builds under the unflavored id.
+            // A bundle id left only in an xcconfig builds under the
+            // unflavored id.
             if (bundleIdFor?.call(flavor) != null)
               'PRODUCT_BUNDLE_IDENTIFIER': bundleIdFor!(flavor)!,
             // Referenced by Info.plist, which is the only way the home-screen
             // name can vary per build configuration.
             if (displayNameFor?.call(flavor) != null)
               'APP_DISPLAY_NAME': displayNameFor!(flavor)!,
+            if (teamId != null) 'DEVELOPMENT_TEAM': teamId,
           },
         ),
   ];

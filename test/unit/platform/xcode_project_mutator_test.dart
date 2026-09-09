@@ -31,10 +31,7 @@ void main() {
   );
 
   List<DesiredConfiguration> devAndProd() =>
-      XcodeProjectMutator.configurationsFor(const <String>[
-        'dev',
-        'prod',
-      ], xcconfigFor: (flavor) => 'Flutter/$flavor.xcconfig');
+      XcodeProjectMutator.configurationsFor(const <String>['dev', 'prod']);
 
   group('configurationsFor', () {
     test('produces all three build types per flavor', () {
@@ -48,7 +45,29 @@ void main() {
         'Profile-prod',
       ]);
       expect(configurations.first.basedOn, 'Debug');
-      expect(configurations.first.xcconfig, 'Flutter/dev.xcconfig');
+    });
+
+    test('never attaches an xcconfig, and inherits the build type\'s', () {
+      // The whole point: `Release-dev` must read whatever `Release` reads, so
+      // that Generated.xcconfig — and with it FLUTTER_TARGET, the dart-defines
+      // and the version numbers — still reaches a flavored build.
+      for (final configuration in devAndProd()) {
+        expect(configuration.xcconfig, isNull);
+        expect(configuration.inheritBaseConfiguration, isTrue);
+        expect(configuration.toJson()['inheritBaseConfiguration'], isTrue);
+        expect(configuration.toJson().containsKey('xcconfig'), isFalse);
+      }
+    });
+
+    test('puts the team id on the configuration itself', () {
+      final configurations = XcodeProjectMutator.configurationsFor(
+        const <String>['dev'],
+        teamId: 'ABCDE12345',
+      );
+      expect(
+        configurations.first.buildSettings['DEVELOPMENT_TEAM'],
+        'ABCDE12345',
+      );
     });
   });
 
@@ -81,7 +100,7 @@ void main() {
       expect(configurations, hasLength(6));
       expect(configurations.first['name'], 'Debug-dev');
       expect(configurations.first['basedOn'], 'Debug');
-      expect(configurations.first['xcconfig'], 'Flutter/dev.xcconfig');
+      expect(configurations.first['inheritBaseConfiguration'], isTrue);
     });
 
     test(

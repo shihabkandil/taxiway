@@ -64,9 +64,7 @@ void main() {
   );
 
   List<DesiredConfiguration> devConfigurations() =>
-      XcodeProjectMutator.configurationsFor(const <String>[
-        'dev',
-      ], xcconfigFor: (flavor) => 'Flutter/$flavor.xcconfig');
+      XcodeProjectMutator.configurationsFor(const <String>['dev']);
 
   Future<Map<String, dynamic>> readProject() async {
     final result = await runner.run('ruby', <String>[
@@ -112,19 +110,81 @@ void main() {
     expect(after, containsAll(before));
   });
 
-  test('attaches the flavor xcconfig to the app target', () async {
+  test('a flavor configuration inherits its build type\'s xcconfig', () async {
     await mutator().configure(configurations: devConfigurations());
 
     final target = (await readProject())['targets'] as List<dynamic>;
     final runnerTarget = target.cast<Map<String, dynamic>>().firstWhere(
       (t) => t['name'] == 'Runner',
     );
-    final debugDev = (runnerTarget['buildConfigurations'] as List<dynamic>)
-        .cast<Map<String, dynamic>>()
-        .firstWhere((c) => c['name'] == 'Debug-dev');
+    Map<String, dynamic> configuration(String name) =>
+        (runnerTarget['buildConfigurations'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .firstWhere((c) => c['name'] == name);
 
-    expect(debugDev['baseConfigurationReference'], contains('dev.xcconfig'));
+    // `Release-dev` must read whatever `Release` reads. That file is what
+    // includes Generated.xcconfig, and with it FLUTTER_TARGET, the
+    // dart-defines and the version numbers; pointing it anywhere else builds
+    // lib/main.dart whatever `-t` said and ships an Info.plist with no
+    // CFBundleVersion.
+    for (final buildType in const <String>['Debug', 'Release', 'Profile']) {
+      expect(
+        configuration('$buildType-dev')['baseConfigurationReference'],
+        configuration(buildType)['baseConfigurationReference'],
+        reason: '$buildType-dev',
+      );
+    }
   });
+
+  test(
+    'repairs a project taxiway previously pointed at a flavor xcconfig',
+    () async {
+      // What an earlier taxiway wrote. Reproduced here rather than described,
+      // because the migration only matters for projects that already have it.
+      await mutator().configure(
+        configurations: <DesiredConfiguration>[
+          for (final buildType in const <String>['Debug', 'Release', 'Profile'])
+            DesiredConfiguration(
+              name: '$buildType-dev',
+              basedOn: buildType,
+              xcconfig: 'Flutter/dev.xcconfig',
+            ),
+        ],
+      );
+
+      Map<String, dynamic> runnerOf(Map<String, dynamic> project) =>
+          (project['targets'] as List<dynamic>)
+              .cast<Map<String, dynamic>>()
+              .firstWhere((t) => t['name'] == 'Runner');
+      String? baseOf(Map<String, dynamic> runner, String name) =>
+          (runner['buildConfigurations'] as List<dynamic>)
+                  .cast<Map<String, dynamic>>()
+                  .firstWhere(
+                    (c) => c['name'] == name,
+                  )['baseConfigurationReference']
+              as String?;
+
+      expect(
+        baseOf(runnerOf(await readProject()), 'Release-dev'),
+        contains('dev.xcconfig'),
+        reason: 'the broken state this migration exists to repair',
+      );
+
+      final result = await mutator().configure(
+        configurations: devConfigurations(),
+      );
+      expect(result.succeeded, isTrue, reason: result.failureReason);
+
+      final runner = runnerOf(await readProject());
+      for (final buildType in const <String>['Debug', 'Release', 'Profile']) {
+        expect(
+          baseOf(runner, '$buildType-dev'),
+          baseOf(runner, buildType),
+          reason: '$buildType-dev was not repointed at the stock xcconfig',
+        );
+      }
+    },
+  );
 
   test('adds one named run script phase and updates it in place', () async {
     await mutator().configure(

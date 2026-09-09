@@ -346,21 +346,19 @@ $flavors
       },
     );
 
-    test('an xcconfig per flavor carries its bundle id', () async {
+    test('no per-flavor xcconfig is written', () async {
       await run(<String>['import']);
       await run(<String>['adopt', 'all']);
       await run(<String>['generate']);
 
-      // The bundle id is documented here but assigned on the build
-      // configuration, because a target's own settings win over its xcconfig.
-      expect(
-        project.read('ios/Flutter/dev.xcconfig'),
-        contains('// configuration itself, and is com.acme.app.dev.'),
-      );
-      expect(
-        project.read('ios/Flutter/dev.xcconfig'),
-        contains('APP_DISPLAY_NAME = Acme Dev'),
-      );
+      // A flavored build configuration must keep the base configuration of the
+      // build type it derives from. Attaching one of taxiway's own here
+      // displaces ios/Flutter/Release.xcconfig, and with it the
+      // Generated.xcconfig that carries FLUTTER_TARGET, the dart-defines and
+      // the version numbers — so the build silently compiles lib/main.dart and
+      // ships an Info.plist with no CFBundleVersion.
+      expect(project.exists('ios/Flutter/dev.xcconfig'), isFalse);
+      expect(project.exists('ios/Flutter/prod.xcconfig'), isFalse);
     });
 
     test('the gitignore block covers every secret-bearing path', () async {

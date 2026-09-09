@@ -93,13 +93,22 @@ void main() {
           .cast<Map<String, dynamic>>()
           .firstWhere((t) => t['name'] == 'Runner');
 
-      for (final config
-          in (runnerTarget['buildConfigurations'] as List<dynamic>)
-              .cast<Map<String, dynamic>>()) {
+      final configurations =
+          (runnerTarget['buildConfigurations'] as List<dynamic>)
+              .cast<Map<String, dynamic>>();
+
+      // Read from the fixture rather than hardcoded, so pointing
+      // TAXIWAY_FIXTURE_APP at any `flutter create` app still exercises this.
+      final expected =
+          (configurations.first['buildSettings']
+              as Map<String, dynamic>)['PRODUCT_BUNDLE_IDENTIFIER'];
+      expect(expected, isA<String>().having((s) => s, 'id', contains('.')));
+
+      for (final config in configurations) {
         final settings = config['buildSettings'] as Map<String, dynamic>;
         expect(
           settings['PRODUCT_BUNDLE_IDENTIFIER'],
-          'com.example.demoApp',
+          expected,
           reason: 'configuration ${config['name']}',
         );
       }
