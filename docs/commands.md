@@ -270,6 +270,35 @@ signing for everyone using it, and every certificate spends one of a team's
 limited Apple allowance. `--create` changes the *advice* — it tells you the
 `fastlane match` command to run — not the safety.
 
+### `firebase`
+
+Correlates the config files already in the project with your flavors, reads the
+app id out of each, records the paths in `taxiway.yaml`, and puts the app ids
+where the resolver looks.
+
+```
+$ taxiway setup firebase
+
+  android  dev
+           android/app/src/dev/google-services.json
+           app id 1:111:android:aaa
+  ios      dev
+           ios/config/dev/GoogleService-Info.plist
+           app id 1:111:ios:bbb
+
+[WARN] flavor `prod` has no google-services.json, but `dev` does.
+  Add the missing google-services.json, or confirm those flavors are meant
+  to share one Firebase project.
+```
+
+That warning is the point of the command. A project with a config file for one
+flavor and not another builds fine and fails at runtime — or worse, reports to
+the wrong Firebase project.
+
+**It never downloads anything.** A `google-services.json` belongs to one
+specific Firebase app; a tool that fetched one would have to guess which, and
+guessing wrong surfaces as an app reporting to somebody else's analytics.
+
 ## `taxiway build`
 
 > Build a flavor for one platform.
@@ -474,6 +503,7 @@ cover.
 taxiway setup android-signing [--alias <name>] [--keystore <path>]
                               [--password-stdin]
 taxiway setup ios-signing [--match-url <url>] [--branch <name>] [--create]
+taxiway setup firebase
 ```
 
 Deliberately not part of `generate`. `generate` is idempotent and derivable —
@@ -602,7 +632,6 @@ Planned, and deliberately absent rather than half-present:
 
 | Command | Phase |
 |---|---|
-| `taxiway setup firebase` | 3 |
 | `taxiway release ios\|android --target testflight\|appstore\|play\|firebase` | 4 |
 | `taxiway run <pipeline>` | 5 |
 | `taxiway upgrade`, `taxiway completion install` | 6 |

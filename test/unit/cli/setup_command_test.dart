@@ -263,6 +263,154 @@ apps:
     });
   });
 
+  group('firebase', () {
+    void firebaseConfig() {
+      project.write('taxiway.yaml', '''
+version: 1
+project:
+  name: acme_app
+apps:
+  main:
+    path: .
+    android:
+      application_id: com.acme.app
+    ios:
+      bundle_id: com.acme.app
+    flavors:
+      dev:
+        suffix: .dev
+      prod:
+        suffix: ""
+    targets:
+      firebase:
+        android_app_id_ref: FB_ANDROID_APP_ID
+        ios_app_id_ref: FB_IOS_APP_ID
+''');
+    }
+
+    void placeAndroid(String flavor, String appId) => project.write(
+      'android/app/src/$flavor/google-services.json',
+      '{"project_info":{"project_id":"acme"},'
+          '"client":[{"client_info":{"mobilesdk_app_id":"$appId",'
+          '"android_client_info":{"package_name":"com.acme.app.$flavor"}}}]}',
+    );
+
+    void placeIos(String flavor, String appId) => project.write(
+      'ios/config/$flavor/GoogleService-Info.plist',
+      '<?xml version="1.0" encoding="UTF-8"?>'
+          '<plist version="1.0"><dict>'
+          '<key>BUNDLE_ID</key><string>com.acme.app.$flavor</string>'
+          '<key>GOOGLE_APP_ID</key><string>$appId</string>'
+          '<key>PROJECT_ID</key><string>acme</string>'
+          '</dict></plist>',
+    );
+
+    setUp(firebaseConfig);
+
+    test('says what to download when there is nothing to find', () async {
+      final code = await run(<String>['setup', 'firebase']);
+      expect(code, TaxiwayExit.environmentError);
+      // The paths matter more than the advice: this is the one thing a reader
+      // cannot guess.
+      expect(logger.output, contains('android/app/src/<flavor>'));
+      expect(logger.output, contains('ios/config/<flavor>'));
+    });
+
+    test('correlates each file with its flavor', () async {
+      placeAndroid('dev', '1:111:android:aaa');
+      placeIos('dev', '1:111:ios:bbb');
+
+      final code = await run(<String>['setup', 'firebase']);
+
+      expect(code, TaxiwayExit.success);
+      expect(logger.output, contains('1:111:android:aaa'));
+      expect(logger.output, contains('1:111:ios:bbb'));
+    });
+
+    test('warns when one flavor has a file and another does not', () async {
+      // Builds fine, fails at runtime, reporting to the wrong project — which
+      // is exactly the kind of thing that should be said out loud.
+      placeAndroid('dev', '1:111:android:aaa');
+
+      await run(<String>['setup', 'firebase']);
+
+      expect(logger.output, contains('prod'));
+      expect(logger.output, contains('google-services.json'));
+    });
+
+    test('records the paths in taxiway.yaml', () async {
+      placeAndroid('dev', '1:111:android:aaa');
+      placeIos('dev', '1:111:ios:bbb');
+
+      await run(<String>['setup', 'firebase']);
+
+      final written = project.read('taxiway.yaml');
+      expect(
+        written,
+        contains('android: android/app/src/dev/google-services.json'),
+      );
+      expect(written, contains('ios: ios/config/dev/GoogleService-Info.plist'));
+    });
+
+    test('a path the config already records is left alone', () async {
+      // A team that put these somewhere unusual and wrote it down keeps their
+      // answer.
+      project.write('taxiway.yaml', '''
+version: 1
+project:
+  name: acme_app
+apps:
+  main:
+    path: .
+    flavors:
+      dev:
+        suffix: .dev
+        firebase:
+          android: somewhere/else/google-services.json
+''');
+      placeAndroid('dev', '1:111:android:aaa');
+
+      await run(<String>['setup', 'firebase']);
+
+      expect(
+        project.read('taxiway.yaml'),
+        contains('somewhere/else/google-services.json'),
+      );
+    });
+
+    test('stores the app ids under the names the config uses', () async {
+      placeAndroid('dev', '1:111:android:aaa');
+      placeIos('dev', '1:111:ios:bbb');
+
+      await run(<String>['setup', 'firebase']);
+
+      final stored = runner.invocations.where(
+        (i) => i.commandLine.contains('add-generic-password'),
+      );
+      expect(stored, isNotEmpty);
+      expect(
+        stored.map((i) => i.arguments.join(' ')).join('\n'),
+        allOf(contains('FB_ANDROID_APP_ID'), contains('FB_IOS_APP_ID')),
+      );
+    });
+
+    test('it never downloads anything', () async {
+      placeAndroid('dev', '1:111:android:aaa');
+
+      await run(<String>['setup', 'firebase']);
+
+      // A google-services.json belongs to one Firebase app. Fetching the wrong
+      // one surfaces as an app reporting to somebody else's analytics.
+      for (final invocation in runner.invocations) {
+        expect(
+          invocation.executable,
+          isNot(anyOf('firebase', 'flutterfire', 'curl')),
+          reason: invocation.commandLine,
+        );
+      }
+    });
+  });
+
   group('android-signing', () {
     test(
       'the password reaches keytool on stdin, never as an argument',

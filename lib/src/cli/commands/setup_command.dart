@@ -9,6 +9,9 @@ import 'package:path/path.dart' as p;
 import '../../core/config/config_patch.dart';
 import '../../core/config/taxiway_config.dart';
 import '../../platform/android/keystore_creator.dart';
+import '../../core/model/firebase_model.dart';
+import '../../core/secrets/secret_names.dart';
+import '../../inspect/firebase_inspector.dart';
 import '../../platform/ios/match_repository.dart';
 import '../../secrets/secret_store.dart';
 import '../exit_codes.dart';
@@ -75,6 +78,7 @@ class SetupCommand extends Command<int> {
   static const List<String> actions = <String>[
     'android-signing',
     'ios-signing',
+    'firebase',
   ];
 
   @override
@@ -103,9 +107,194 @@ class SetupCommand extends Command<int> {
     }
 
     final config = await _context.requireConfig();
-    return action == 'ios-signing'
-        ? _iosSigning(results, config)
-        : _androidSigning(results, config);
+    return switch (action) {
+      'ios-signing' => _iosSigning(results, config),
+      'firebase' => _firebase(config),
+      _ => _androidSigning(results, config),
+    };
+  }
+
+  /// `taxiway setup firebase` — correlate the config files with flavors and
+  /// record what they say.
+  ///
+  /// The tedious part of Firebase is not downloading the files, it is knowing
+  /// which flavor each belongs to and finding the app id inside one to paste
+  /// somewhere else. Both are already in the files, so taxiway reads them
+  /// rather than asking.
+  ///
+  /// It never downloads anything. A `google-services.json` comes from the
+  /// Firebase console for a specific app, and a tool that fetched one would
+  /// have to pick which — silently choosing the wrong project is a mistake that
+  /// surfaces as an app reporting to somebody else's analytics.
+  Future<int> _firebase(TaxiwayConfig config) async {
+    final context = _context;
+    final logger = context.logger;
+
+    final appId = context.appId ?? config.defaultAppId;
+    final app = config.appOrNull(appId);
+    if (app == null) {
+      logger.err('No app to set up. Check `apps:` in taxiway.yaml.');
+      return TaxiwayExit.userError;
+    }
+
+    final result = await const FirebaseInspector().inspect(
+      context.projectRoot,
+      flavors: app.flavors.keys.toSet(),
+    );
+    final files = result.firebase.configFiles;
+
+    if (files.isEmpty) {
+      logger
+        ..err('No Firebase configuration files in this project.')
+        ..info(
+          'Download google-services.json and GoogleService-Info.plist from '
+          'the Firebase console for each flavor, then put them where the '
+          'build looks:',
+        )
+        ..info('  android/app/src/<flavor>/google-services.json')
+        ..info('  ios/config/<flavor>/GoogleService-Info.plist')
+        ..info('')
+        ..info('Re-run this and taxiway will wire them up.');
+      return TaxiwayExit.environmentError;
+    }
+
+    logger.info('');
+    for (final file in files) {
+      final flavor = _flavorFor(file, app);
+      final label = flavor ?? darkGray.wrap('unflavored') ?? 'unflavored';
+      logger
+        ..info('  ${file.platform.padRight(8)} $label')
+        ..info('           ${darkGray.wrap(file.path) ?? file.path}');
+      final id = file.appId;
+      if (id != null) {
+        logger.info('           ${darkGray.wrap('app id $id') ?? id}');
+      }
+    }
+
+    // The inspector already knows which flavor has a config file on one
+    // platform and not the other — a project that builds fine and fails at
+    // runtime.
+    for (final uncertainty in result.uncertainties) {
+      logger
+        ..info('')
+        ..warn(uncertainty.reason)
+        ..info('  ${uncertainty.remedy}');
+    }
+
+    _recordFirebaseInConfig(appId: appId!, app: app, files: files);
+    logger
+      ..info('')
+      ..info('Recorded the paths in taxiway.yaml.');
+
+    // The app ids are not secret — they are compiled into the app — but the
+    // lanes read them by name, so putting them where the resolver looks is
+    // what makes `secrets check` answerable without a trip to the console.
+    final stored = await _storeFirebaseAppIds(app, files);
+    if (stored.isNotEmpty) {
+      logger.info('Stored ${stored.join(' and ')} in the login keychain.');
+    }
+
+    logger
+      ..info('')
+      ..info('Next:')
+      ..info('  taxiway generate          — the run script that copies these')
+      ..info(
+        '  taxiway secrets check     — the service account is still needed',
+      )
+      ..info('')
+      ..info(
+        'Firebase App Distribution needs a service-account JSON, not the '
+        'deprecated CI token. Create one in the Google Cloud console and '
+        'point ${SecretNames.firebaseServiceAccountPath} at it.',
+      );
+    return TaxiwayExit.success;
+  }
+
+  /// Which flavor a config file belongs to, by the directory it sits in.
+  static String? _flavorFor(FirebaseConfigFile file, AppConfig app) {
+    final sourceSet = file.sourceSet;
+    if (sourceSet == null) return null;
+    return app.flavors.keys
+            .firstWhere((flavor) => flavor == sourceSet, orElse: () => '')
+            .isEmpty
+        ? null
+        : sourceSet;
+  }
+
+  void _recordFirebaseInConfig({
+    required String appId,
+    required AppConfig app,
+    required List<FirebaseConfigFile> files,
+  }) {
+    final values = <List<String>, Object?>{};
+    for (final flavor in app.flavors.keys) {
+      for (final platform in const <String>['android', 'ios']) {
+        // Only what the config does not already say: a team that placed these
+        // somewhere unusual and wrote it down keeps their answer.
+        final existing = platform == 'android'
+            ? app.flavors[flavor]?.firebase?.android
+            : app.flavors[flavor]?.firebase?.ios;
+        if (existing != null) continue;
+
+        final match = files.where(
+          (f) => f.platform == platform && f.sourceSet == flavor,
+        );
+        if (match.isEmpty) continue;
+        values[<String>[
+              'apps',
+              appId,
+              'flavors',
+              flavor,
+              'firebase',
+              platform,
+            ]] =
+            match.first.path;
+      }
+    }
+    if (values.isEmpty) return;
+
+    final file = _context.configFile;
+    if (file == null) return;
+    file.writeAsStringSync(ConfigPatch.setAll(file.readAsStringSync(), values));
+  }
+
+  /// Puts the app ids where the resolver looks, under the names the config
+  /// already uses.
+  Future<List<String>> _storeFirebaseAppIds(
+    AppConfig app,
+    List<FirebaseConfigFile> files,
+  ) async {
+    final target = app.targets.firebase;
+    if (target == null || !_context.host.hasSecurityKeychain) {
+      return const <String>[];
+    }
+
+    final store = SecretStore(
+      runner: _context.runner,
+      redactor: _context.redactor,
+      host: _context.host,
+    );
+
+    final stored = <String>[];
+    Future<void> put(String? ref, String platform) async {
+      if (ref == null) return;
+      final id = files
+          .where((f) => f.platform == platform && f.appId != null)
+          .map((f) => f.appId!)
+          .firstOrNull;
+      if (id == null) return;
+      try {
+        await store.set(ref, id);
+        stored.add(ref);
+      } on SecretStoreFailure {
+        // Not fatal: the paths are recorded and the id is in the file. A
+        // keychain that refuses is a worse reason to fail than to mention.
+      }
+    }
+
+    await put(target.androidAppIdRef, 'android');
+    await put(target.iosAppIdRef, 'ios');
+    return stored;
   }
 
   /// `taxiway setup ios-signing` — adopt a certificates repository.
