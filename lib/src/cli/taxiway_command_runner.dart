@@ -6,11 +6,13 @@ import 'package:mason_logger/mason_logger.dart';
 
 import '../core/config/config_exception.dart';
 import '../core/io/process_runner.dart';
+import '../core/env/run_environment.dart';
 import '../core/io/redactor.dart';
 import '../core/managed/managed_block.dart';
 import '../version.dart';
 import 'commands/adopt_command.dart';
 import 'commands/build_command.dart';
+import 'commands/secrets_command.dart';
 import 'commands/doctor_command.dart';
 import 'commands/generate_command.dart';
 import 'commands/import_command.dart';
@@ -59,6 +61,14 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
         'app',
         help: 'Which app in a monorepo to act on.',
         valueHelp: 'id',
+      )
+      ..addOption(
+        'env',
+        help:
+            'Where this is running. Decides which sources secrets may come '
+            'from, and whether taxiway may prompt. Detected when omitted.',
+        allowed: RunEnvironment.flagNames,
+        valueHelp: 'name',
       );
 
     addCommand(DoctorCommand(() => context));
@@ -68,6 +78,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
     addCommand(GenerateCommand(() => context));
     addCommand(AdoptCommand(() => context));
     addCommand(BuildCommand(() => context));
+    addCommand(SecretsCommand(() => context));
   }
 
   final Logger _logger;
@@ -144,6 +155,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
       appId: results['app'] as String?,
       verbose: verbose,
       assumeYes: results['yes'] as bool,
+      environmentFlag: results['env'] as String?,
     );
   }
 }

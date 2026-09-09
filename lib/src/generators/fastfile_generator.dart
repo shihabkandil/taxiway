@@ -1,4 +1,5 @@
 import '../core/config/taxiway_config.dart';
+import '../core/secrets/secret_names.dart';
 import 'fastlane_ruby.dart';
 import 'generated_file.dart';
 
@@ -113,7 +114,7 @@ end
 $auth
   desc "Sync signing certificates and profiles via match"
   lane :certificates do |options|
-    require_env("MATCH_PASSWORD")
+    require_env("${SecretNames.matchPassword}")
     setup_ci if is_ci
 
     sync_code_signing(
@@ -174,7 +175,7 @@ $auth
       # Also required, and only for this shape: an archive built with
       # --no-codesign records an empty Team, so export has none to infer and
       # fails with "exportArchive No Team Found in Archive".
-      export_team_id: ${teamId == null ? 'ENV.fetch("DEVELOPER_PORTAL_TEAM_ID")' : 'ENV.fetch("DEVELOPER_PORTAL_TEAM_ID", "$teamId")'},
+      export_team_id: ${teamId == null ? 'ENV.fetch("${SecretNames.developerPortalTeamId}")' : 'ENV.fetch("${SecretNames.developerPortalTeamId}", "$teamId")'},
       export_method: "app-store",
       export_options: {
         provisioningProfiles: { config[:bundle_id] => profile }

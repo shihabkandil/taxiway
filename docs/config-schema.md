@@ -92,6 +92,9 @@ secrets:
 
 notify:
   slack_webhook_ref: SLACK_WEBHOOK
+
+ci:
+  environment: persistent      # workstation | ci | persistent
 ```
 
 ## Minimal valid config

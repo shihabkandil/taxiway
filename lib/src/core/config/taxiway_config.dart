@@ -15,6 +15,7 @@ class TaxiwayConfig {
     required this.apps,
     this.secrets = const SecretsConfig(),
     this.notify = const NotifyConfig(),
+    this.ci = const CiConfig(),
   });
 
   factory TaxiwayConfig.fromJson(Map<dynamic, dynamic> json) =>
@@ -35,6 +36,7 @@ class TaxiwayConfig {
 
   final SecretsConfig secrets;
   final NotifyConfig notify;
+  final CiConfig ci;
 
   /// The app to act on when `--app` is not given.
   ///
@@ -507,6 +509,25 @@ class SecretsConfig {
   final bool keychain;
 
   Map<String, dynamic> toJson() => _$SecretsConfigToJson(this);
+}
+
+/// How this project is built when it is not being built on a laptop.
+@JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
+class CiConfig {
+  const CiConfig({this.environment});
+
+  factory CiConfig.fromJson(Map<dynamic, dynamic> json) =>
+      _$CiConfigFromJson(json);
+
+  /// `workstation`, `ci` or `persistent`.
+  ///
+  /// A team default for machines whose shape taxiway cannot detect — most
+  /// usefully a self-hosted runner, which looks identical to a hosted one from
+  /// inside. Overridden by `--env` and `TAXIWAY_ENV`, and left unset by
+  /// `import`, which has no way to know.
+  final String? environment;
+
+  Map<String, dynamic> toJson() => _$CiConfigToJson(this);
 }
 
 @JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)

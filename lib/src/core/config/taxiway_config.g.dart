@@ -11,7 +11,14 @@ TaxiwayConfig _$TaxiwayConfigFromJson(
 ) => $checkedCreate('TaxiwayConfig', json, ($checkedConvert) {
   $checkKeys(
     json,
-    allowedKeys: const ['version', 'project', 'apps', 'secrets', 'notify'],
+    allowedKeys: const [
+      'version',
+      'project',
+      'apps',
+      'secrets',
+      'notify',
+      'ci',
+    ],
   );
   final val = TaxiwayConfig(
     version: $checkedConvert('version', (v) => (v as num).toInt()),
@@ -29,6 +36,10 @@ TaxiwayConfig _$TaxiwayConfigFromJson(
       'notify',
       (v) => v == null ? const NotifyConfig() : NotifyConfig.fromJson(v as Map),
     ),
+    ci: $checkedConvert(
+      'ci',
+      (v) => v == null ? const CiConfig() : CiConfig.fromJson(v as Map),
+    ),
   );
   return val;
 });
@@ -40,6 +51,7 @@ Map<String, dynamic> _$TaxiwayConfigToJson(TaxiwayConfig instance) =>
       'apps': instance.apps.map((k, e) => MapEntry(k, e.toJson())),
       'secrets': instance.secrets.toJson(),
       'notify': instance.notify.toJson(),
+      'ci': instance.ci.toJson(),
     };
 
 ProjectConfig _$ProjectConfigFromJson(Map json) =>
@@ -656,6 +668,19 @@ SecretsConfig _$SecretsConfigFromJson(Map json) => $checkedCreate(
 
 Map<String, dynamic> _$SecretsConfigToJson(SecretsConfig instance) =>
     <String, dynamic>{'dotenv': instance.dotenv, 'keychain': instance.keychain};
+
+CiConfig _$CiConfigFromJson(Map json) =>
+    $checkedCreate('CiConfig', json, ($checkedConvert) {
+      $checkKeys(json, allowedKeys: const ['environment']);
+      final val = CiConfig(
+        environment: $checkedConvert('environment', (v) => v as String?),
+      );
+      return val;
+    });
+
+Map<String, dynamic> _$CiConfigToJson(CiConfig instance) => <String, dynamic>{
+  'environment': ?instance.environment,
+};
 
 NotifyConfig _$NotifyConfigFromJson(Map json) =>
     $checkedCreate('NotifyConfig', json, ($checkedConvert) {

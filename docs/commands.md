@@ -40,6 +40,7 @@ Accepted before any command.
 | `-y, --yes` | Assume yes for every prompt. Implies non-interactive. |
 | `--config=<path>` | Use this `taxiway.yaml` instead of searching for one. |
 | `--app=<id>` | Which app in a monorepo to act on. |
+| `--env=<name>` | `workstation`, `ci` or `persistent`. Decides which sources secrets may come from and whether taxiway may prompt. Detected when omitted; also settable as `TAXIWAY_ENV` or `ci.environment`. |
 
 ## Exit codes
 
@@ -267,6 +268,64 @@ under gym, so it can only be found by globbing `build/ios/ipa/*.ipa`. Since
 taxiway varies only `CFBundleDisplayName` per flavor, every flavor exports to
 the same filename — which is why the generated lanes accept only an `.ipa`
 written after their own build began.
+
+## `taxiway secrets`
+
+> Show which credentials this project needs, and whether they are set.
+
+```
+taxiway secrets list|check [--json] [--flavor <f>]
+```
+
+`list` reports; `check` exits `2` when a required credential is missing. Run
+`check` as the first step of a CI job and a twenty-minute build that dies at the
+upload becomes a five-second failure that names the variable.
+
+**Neither ever prints a value.** That is a property of the types rather than of
+care: the resolver returns a status carrying a *source*, and is never handed a
+secret to leak.
+
+```
+$ taxiway secrets check --env ci
+
+Environment: ci (from --env). Looking in: environment.
+
+  missing ASC_KEY_P8_BASE64
+          signing.ios.api_key.p8_ref
+  no file PLAY_SERVICE_ACCOUNT_JSON_PATH
+          the play lane
+          names play.json, which does not exist
+       ok MATCH_PASSWORD
+          the certificates lane — found in environment
+
+1 of 3 resolved.
+```
+
+A variable naming a file that is not there is reported as missing, because it
+is the same failure as being unset — only found twenty minutes later.
+
+The list is derived from `taxiway.yaml`: every `*_ref` field names a credential,
+so the config is the single source of truth for what a project needs. A test
+asserts the names checked here are the ones the generated lanes actually read —
+a pre-flight that checks a different name than the lane reads is worse than
+none, because it reports green and the build still fails.
+
+### Where secrets are looked for
+
+The chain depends on `--env`, because a prompt on a build machine is a hang, and
+a hang is worse than a failure:
+
+| Environment | Chain |
+|---|---|
+| `workstation` | environment → `.env` → keychain → prompt |
+| `ci` (hosted runner) | environment |
+| `persistent` (self-hosted, Mac mini) | environment → `.env` |
+
+The login keychain is deliberately absent off the workstation: on a headless Mac
+it may not be unlocked after a reboot, and depending on it is what makes
+self-hosted builders fail in ways that look like signing problems.
+
+See [`execution-environments.md`](execution-environments.md).
 
 ## Generated fastlane lanes
 

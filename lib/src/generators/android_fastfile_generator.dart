@@ -1,4 +1,5 @@
 import '../core/config/taxiway_config.dart';
+import '../core/secrets/secret_names.dart';
 import 'fastlane_ruby.dart';
 import 'generated_file.dart';
 
@@ -20,13 +21,13 @@ class AndroidFastfileGenerator extends Generator {
   static const String path = 'android/fastlane/Fastfile';
 
   /// The environment variable naming the Play service-account JSON.
-  static const String playKeyEnv = 'PLAY_SERVICE_ACCOUNT_JSON_PATH';
+  static const String playKeyEnv = SecretNames.playServiceAccountPath;
 
   /// The environment variable naming the Firebase service-account JSON.
   ///
   /// A file path rather than the deprecated CI token: Firebase App
   /// Distribution rejects refresh-token auth now.
-  static const String firebaseKeyEnv = 'FIREBASE_SERVICE_ACCOUNT_JSON_PATH';
+  static const String firebaseKeyEnv = SecretNames.firebaseServiceAccountPath;
 
   @override
   bool owns(String path) => path == AndroidFastfileGenerator.path;

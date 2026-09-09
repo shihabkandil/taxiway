@@ -4,6 +4,7 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as p;
 
 import '../core/config/config_exception.dart';
+import '../core/env/run_environment.dart';
 import '../core/config/config_loader.dart';
 import '../core/config/taxiway_config.dart';
 import '../core/io/process_runner.dart';
@@ -31,8 +32,11 @@ class RunContext {
     required this.appId,
     required this.verbose,
     required this.assumeYes,
+    this.environmentFlag,
+    Map<String, String>? processEnvironment,
     DateTime? now,
-  }) : now = now ?? DateTime.now();
+  }) : now = now ?? DateTime.now(),
+       _processEnvironment = processEnvironment ?? Platform.environment;
 
   final Logger logger;
   final Redactor redactor;
@@ -53,6 +57,25 @@ class RunContext {
   final bool assumeYes;
 
   final DateTime now;
+
+  /// `--env`, when given.
+  final String? environmentFlag;
+
+  final Map<String, String> _processEnvironment;
+
+  /// Where taxiway is running, resolved once.
+  ///
+  /// Explicit answers win over detection, because being wrong is expensive
+  /// both ways: prompting on a runner hangs the job, and creating throwaway
+  /// keychains on a laptop is rude. Read lazily so a command that needs no
+  /// config does not pay for loading one.
+  ResolvedEnvironment get environment =>
+      _environment ??= EnvironmentDetector.resolve(
+        flag: environmentFlag,
+        configured: _config?.ci.environment,
+        environment: _processEnvironment,
+      );
+  ResolvedEnvironment? _environment;
 
   TaxiwayConfig? _config;
   bool _configLoaded = false;
