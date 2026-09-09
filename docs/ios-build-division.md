@@ -196,7 +196,13 @@ runtime, from `SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING`, and gym's
 `export_options:` takes it directly. A static `ExportOptions-<flavor>.plist` has
 to have the name written into it ahead of time.
 
-Which taxiway generates is still open.
+**Decision: taxiway generates A by default, and supports B behind a config
+switch.** A is the smaller thing to get right and matches the plan, so it is
+what an unconfigured project gets. B stays reachable — for a `match` setup the
+runtime profile mapping is genuinely more robust than a name written into a
+plist ahead of time, and that is not a trade-off to make on a team's behalf. The
+field lands with the fastlane generators; until then this is the record of the
+decision, not of an implemented feature.
 
 ## What the Android side does
 
