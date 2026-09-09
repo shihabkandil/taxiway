@@ -328,6 +328,8 @@ rollout management are Phase 4.
 - [`config-schema.md`](config-schema.md) — every `taxiway.yaml` field.
 - [`ios-build-division.md`](ios-build-division.md) — who builds the iOS archive,
   and why gym must not.
+- [`execution-environments.md`](execution-environments.md) — how Phase 3 is
+  designed to run on a laptop, a hosted runner and a self-hosted Mac alike.
 - [`orphan-cleanup.md`](orphan-cleanup.md) — how files the config no longer
   describes are removed without deleting anybody's work.
 - [`deviations.md`](deviations.md) — where the built thing differs from the plan,
