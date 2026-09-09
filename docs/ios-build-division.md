@@ -196,13 +196,28 @@ runtime, from `SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING`, and gym's
 `export_options:` takes it directly. A static `ExportOptions-<flavor>.plist` has
 to have the name written into it ahead of time.
 
-**Decision: taxiway generates A by default, and supports B behind a config
-switch.** A is the smaller thing to get right and matches the plan, so it is
-what an unconfigured project gets. B stays reachable — for a `match` setup the
-runtime profile mapping is genuinely more robust than a name written into a
-plist ahead of time, and that is not a trade-off to make on a team's behalf. The
-field lands with the fastlane generators; until then this is the record of the
-decision, not of an implemented feature.
+**Decision: taxiway generates B by default, and supports A behind
+`ios.export`.** B is what a real shipping project uses, and its advantage is the
+one that matters in practice — under `match` the profile name exists only at
+lane runtime, so a name written into a plist in advance is silently wrong the
+day match's naming changes. gym also emits the dSYM zip the crash-report upload
+wants. A stays available for teams who would rather not have gym in the build
+lane at all.
+
+Two things only surfaced by running the generated lane, not by reading it:
+
+- **B must pass `export_team_id`.** An archive built with `--no-codesign`
+  records an empty `Team`, so export has none to infer:
+  `error: exportArchive No Team Found in Archive`. Shape A never hits this, and
+  neither does the real project above, because its archive is signed.
+- **gym requires `scheme:` even when it only exports.** Without it, a project
+  with more than one scheme prompts `Ambiguous choice` and a non-interactive
+  run hangs forever rather than failing.
+
+taxiway generates `flutter build ipa --no-codesign` for B rather than letting
+Flutter export and then exporting again, as the real project does. The second
+export is the one that counts, and the first costs a signing round trip and
+fails outright before any distribution profile is installed.
 
 ## What the Android side does
 
