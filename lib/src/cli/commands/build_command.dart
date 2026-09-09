@@ -94,8 +94,11 @@ class BuildCommand extends Command<int> {
       return TaxiwayExit.userError;
     }
 
-    if (platform == 'ios' && !Platform.isMacOS) {
-      logger.err('An iOS build needs macOS.');
+    if (platform == 'ios' && !context.host.canBuildIos) {
+      logger.err(
+        'An iOS build needs macOS; this is ${context.host.label}. '
+        '`taxiway build android` works here.',
+      );
       return TaxiwayExit.environmentError;
     }
 

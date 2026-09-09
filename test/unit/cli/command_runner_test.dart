@@ -1,6 +1,7 @@
 import 'package:mason_logger/mason_logger.dart';
 import 'package:taxiway/src/cli/exit_codes.dart';
 import 'package:taxiway/src/cli/taxiway_command_runner.dart';
+import 'package:taxiway/src/core/env/host_platform.dart';
 import 'package:taxiway/src/version.dart';
 import 'package:test/test.dart';
 
@@ -33,11 +34,13 @@ void main() {
   late _CapturingLogger logger;
   late RecordingProcessRunner runner;
 
-  TaxiwayCommandRunner build({String? cwd}) => TaxiwayCommandRunner(
-    logger: logger,
-    runner: runner,
-    workingDirectory: cwd ?? '.',
-  );
+  TaxiwayCommandRunner build({String? cwd, HostPlatform? host}) =>
+      TaxiwayCommandRunner(
+        logger: logger,
+        runner: runner,
+        workingDirectory: cwd ?? '.',
+        host: host,
+      );
 
   setUp(() {
     logger = _CapturingLogger();
@@ -148,5 +151,20 @@ void main() {
         expect(logger.output, contains('Ruby'));
       },
     );
+  });
+
+  group('a machine that cannot build iOS', () {
+    test('refuses `build ios` and names what it can build', () async {
+      // The refusal has to arrive before anything slow, and it has to say
+      // where to go next: "needs macOS" alone leaves someone on a Linux
+      // builder wondering whether taxiway is any use to them.
+      final code = await build(
+        host: HostPlatform.linux,
+      ).run(<String>['build', 'ios']);
+
+      expect(code, TaxiwayExit.environmentError);
+      expect(logger.output, contains('Linux'));
+      expect(logger.output, contains('taxiway build android'));
+    });
   });
 }

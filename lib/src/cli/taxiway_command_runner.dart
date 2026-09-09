@@ -4,6 +4,7 @@ import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 
+import '../core/env/host_platform.dart';
 import '../core/config/config_exception.dart';
 import '../core/io/process_runner.dart';
 import '../core/env/run_environment.dart';
@@ -32,10 +33,12 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
     ProcessRunner? runner,
     Redactor? redactor,
     String? workingDirectory,
+    HostPlatform? host,
   }) : _logger = logger ?? Logger(),
        _redactor = redactor ?? Redactor(),
        _injectedRunner = runner,
        _workingDirectory = workingDirectory ?? Directory.current.path,
+       _host = host ?? HostPlatform.current,
        super('taxiway', 'Local-first CI/CD for Flutter apps.') {
     argParser
       ..addFlag(
@@ -86,6 +89,9 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
   final ProcessRunner? _injectedRunner;
   final String _workingDirectory;
 
+  /// Injected so the Linux refusals can be exercised from a Mac.
+  final HostPlatform _host;
+
   /// The context before global flags are parsed. Commands never capture this
   /// directly; they resolve through [context] at run time.
   late final RunContext _initialContext = RunContext(
@@ -97,6 +103,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
     appId: null,
     verbose: false,
     assumeYes: false,
+    host: _host,
   );
 
   /// The context commands act on. Replaced once globals are parsed.
@@ -156,6 +163,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
       verbose: verbose,
       assumeYes: results['yes'] as bool,
       environmentFlag: results['env'] as String?,
+      host: _host,
     );
   }
 }

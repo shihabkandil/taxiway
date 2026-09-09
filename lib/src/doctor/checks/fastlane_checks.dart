@@ -47,8 +47,9 @@ class FastlaneShimCheck extends Check {
 
   @override
   Future<CheckResult> run(DoctorContext context) async {
-    if (!context.hasIos) {
-      return const CheckResult.skip('No ios/ directory.');
+    final directory = context.fastlaneDirectory;
+    if (directory == null) {
+      return const CheckResult.skip('No ios/ or android/ directory.');
     }
 
     final which = await context.runner.run('which', const <String>['fastlane']);
@@ -83,8 +84,8 @@ class FastlaneShimCheck extends Check {
       'The fastlane at $path is a wrapper script that overrides GEM_HOME, so '
       '`bundle exec fastlane` will not use the version your Gemfile pins.',
       fixHint:
-          'Run it through a binstub instead: `cd ios && bundle binstubs '
-          'fastlane` then `./bin/fastlane <lane>`.',
+          'Run it through a binstub instead: `cd $directory && bundle '
+          'binstubs fastlane` then `./bin/fastlane <lane>`.',
     );
   }
 }
@@ -104,13 +105,17 @@ class GemfileSolvableCheck extends Check {
 
   @override
   Future<CheckResult> run(DoctorContext context) async {
-    if (!context.hasIos) {
-      return const CheckResult.skip('No ios/ directory.');
+    // The bundle that matters is the one a lane here would actually install:
+    // ios/ where iOS can be built, android/ otherwise. Checking the iOS Gemfile
+    // on a Linux machine reports on a bundle nothing there can run.
+    final directory = context.fastlaneDirectory;
+    if (directory == null) {
+      return const CheckResult.skip('No ios/ or android/ directory.');
     }
-    final gemfile = File(p.join(context.projectRoot, 'ios', 'Gemfile'));
+    final gemfile = File(p.join(context.projectRoot, directory, 'Gemfile'));
     if (!gemfile.existsSync()) {
-      return const CheckResult.skip(
-        'No ios/Gemfile yet; run `taxiway generate fastlane`.',
+      return CheckResult.skip(
+        'No $directory/Gemfile yet; run `taxiway generate fastlane`.',
       );
     }
 

@@ -4,6 +4,7 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as p;
 
 import '../core/config/config_exception.dart';
+import '../core/env/host_platform.dart';
 import '../core/env/run_environment.dart';
 import '../core/config/config_loader.dart';
 import '../core/config/taxiway_config.dart';
@@ -35,7 +36,9 @@ class RunContext {
     this.environmentFlag,
     Map<String, String>? processEnvironment,
     DateTime? now,
+    HostPlatform? host,
   }) : now = now ?? DateTime.now(),
+       host = host ?? HostPlatform.current,
        _processEnvironment = processEnvironment ?? Platform.environment;
 
   final Logger logger;
@@ -57,6 +60,13 @@ class RunContext {
   final bool assumeYes;
 
   final DateTime now;
+
+  /// The operating system this is running on.
+  ///
+  /// Separate from [environment]: that says what kind of machine this is, this
+  /// says whether Apple's toolchain can exist on it. Injected so the Linux
+  /// path is testable from a Mac.
+  final HostPlatform host;
 
   /// `--env`, when given.
   final String? environmentFlag;

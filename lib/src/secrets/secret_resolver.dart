@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../core/env/host_platform.dart';
 import '../core/env/run_environment.dart';
 import '../core/io/process_runner.dart';
 import '../core/io/redactor.dart';
@@ -68,7 +69,9 @@ class SecretResolver {
     Map<String, String>? processEnvironment,
     this.keychainService = defaultKeychainService,
     this.flavor,
-  }) : _processEnvironment = processEnvironment ?? Platform.environment;
+    HostPlatform? host,
+  }) : host = host ?? HostPlatform.current,
+       _processEnvironment = processEnvironment ?? Platform.environment;
 
   /// The generic-password service taxiway stores secrets under.
   static const String defaultKeychainService = 'taxiway';
@@ -83,6 +86,11 @@ class SecretResolver {
 
   final String keychainService;
 
+  /// The machine this is running on. Only one thing turns on it: there is no
+  /// `security` keychain off macOS, so it must not be offered as a place a
+  /// value could be.
+  final HostPlatform host;
+
   /// Selects `.env.<flavor>`, when the config names a per-flavor file.
   final String? flavor;
 
@@ -95,21 +103,31 @@ class SecretResolver {
   /// The login keychain is absent off the workstation on purpose: on a headless
   /// Mac it may not be unlocked after a reboot, and depending on it is what
   /// makes self-hosted builders fail in ways that look like signing problems.
-  List<SecretSource> get chain => switch (environment) {
-    RunEnvironment.workstation => const <SecretSource>[
-      SecretSource.environment,
-      SecretSource.dotenv,
-      SecretSource.keychain,
-      SecretSource.prompt,
-    ],
-    RunEnvironment.ephemeralCi => const <SecretSource>[
-      SecretSource.environment,
-    ],
-    RunEnvironment.persistentRunner => const <SecretSource>[
-      SecretSource.environment,
-      SecretSource.dotenv,
-    ],
-  };
+  ///
+  /// It is absent off macOS for a blunter reason — there is no such keychain —
+  /// and the chain is printed to the user, so listing a place nothing could
+  /// ever be found is a lie about where to put a value.
+  List<SecretSource> get chain => <SecretSource>[
+    for (final source in _chainFor(environment))
+      if (source != SecretSource.keychain || host.hasSecurityKeychain) source,
+  ];
+
+  static List<SecretSource> _chainFor(RunEnvironment environment) =>
+      switch (environment) {
+        RunEnvironment.workstation => const <SecretSource>[
+          SecretSource.environment,
+          SecretSource.dotenv,
+          SecretSource.keychain,
+          SecretSource.prompt,
+        ],
+        RunEnvironment.ephemeralCi => const <SecretSource>[
+          SecretSource.environment,
+        ],
+        RunEnvironment.persistentRunner => const <SecretSource>[
+          SecretSource.environment,
+          SecretSource.dotenv,
+        ],
+      };
 
   /// Reports on [requirement] without exposing its value.
   Future<SecretStatus> status(SecretRequirement requirement) async {
@@ -187,7 +205,9 @@ class SecretResolver {
   }
 
   Future<String?> _readKeychain(String name) async {
-    if (!environment.mayUseLoginKeychain || !Platform.isMacOS) return null;
+    if (!environment.mayUseLoginKeychain || !host.hasSecurityKeychain) {
+      return null;
+    }
 
     final result = await runner.run('security', <String>[
       'find-generic-password',

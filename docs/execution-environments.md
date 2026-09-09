@@ -182,7 +182,10 @@ Phase 2 already ran into.
 
 Runs the checks that matter for a *target* environment rather than the current
 one, so a Mac mini can be validated as a builder before anything is wired to it.
-On Linux the iOS checks skip with a reason rather than failing.
+On Linux the iOS checks skip with a reason rather than failing, and the ones
+that would have shelled out to `xcodebuild` or `security` are not run at all —
+a skip that still spends the time and can still fail is a skip in the report
+only.
 
 ## New classifier signatures
 
@@ -204,7 +207,7 @@ the environments make likely:
 | **Workstation** | Supported. Login keychain, prompts allowed, nothing created. |
 | **Ephemeral CI** (GitHub-hosted) | Supported. Generated workflow, pre-flight, keychain session. |
 | **Persistent runner** | **Not yet.** Detection classifies it correctly and it shares the ephemeral code path, but nothing here has been validated against a real self-hosted machine and taxiway does not claim to support one. |
-| **Linux VPS** | Not yet. |
+| **Linux VPS** | Android only, and it says so. Every Apple check skips with a reason rather than failing, `taxiway build ios` refuses and names `build android`, the keychain is not offered as a place a secret could be, and `doctor` reports "Ready to ship Android" rather than implying more. Not validated against a real Linux builder end to end. |
 
 Detection still resolves `persistentRunner` — misclassifying a self-hosted
 runner as disposable would be worse than naming it — but the work that makes
@@ -223,7 +226,10 @@ Sequenced so each step is independently useful, rather than one XL landing:
 4. **`taxiway setup ios-signing` / `android-signing`**, the wizard proper — by
    which point it is filling in a model that already works headlessly.
 5. **`taxiway generate ci`** and `secrets export`.
-6. **Linux/Android-only support** in `doctor` and `build`.
+6. **Linux/Android-only support** in `doctor` and `build`. *Done.* The host OS
+   is a value (`HostPlatform`) threaded through `RunContext`, so the Linux
+   answer is testable from a Mac — which is the only place it was ever going to
+   be tested.
 
 ## What this deliberately does not do
 

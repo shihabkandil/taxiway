@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:taxiway/src/core/config/config_loader.dart';
+import 'package:taxiway/src/core/env/host_platform.dart';
 import 'package:taxiway/src/doctor/check.dart';
+import 'package:taxiway/src/doctor/checks/fastlane_checks.dart';
 import 'package:taxiway/src/doctor/checks/project_checks.dart';
 import 'package:taxiway/src/doctor/checks/tool_checks.dart';
 import 'package:taxiway/src/doctor/doctor.dart';
@@ -85,11 +87,15 @@ DoctorContext contextFor(
   Directory project, {
   String? configYaml,
   DateTime? now,
+  // Pinned rather than taken from the machine running the tests: the healthy
+  // baseline below is a Mac, and it should stay one wherever this suite runs.
+  HostPlatform host = HostPlatform.macos,
 }) => DoctorContext(
   runner: runner,
   projectRoot: project.path,
   config: configYaml == null ? null : ConfigLoader.parse(configYaml),
   now: now ?? DateTime.utc(2026, 9, 8),
+  host: host,
 );
 
 void main() {
@@ -477,6 +483,124 @@ apps:
       )).toJson();
       expect(json['deadlineDataStale'], isTrue);
     });
+  });
+
+  group('a Linux machine building Android only', () {
+    /// The whole point: none of Apple's tooling is there, and none of it being
+    /// there is not a failure. A doctor that reports six failures for tools
+    /// that were never going to exist tells someone their machine cannot ship
+    /// an app it ships fine.
+    Future<DoctorReport> linuxReport({
+      void Function(RecordingProcessRunner)? stub,
+    }) async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      // Nothing Apple answers here.
+      for (final command in const <String>[
+        'xcodebuild -version',
+        'pod --version',
+        'gem list xcodeproj',
+        'security list-keychains',
+      ]) {
+        runner.stub(command, exitCode: 127, stderr: 'command not found');
+      }
+      stub?.call(runner);
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+      return Doctor().run(
+        contextFor(runner, project, host: HostPlatform.linux),
+      );
+    }
+
+    test('passes, with the Apple checks skipped rather than failed', () async {
+      final report = await linuxReport();
+
+      expect(report.passed, isTrue);
+      final skipped = <String>[
+        for (final entry in report.withStatus(CheckStatus.skip)) entry.check.id,
+      ];
+      expect(
+        skipped,
+        containsAll(<String>[
+          'xcode',
+          'cocoapods',
+          'xcodeproj_gem',
+          'pbxproj_object_version',
+          'keychain',
+        ]),
+      );
+    });
+
+    test('does not run the tools it skipped', () async {
+      // A skip that still shells out is a skip in the report only: it costs
+      // the same time and can still fail in a way the report does not show.
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await Doctor().run(contextFor(runner, project, host: HostPlatform.linux));
+
+      expect(runner.ran('xcodebuild'), isFalse);
+      expect(runner.ran('security'), isFalse);
+    });
+
+    test('the Android toolchain is still checked properly', () async {
+      // Skipping iOS must not turn doctor into a no-op: a broken JDK on a
+      // Linux builder is still the thing that stops a release.
+      final report = await linuxReport(
+        stub: (runner) =>
+            runner.stub('java -version', exitCode: 127, stderr: 'not found'),
+      );
+
+      expect(report.passed, isFalse);
+      final jdk = report.entries.firstWhere((e) => e.check.id == 'jdk');
+      expect(jdk.result.status, CheckStatus.fail);
+    });
+
+    test('the report says which machine it describes', () async {
+      // `passed` means something narrower here, and JSON has no other way to
+      // say so.
+      final json = (await linuxReport()).toJson();
+      expect(json['host'], 'linux');
+      expect(json['canBuildIos'], isFalse);
+    });
+  });
+
+  group('the Gemfile checked is the one this machine would install', () {
+    /// A Linux builder installs `android/Gemfile` and never touches
+    /// `ios/Gemfile`. Reporting on the iOS one there describes a bundle
+    /// nothing on that machine can run — and stays quiet about the one that
+    /// will actually fail.
+    Future<CheckResult> pinsCheck(HostPlatform host) async {
+      final runner = RecordingProcessRunner();
+      stubHealthyMachine(runner);
+      runner.stub('ruby -e', stdout: '3.4.1');
+      final project = await makeProject();
+      addTearDown(() => project.delete(recursive: true));
+      File(
+        '${project.path}/android/Gemfile',
+      ).writeAsStringSync("source 'https://rubygems.org'\ngem 'fastlane'\n");
+
+      final report = await Doctor(
+        checks: <Check>[GemfileSolvableCheck()],
+      ).run(contextFor(runner, project, host: host));
+      return report.entries.single.result;
+    }
+
+    test('Linux reads android/Gemfile', () async {
+      final result = await pinsCheck(HostPlatform.linux);
+      expect(result.status, CheckStatus.ok);
+    });
+
+    test(
+      'a Mac still asks about the iOS one, and says it is missing',
+      () async {
+        final result = await pinsCheck(HostPlatform.macos);
+        expect(result.status, CheckStatus.skip);
+        expect(result.detail, contains('ios/Gemfile'));
+      },
+    );
   });
 }
 

@@ -49,6 +49,9 @@ class PbxprojObjectVersionCheck extends Check {
   String get id => 'pbxproj_object_version';
 
   @override
+  bool get needsMacOS => true;
+
+  @override
   String get title => 'Xcode project format';
 
   /// The format taxiway mutates confidently.
@@ -237,11 +240,12 @@ class KeychainCheck extends Check {
   @override
   String get title => 'Keychain';
 
+  /// `security` is macOS's, and so is everything that would be stored in it.
+  @override
+  bool get needsMacOS => true;
+
   @override
   Future<CheckResult> run(DoctorContext context) async {
-    if (!Platform.isMacOS) {
-      return const CheckResult.skip('Keychain checks are macOS-only.');
-    }
     final result = await context.runner.run('security', const <String>[
       'list-keychains',
     ]);

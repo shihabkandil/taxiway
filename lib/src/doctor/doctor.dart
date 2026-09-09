@@ -1,3 +1,4 @@
+import '../core/env/host_platform.dart';
 import 'check.dart';
 import 'checks/fastlane_checks.dart';
 import 'checks/project_checks.dart';
@@ -25,10 +26,19 @@ class DoctorEntry {
 
 /// The whole run.
 class DoctorReport {
-  const DoctorReport({required this.entries, required this.generatedAt});
+  const DoctorReport({
+    required this.entries,
+    required this.generatedAt,
+    required this.host,
+  });
 
   final List<DoctorEntry> entries;
   final DateTime generatedAt;
+
+  /// The machine the checks ran on. Carried because a pass means something
+  /// narrower on Linux — Android only — and a reader of the JSON has no other
+  /// way to tell.
+  final HostPlatform host;
 
   Iterable<DoctorEntry> withStatus(CheckStatus status) =>
       entries.where((e) => e.result.status == status);
@@ -44,6 +54,8 @@ class DoctorReport {
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'passed': passed,
+    'host': host.name,
+    'canBuildIos': host.canBuildIos,
     'generatedAt': generatedAt.toUtc().toIso8601String(),
     'summary': <String, int>{
       for (final status in CheckStatus.values) status.name: count(status),
@@ -91,6 +103,7 @@ class Doctor {
           'App Store Connect has rejected builds made with older Xcode '
           'since 2026-04-28.',
       docsUrl: 'https://developer.apple.com/news/upcoming-requirements/',
+      needsMacOS: true,
     ),
     VersionCheck(
       id: 'cocoapods',
@@ -99,6 +112,7 @@ class Doctor {
       arguments: const <String>['--version'],
       minimum: const ToolVersion(1, 13, 0),
       installHint: 'Run `gem install cocoapods`.',
+      needsMacOS: true,
     ),
     VersionCheck(
       id: 'ruby',
@@ -159,9 +173,27 @@ class Doctor {
   Future<DoctorReport> run(DoctorContext context) async {
     final entries = <DoctorEntry>[];
     for (final check in checks) {
-      entries.add(DoctorEntry(check, await _guard(check, context)));
+      entries.add(DoctorEntry(check, await _run(check, context)));
     }
-    return DoctorReport(entries: entries, generatedAt: context.now);
+    return DoctorReport(
+      entries: entries,
+      generatedAt: context.now,
+      host: context.host,
+    );
+  }
+
+  /// Runs one check, unless this machine cannot answer its question.
+  ///
+  /// An Apple check on Linux is not a failure. There is no `xcodebuild` to find
+  /// and no login keychain to open, and saying "fail" would tell someone
+  /// building Android that their machine cannot ship an app it ships fine.
+  Future<CheckResult> _run(Check check, DoctorContext context) async {
+    if (check.needsMacOS && !context.host.canBuildIos) {
+      return CheckResult.skip(
+        'Needs macOS; this is ${context.host.label}. Android only here.',
+      );
+    }
+    return _guard(check, context);
   }
 
   /// A check that throws is a taxiway bug, not an environment failure, and must

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../core/config/taxiway_config.dart';
+import '../core/env/host_platform.dart';
 import '../core/io/process_runner.dart';
 import 'tool_version.dart';
 
@@ -73,12 +74,13 @@ class CheckResult {
 
 /// What a check may look at.
 class DoctorContext {
-  const DoctorContext({
+  DoctorContext({
     required this.runner,
     required this.projectRoot,
     required this.config,
     required this.now,
-  });
+    HostPlatform? host,
+  }) : host = host ?? HostPlatform.current;
 
   final ProcessRunner runner;
 
@@ -92,11 +94,35 @@ class DoctorContext {
 
   final DateTime now;
 
+  /// The machine this is running on. Injected so the Linux answer can be
+  /// tested from a Mac, which is the only place it will be.
+  final HostPlatform host;
+
   bool get hasProject =>
       File('$projectRoot/pubspec.yaml').existsSync() &&
       Directory('$projectRoot/android').existsSync();
 
   bool get hasIos => Directory('$projectRoot/ios').existsSync();
+
+  bool get hasAndroid => Directory('$projectRoot/android').existsSync();
+
+  /// Whether this project can be built for iOS *here*.
+  ///
+  /// An `ios/` directory in a checkout is not the question — it is there on
+  /// Linux too, and it is what makes an Android-only machine look broken.
+  bool get canBuildIos => host.canBuildIos && hasIos;
+
+  /// The platform directory whose Gemfile a lane on this machine would use.
+  ///
+  /// `ios` where iOS can be built, because that is the harder setup and the one
+  /// that must work. Where it cannot, the Android bundle is the one that will
+  /// actually be installed, and reporting on the iOS one would describe a
+  /// bundle nothing here can run.
+  String? get fastlaneDirectory {
+    if (canBuildIos) return 'ios';
+    if (hasAndroid) return 'android';
+    return null;
+  }
 }
 
 /// One environment check.
@@ -106,6 +132,13 @@ abstract class Check {
 
   /// Human-facing name.
   String get title;
+
+  /// Whether this check can only say something true on a Mac.
+  ///
+  /// [Doctor] skips these with one reason rather than running them, so a Linux
+  /// machine building Android reports "not applicable" instead of a wall of
+  /// failures for tools that were never going to be there.
+  bool get needsMacOS => false;
 
   Future<CheckResult> run(DoctorContext context);
 }

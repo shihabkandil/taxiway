@@ -61,6 +61,7 @@ class DoctorCommand extends Command<int> {
         projectRoot: _context.projectRoot,
         config: await _configOrNull(),
         now: _context.now,
+        host: _context.host,
       ),
     );
 
@@ -122,10 +123,19 @@ class DoctorCommand extends Command<int> {
         '${report.count(CheckStatus.skip)} skipped',
     ].join(', ');
 
+    // Named rather than implied: "Ready to ship" on a machine that cannot
+    // build iOS is true of half an app, and the half it is not true of is the
+    // one that takes a week to discover.
+    final scope = report.host.canBuildIos ? '' : ' Android';
     if (report.passed) {
-      logger.info('${green.wrap('Ready to ship.')} $summary.');
+      logger.info('${green.wrap('Ready to ship$scope.')} $summary.');
     } else {
-      logger.info('${red.wrap('Not ready to ship.')} $summary.');
+      logger.info('${red.wrap('Not ready to ship$scope.')} $summary.');
+    }
+    if (!report.host.canBuildIos) {
+      const note =
+          'iOS checks were skipped: they need macOS. Android is unaffected.';
+      logger.info(darkGray.wrap(note) ?? note);
     }
 
     // State the age of the store-deadline data rather than presenting it as

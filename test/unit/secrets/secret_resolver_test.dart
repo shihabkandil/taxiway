@@ -1,3 +1,4 @@
+import 'package:taxiway/src/core/env/host_platform.dart';
 import 'package:taxiway/src/core/env/run_environment.dart';
 import 'package:taxiway/src/core/io/redactor.dart';
 import 'package:taxiway/src/secrets/secret_requirements.dart';
@@ -36,6 +37,9 @@ void main() {
     RunEnvironment environment = RunEnvironment.workstation,
     Map<String, String> processEnvironment = const <String, String>{},
     String? flavor,
+    // Pinned rather than inherited from the machine running the tests, so
+    // these assertions mean the same thing on a Linux CI box as they do here.
+    HostPlatform host = HostPlatform.macos,
   }) => SecretResolver(
     environment: environment,
     projectRoot: project.path,
@@ -43,6 +47,7 @@ void main() {
     redactor: redactor,
     processEnvironment: processEnvironment,
     flavor: flavor,
+    host: host,
   );
 
   group('the chain is a property of the environment', () {
@@ -63,6 +68,18 @@ void main() {
         resolver(environment: RunEnvironment.ephemeralCi).chain,
         <SecretSource>[SecretSource.environment],
       );
+    });
+
+    test('a machine with no security keychain is not offered one', () async {
+      // The chain is printed to the user. Naming the keychain on Linux would
+      // be advice to put a value somewhere nothing will ever read it.
+      final linux = resolver(host: HostPlatform.linux);
+      expect(linux.chain, isNot(contains(SecretSource.keychain)));
+      expect(linux.chain, contains(SecretSource.prompt));
+
+      // And the lookup agrees with what the chain claims: no `security` call.
+      await linux.status(plain);
+      expect(runner.ran('security'), isFalse);
     });
 
     test('a persistent runner never reaches the login keychain', () {

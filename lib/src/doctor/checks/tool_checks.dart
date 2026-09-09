@@ -22,6 +22,7 @@ class VersionCheck extends Check {
     this.missingIsFatal = true,
     this.belowMinimumIsFatal = true,
     this.reason,
+    this.needsMacOS = false,
   });
 
   @override
@@ -51,6 +52,9 @@ class VersionCheck extends Check {
 
   /// Why the floor exists, appended to the fix hint.
   final String? reason;
+
+  @override
+  final bool needsMacOS;
 
   @override
   Future<CheckResult> run(DoctorContext context) async {
@@ -211,6 +215,9 @@ class XcodeprojGemCheck extends Check {
 
   @override
   String get title => 'xcodeproj gem';
+
+  @override
+  bool get needsMacOS => true;
 
   /// Below this the gem cannot parse `PBXFileSystemSynchronizedRootGroup`,
   /// which Xcode 16 and later write into new projects.

@@ -77,6 +77,7 @@ class SecretsCommand extends Command<int> {
       runner: context.runner,
       redactor: context.redactor,
       flavor: results['flavor'] as String?,
+      host: context.host,
     );
     final statuses = await resolver.statuses(requirements);
 
