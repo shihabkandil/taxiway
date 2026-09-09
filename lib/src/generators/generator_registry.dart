@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import '../core/config/taxiway_config.dart';
 import '../core/gradle/gradle_layout.dart';
 import 'android_flavor_generator.dart';
+import 'android_fastfile_generator.dart';
 import 'dart_generators.dart';
 import 'fastfile_generator.dart';
 import 'fastlane_generators.dart';
@@ -26,6 +27,7 @@ abstract final class GeneratorRegistry {
     MatchfileGenerator(),
     ExportOptionsGenerator(),
     IosFastfileGenerator(),
+    AndroidFastfileGenerator(),
     GitignoreGenerator(),
   ];
 
@@ -44,6 +46,7 @@ abstract final class GeneratorRegistry {
       'matchfile',
       'export-options',
       'ios-fastfile',
+      'android-fastfile',
     ],
     'all': <String>[
       'android-flavors',
@@ -56,6 +59,7 @@ abstract final class GeneratorRegistry {
       'matchfile',
       'export-options',
       'ios-fastfile',
+      'android-fastfile',
       'gitignore',
     ],
   };

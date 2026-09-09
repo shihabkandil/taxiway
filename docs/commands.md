@@ -262,8 +262,11 @@ output of a *successful* build is classified as well, and anything recognised is
 reported as a warning with its remedy.
 
 For iOS the reported artifact is the `.xcarchive`, not an `.ipa`: the export
-names the `.ipa` after `CFBundleDisplayName` under Flutter and after the product
-target under gym, so it can only be found by globbing `build/ios/ipa/*.ipa`.
+names the `.ipa` after `CFBundleName` under Flutter and after the product target
+under gym, so it can only be found by globbing `build/ios/ipa/*.ipa`. Since
+taxiway varies only `CFBundleDisplayName` per flavor, every flavor exports to
+the same filename — which is why the generated lanes accept only an `.ipa`
+written after their own build began.
 
 ## Generated fastlane lanes
 
@@ -275,11 +278,25 @@ cd ios && bundle install
 bundle exec fastlane ios beta flavor:prod
 ```
 
+**iOS** — `cd ios && bundle exec fastlane ios <lane>`
+
 | Lane | Does |
 |---|---|
 | `certificates` | Syncs signing via `match`, readonly unless asked otherwise. |
 | `build_ipa` | Builds and signs an `.ipa` for one flavor. |
 | `beta` | `certificates` → `build_ipa` → upload to TestFlight. Takes `dry_run: true`. |
+
+**Android** — `cd android && bundle exec fastlane android <lane>`
+
+| Lane | Does |
+|---|---|
+| `build` | Builds a release artifact. `type: "appbundle"` (default) or `"apk"`. |
+| `play` | `build` → `upload_to_play_store`, on the configured track. Takes `dry_run: true`. |
+| `firebase` | `build` → Firebase App Distribution. Only generated when `targets.firebase.android_app_id_ref` is set. |
+
+Every lane takes `flavor:`, and refuses with the list of valid flavors without
+it. The Play lane never touches the store listing — metadata belongs to whoever
+writes it, not to a build.
 
 Every credential reaches a lane through `ENV`; nothing that could be a secret is
 written into a generated file, and a test greps all fastlane output to keep it
@@ -302,8 +319,9 @@ Planned, and deliberately absent rather than half-present:
 | `taxiway secrets set\|list\|import` | 3 |
 | `taxiway upgrade`, `taxiway completion install` | 6 |
 
-Android fastlane lanes are also not generated yet; the Gemfile, Appfile and
-Pluginfile for Android are.
+The generated lanes stop at TestFlight, the Play internal track and Firebase
+App Distribution. Promotion between tracks, App Store submission and staged
+rollout management are Phase 4.
 
 ## See also
 

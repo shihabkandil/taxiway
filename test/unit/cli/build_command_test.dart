@@ -134,9 +134,9 @@ void main() {
     });
 
     test('the ipa is reported as the archive, never a guessed filename', () {
-      // The .ipa is named after CFBundleDisplayName under a Flutter export and
-      // after the product target under a gym export, so it can only be found
-      // by globbing. Pointing at the archive is honest; guessing is not.
+      // The .ipa is named after CFBundleName under a Flutter export and after
+      // the product target under a gym export, so it can only be found by
+      // globbing. Pointing at the archive is honest; guessing is not.
       expect(
         BuildCommand.artifactPath(BuildArtifact.ipa, dev),
         isNot(endsWith('.ipa')),

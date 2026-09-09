@@ -153,3 +153,36 @@ like a broken bundle rather than a hijacked one.
 `doctor` now reads the `fastlane` on `PATH` and warns when it is a wrapper of
 this shape, recommending a binstub — `bundle binstubs fastlane`, then
 `./bin/fastlane` — which cannot be shadowed. Reproduced on this machine.
+
+## No `Gymfile` is generated
+
+The plan's artifact inventory lists one. taxiway does not write it.
+
+Every gym option taxiway sets is either per-flavor — the scheme, the
+provisioning-profile mapping — or load-bearing in a way that must be visible at
+the call site: `skip_build_archive: true` is the single flag separating a
+working export from the arrangement that fails, and `export_team_id` is what
+stops a `--no-codesign` archive failing with `No Team Found in Archive`.
+
+A `Gymfile` supplies defaults at lower precedence than the lane, so it cannot
+break a correct lane. What it does do is give a reader a second place to look
+before they can be sure what a build did, for settings that are all either
+per-flavor or too important to be a default. Under `ios.export: flutter` gym is
+not used at all, so a Gymfile would describe a tool the project never invokes.
+
+## The `.ipa` filename follows `CFBundleName`, not the display name
+
+Recorded because the first measurement was ambiguous and the wrong conclusion
+was briefly written down. A real project exported `Lahent Dev.ipa` and set both
+`CFBundleName` and `CFBundleDisplayName` from the same build setting, so it
+could not distinguish them. A project where they differ settles it:
+`CFBundleName = e2eapp` with `CFBundleDisplayName = E2E Staging` exports
+`e2eapp.ipa`.
+
+The consequence is sharper than the trivia. taxiway varies only
+`CFBundleDisplayName` per flavor, so **every flavor of a taxiway project exports
+to the same filename**, overwriting the previous one in `build/ios/ipa/`. A lane
+that globbed and took any match would upload the last flavor built rather than
+the one it just built. The generated lanes therefore accept only an `.ipa`
+written after their own build began, and fail loudly when the export produced
+nothing.

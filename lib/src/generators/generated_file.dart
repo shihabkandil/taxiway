@@ -159,6 +159,10 @@ class ResolvedApp {
     this.matchGitUrl,
     this.matchStorage = MatchStorage.git,
     this.ascApiKey,
+    this.testflight,
+    this.play,
+    this.firebase,
+    this.androidSigning,
   });
 
   final String appId;
@@ -194,6 +198,14 @@ class ResolvedApp {
 
   /// App Store Connect key, by reference only — never a value.
   final AscApiKeyConfig? ascApiKey;
+
+  /// Deploy targets, when the config declares them. Null means the generated
+  /// lane falls back to a safe default rather than inventing a destination.
+  final TestflightTarget? testflight;
+  final PlayTarget? play;
+  final FirebaseTarget? firebase;
+
+  final AndroidSigningConfig? androidSigning;
 
   bool get hasFlavors => flavors.isNotEmpty;
 

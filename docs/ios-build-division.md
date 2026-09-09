@@ -143,10 +143,18 @@ and re-archiving expensive.
 
 Two details a generated lane must get right:
 
-- **The `.ipa` is named after `CFBundleDisplayName`, not the target.** This build
-  produced `build/ios/ipa/Lahent Dev.ipa` -- a flavor's display name, spaces and
-  all. A lane that hardcodes `Runner.ipa` finds nothing. Glob
-  `build/ios/ipa/*.ipa` rather than construct the name.
+- **The `.ipa` is named after `CFBundleName`, not the target.** This build
+  produced `build/ios/ipa/Lahent Dev.ipa`, spaces and all, because that project
+  sets `CFBundleName` and `CFBundleDisplayName` to the same build setting. A
+  later test on a project where the two differ settled which one it follows:
+  `CFBundleName = e2eapp` with `CFBundleDisplayName = E2E Staging` exported
+  `e2eapp.ipa`.
+
+  This matters more than it looks. taxiway varies only `CFBundleDisplayName`
+  per flavor, so **every flavor of a taxiway project exports to the same
+  filename** and overwrites the last. A lane that globs and takes any match
+  will cheerfully upload the previous flavor's build, so the generated lanes
+  take only an `.ipa` written after their own build started.
 - **Xcode 26 rewrites the export method.** `method: development` comes back as
   `method: "debugging"` in the `ExportOptions.plist` Xcode leaves beside the
   `.ipa`. The old names (`app-store`, `ad-hoc`, `development`, `enterprise`) are

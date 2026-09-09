@@ -38,6 +38,10 @@ abstract final class ResolveApp {
       matchGitUrl: app.signing.ios?.matchGitUrl,
       matchStorage: app.signing.ios?.matchStorage ?? MatchStorage.git,
       ascApiKey: app.signing.ios?.apiKey,
+      testflight: app.targets.testflight,
+      play: app.targets.play,
+      firebase: app.targets.firebase,
+      androidSigning: app.signing.android,
       flavors: <ResolvedFlavor>[
         for (final entry in app.flavors.entries)
           _flavor(entry.key, entry.value, androidBase, iosBase),

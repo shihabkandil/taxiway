@@ -144,7 +144,7 @@ void main() {
       );
 
       expect(fastfile, contains('skip_build_archive: true'));
-      expect(fastfile, contains('flutter build ipa --release --no-codesign'));
+      expect(fastfile, contains('extra: ["--no-codesign"]'));
       // Required even when only exporting; without it gym prompts and a
       // non-interactive run hangs forever.
       expect(fastfile, contains('scheme: flavor'));
@@ -204,6 +204,7 @@ void main() {
       expect(fastfile, contains('--export-options-plist='));
       expect(fastfile, isNot(contains('skip_build_archive')));
       expect(fastfile, isNot(contains('--no-codesign')));
+      expect(fastfile, contains('flutter_build('));
     });
 
     test('never predicts the ipa filename', () {
@@ -215,6 +216,13 @@ void main() {
           IosFastfileGenerator.path,
         );
         expect(fastfile, contains('Dir[root_path('), reason: export.name);
+        // Only a file this build wrote: every flavor exports to the same
+        // name, so any-match would upload the previous flavor's build.
+        expect(
+          fastfile,
+          contains('exported_ipa(started)'),
+          reason: export.name,
+        );
         expect(
           fastfile,
           isNot(contains('Runner.ipa')),

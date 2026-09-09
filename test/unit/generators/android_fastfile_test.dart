@@ -1,0 +1,205 @@
+import 'package:taxiway/src/core/config/taxiway_config.dart';
+import 'package:taxiway/src/core/model/android_model.dart';
+import 'package:taxiway/src/generators/android_fastfile_generator.dart';
+import 'package:taxiway/src/generators/generated_file.dart';
+import 'package:test/test.dart';
+
+ResolvedApp app({
+  String? androidApplicationId = 'com.acme.app',
+  PlayTarget? play,
+  FirebaseTarget? firebase,
+  AndroidSigningConfig? signing,
+  bool flavors = true,
+}) => ResolvedApp(
+  appId: 'main',
+  projectName: 'acme_app',
+  androidApplicationId: androidApplicationId,
+  iosBundleId: 'com.acme.app',
+  gradleDsl: GradleDsl.kotlin,
+  play: play,
+  firebase: firebase,
+  androidSigning: signing,
+  flavors: !flavors
+      ? const <ResolvedFlavor>[]
+      : <ResolvedFlavor>[
+          ResolvedFlavor(
+            name: 'dev',
+            suffix: '.dev',
+            entrypoint: 'lib/main_dev.dart',
+            dimension: 'environment',
+            androidApplicationId: androidApplicationId == null
+                ? null
+                : '$androidApplicationId.dev',
+          ),
+        ],
+);
+
+String render(ResolvedApp resolved) =>
+    const AndroidFastfileGenerator().render(resolved).single.contents;
+
+void main() {
+  group('when it produces nothing', () {
+    test('a project with no flavors', () {
+      expect(
+        const AndroidFastfileGenerator().render(app(flavors: false)),
+        isEmpty,
+      );
+    });
+
+    test('a project whose package name is unknown', () {
+      // Lanes with nothing to upload against are worse than no lanes: they
+      // look configured.
+      expect(
+        const AndroidFastfileGenerator().render(
+          app(androidApplicationId: null),
+        ),
+        isEmpty,
+      );
+    });
+  });
+
+  group('the build lane', () {
+    test('always passes the flavor entrypoint', () {
+      // Same silent failure as iOS: without --target, Flutter builds
+      // lib/main.dart under this flavor's package name and succeeds.
+      final fastfile = render(app());
+      expect(fastfile, contains('entrypoint: "lib/main_dev.dart"'));
+      expect(fastfile, contains('--target #{entrypoint.shellescape}'));
+    });
+
+    test('passes dart-defines only when the file is there', () {
+      expect(render(app()), contains('File.exist?(defines)'));
+    });
+
+    test('checks the artifact actually appeared', () {
+      // A Flutter build that reports success and produces nothing means the
+      // Gradle flavor is named differently than the config thinks.
+      expect(
+        render(app()),
+        contains('The build reported success but produced no artifact.'),
+      );
+    });
+
+    test('guards key.properties only when signing is configured', () {
+      expect(
+        render(
+          app(
+            signing: const AndroidSigningConfig(
+              keystoreRef: 'ANDROID_KEYSTORE_BASE64',
+            ),
+          ),
+        ),
+        contains('android/key.properties'),
+      );
+      expect(render(app()), isNot(contains('key.properties')));
+    });
+
+    test('uses the variant paths Gradle actually writes', () {
+      final fastfile = render(app());
+      expect(
+        fastfile,
+        contains(
+          'build/app/outputs/bundle/#{flavor}Release/app-#{flavor}-release.aab',
+        ),
+      );
+      expect(
+        fastfile,
+        contains('build/app/outputs/flutter-apk/app-#{flavor}-release.apk'),
+      );
+    });
+  });
+
+  group('the play lane', () {
+    test('defaults to the internal track as a draft', () {
+      final fastfile = render(app());
+      expect(fastfile, contains('track: options.fetch(:track, "internal")'));
+      expect(fastfile, contains('release_status: "draft"'));
+    });
+
+    test('carries the configured track, status and rollout', () {
+      final fastfile = render(
+        app(
+          play: const PlayTarget(
+            track: PlayTrack.beta,
+            releaseStatus: PlayReleaseStatus.inProgress,
+            rollout: 0.1,
+          ),
+        ),
+      );
+      expect(fastfile, contains('"beta"'));
+      // supply spells this one in camelCase, unlike every other option.
+      expect(fastfile, contains('release_status: "inProgress"'));
+      expect(fastfile, contains('rollout: "0.1"'));
+    });
+
+    test('uploads the configured artifact and skips the other', () {
+      final aab = render(app());
+      expect(aab, contains('aab: artifact'));
+      expect(aab, contains('skip_upload_apk: true'));
+
+      final apk = render(
+        app(play: const PlayTarget(artifact: PlayArtifact.apk)),
+      );
+      expect(apk, contains('apk: artifact'));
+      expect(apk, contains('skip_upload_aab: true'));
+    });
+
+    test('never touches the store listing', () {
+      // Metadata belongs to whoever writes it, not to a build.
+      final fastfile = render(app());
+      for (final skip in const <String>[
+        'skip_upload_metadata: true',
+        'skip_upload_images: true',
+        'skip_upload_screenshots: true',
+      ]) {
+        expect(fastfile, contains(skip));
+      }
+    });
+  });
+
+  group('the firebase lane', () {
+    test('is absent unless an app id is configured', () {
+      expect(render(app()), isNot(contains('firebase_app_distribution')));
+    });
+
+    test('uses a service account, never the deprecated token', () {
+      final fastfile = render(
+        app(
+          firebase: const FirebaseTarget(
+            androidAppIdRef: 'FB_ANDROID_APP_ID',
+            groups: <String>['testers', 'qa'],
+          ),
+        ),
+      );
+      expect(fastfile, contains('service_credentials_file:'));
+      expect(fastfile, isNot(contains('firebase_cli_token')));
+      expect(fastfile, contains('groups: "testers,qa"'));
+      expect(fastfile, contains('ENV.fetch("FB_ANDROID_APP_ID")'));
+    });
+  });
+
+  test('no credential is ever written into the file', () {
+    final fastfile = render(
+      app(
+        play: const PlayTarget(serviceAccountRef: 'PLAY_JSON'),
+        firebase: const FirebaseTarget(androidAppIdRef: 'FB_ANDROID_APP_ID'),
+        signing: const AndroidSigningConfig(
+          keystoreRef: 'ANDROID_KEYSTORE_BASE64',
+        ),
+      ),
+    );
+    for (final pattern in const <Pattern>[
+      '-----BEGIN',
+      'AIza',
+      'AKIA',
+      '"private_key"',
+    ]) {
+      expect(fastfile, isNot(contains(pattern)));
+    }
+    // Everything sensitive arrives through the environment.
+    expect(
+      fastfile,
+      contains('ENV.fetch("${AndroidFastfileGenerator.playKeyEnv}")'),
+    );
+  });
+}
