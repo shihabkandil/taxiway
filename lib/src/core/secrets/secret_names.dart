@@ -18,6 +18,19 @@ abstract final class SecretNames {
   static const String matchGitUrl = 'MATCH_GIT_URL';
   static const String matchGitBranch = 'MATCH_GIT_BRANCH';
 
+  /// How match authenticates to an **HTTPS** certificates repository:
+  /// base64 of `user:token`. Sent as an `Authorization: Basic` header.
+  ///
+  /// A runner has no credential helper and no SSH agent, so without one of
+  /// these two the clone fails with an authentication error that looks like a
+  /// signing problem.
+  static const String matchGitBasicAuthorization =
+      'MATCH_GIT_BASIC_AUTHORIZATION';
+
+  /// How match authenticates to an **SSH** certificates repository: the
+  /// private key itself, or a path to it.
+  static const String matchGitPrivateKey = 'MATCH_GIT_PRIVATE_KEY';
+
   /// The Apple Developer Portal team. Not a secret — it appears in every build
   /// log — but it must be resolvable, so it is tracked alongside the rest.
   static const String developerPortalTeamId = 'DEVELOPER_PORTAL_TEAM_ID';
@@ -43,6 +56,8 @@ abstract final class SecretNames {
     matchPassword,
     matchGitUrl,
     matchGitBranch,
+    matchGitBasicAuthorization,
+    matchGitPrivateKey,
     developerPortalTeamId,
     appleId,
     appStoreConnectTeamId,

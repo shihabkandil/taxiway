@@ -1,0 +1,231 @@
+import 'package:taxiway/src/core/config/taxiway_config.dart';
+import 'package:taxiway/src/core/env/run_environment.dart';
+import 'package:taxiway/src/core/model/android_model.dart';
+import 'package:taxiway/src/core/secrets/secret_names.dart';
+import 'package:taxiway/src/generators/generated_file.dart';
+import 'package:taxiway/src/generators/workflow_generator.dart';
+import 'package:taxiway/src/secrets/secret_requirements.dart';
+import 'package:test/test.dart';
+import 'package:yaml/yaml.dart';
+
+ResolvedApp app({
+  String? matchGitUrl = 'https://github.com/acme/certs.git',
+  String? iosTeamId = 'ABCDE12345',
+  AndroidSigningConfig? androidSigning = const AndroidSigningConfig(
+    keystoreRef: 'ANDROID_KEYSTORE_BASE64',
+    keyProperties: KeyPropertiesConfig(
+      storePasswordRef: 'ANDROID_STORE_PASSWORD',
+      keyPasswordRef: 'ANDROID_KEY_PASSWORD',
+    ),
+  ),
+  PlayTarget? play = const PlayTarget(),
+  FirebaseTarget? firebase = const FirebaseTarget(
+    androidAppIdRef: 'FB_ANDROID_APP_ID',
+  ),
+  bool flavors = true,
+}) => ResolvedApp(
+  appId: 'main',
+  projectName: 'acme_app',
+  androidApplicationId: 'com.acme.app',
+  iosBundleId: 'com.acme.app',
+  gradleDsl: GradleDsl.kotlin,
+  iosTeamId: iosTeamId,
+  matchGitUrl: matchGitUrl,
+  ascApiKey: const AscApiKeyConfig(
+    keyIdRef: 'ASC_KEY_ID',
+    issuerIdRef: 'ASC_ISSUER_ID',
+    p8Ref: 'ASC_KEY_P8_BASE64',
+  ),
+  androidSigning: androidSigning,
+  play: play,
+  firebase: firebase,
+  flavors: !flavors
+      ? const <ResolvedFlavor>[]
+      : const <ResolvedFlavor>[
+          ResolvedFlavor(
+            name: 'dev',
+            suffix: '.dev',
+            entrypoint: 'lib/main_dev.dart',
+            dimension: 'environment',
+            iosBundleId: 'com.acme.app.dev',
+            androidApplicationId: 'com.acme.app.dev',
+          ),
+          ResolvedFlavor(
+            name: 'prod',
+            suffix: '',
+            entrypoint: 'lib/main_prod.dart',
+            dimension: 'environment',
+            iosBundleId: 'com.acme.app',
+            androidApplicationId: 'com.acme.app',
+          ),
+        ],
+);
+
+String render(ResolvedApp resolved) =>
+    const WorkflowGenerator().render(resolved).single.contents;
+
+YamlMap parse(ResolvedApp resolved) => loadYaml(render(resolved)) as YamlMap;
+
+YamlMap job(ResolvedApp resolved, String name) =>
+    (parse(resolved)['jobs'] as YamlMap)[name] as YamlMap;
+
+List<String> stepNames(YamlMap job) => <String>[
+  for (final step in job['steps'] as YamlList)
+    ((step as YamlMap)['name'] ?? step['uses']).toString(),
+];
+
+void main() {
+  test('it is valid YAML with the jobs a release needs', () {
+    // Generated YAML that does not parse is worse than none: GitHub reports it
+    // as a repository-level error with no line number a reader can act on.
+    final jobs = parse(app())['jobs'] as YamlMap;
+    expect(jobs.keys, containsAll(<String>['ios', 'android']));
+  });
+
+  test('the flavor choices come from the config', () {
+    final input =
+        ((parse(app())['on'] as YamlMap)['workflow_dispatch']
+                as YamlMap)['inputs']
+            as YamlMap;
+    expect((input['flavor'] as YamlMap)['options'], <String>['dev', 'prod']);
+  });
+
+  test('releases are serialised', () {
+    // Two uploads racing produce two builds claiming one version, and the
+    // store rejects the second as a duplicate.
+    final concurrency = parse(app())['concurrency'] as YamlMap;
+    expect(concurrency['cancel-in-progress'], isFalse);
+  });
+
+  group('getting signing material onto a runner', () {
+    test('an HTTPS match repo asks for basic authorisation', () {
+      // match treats the two mechanisms as mutually exclusive and silently
+      // ignores the wrong one, so the choice is made from the URL rather than
+      // left to the reader.
+      final env = job(app(), 'ios')['env'] as YamlMap;
+      expect(env.keys, contains(SecretNames.matchGitBasicAuthorization));
+      expect(env.keys, isNot(contains(SecretNames.matchGitPrivateKey)));
+    });
+
+    test('an SSH match repo asks for a private key instead', () {
+      final env =
+          job(app(matchGitUrl: 'git@github.com:acme/certs.git'), 'ios')['env']
+              as YamlMap;
+      expect(env.keys, contains(SecretNames.matchGitPrivateKey));
+      expect(env.keys, isNot(contains(SecretNames.matchGitBasicAuthorization)));
+    });
+
+    test('the keystore and key.properties are rebuilt from the secret', () {
+      // A checkout has neither: the keystore is binary and git-ignored, and
+      // key.properties holds passwords. Without this the build fails inside
+      // Gradle on a null signing config.
+      final android = job(app(), 'android');
+      expect(stepNames(android), contains('Materialise the signing key'));
+
+      final rendered = render(app());
+      expect(rendered, contains('base64 --decode'));
+      expect(rendered, contains('key.properties'));
+      // Absolute, because storeFile resolves relative to android/app and a
+      // relative path silently misses.
+      expect(rendered, contains(r'storeFile=$GITHUB_WORKSPACE'));
+    });
+
+    test('path-valued service accounts are written to real files', () {
+      final steps = stepNames(job(app(), 'android'));
+      expect(steps, contains('Materialise the Play service account'));
+      expect(steps, contains('Materialise the Firebase service account'));
+    });
+
+    test('nothing is materialised when nothing is configured', () {
+      final steps = stepNames(
+        job(app(androidSigning: null, play: null, firebase: null), 'android'),
+      );
+      expect(steps, isNot(contains('Materialise the signing key')));
+      expect(steps, isNot(contains('Materialise the Play service account')));
+    });
+  });
+
+  group('what goes in env', () {
+    test('a known team id is written plainly, not hidden as a secret', () {
+      // It is printed in every build log. A repository secret that hides
+      // nothing is theatre.
+      final env = job(app(), 'ios')['env'] as YamlMap;
+      expect(env[SecretNames.developerPortalTeamId], 'ABCDE12345');
+    });
+
+    test('an unknown team id falls back to a secret', () {
+      final env = job(app(iosTeamId: null), 'ios')['env'] as YamlMap;
+      expect(
+        env[SecretNames.developerPortalTeamId],
+        contains('secrets.${SecretNames.developerPortalTeamId}'),
+      );
+    });
+  });
+
+  test('the pre-flight cannot demand something the workflow never sets', () {
+    // The property that makes this generated rather than copied from a README.
+    // A workflow whose own `secrets check` step fails is worse than no
+    // workflow: it looks configured and refuses to run.
+    final resolved = app();
+    final rendered = render(resolved);
+
+    final config = TaxiwayConfig.fromJson(<String, dynamic>{
+      'version': 1,
+      'project': <String, dynamic>{'name': 'acme_app'},
+      'apps': <String, dynamic>{
+        'main': <String, dynamic>{
+          'ios': <String, dynamic>{'bundle_id': 'com.acme.app'},
+          'android': <String, dynamic>{'application_id': 'com.acme.app'},
+          'signing': <String, dynamic>{
+            'ios': <String, dynamic>{
+              'match_git_url': 'https://github.com/acme/certs.git',
+              'team_id': 'ABCDE12345',
+              'api_key': <String, dynamic>{
+                'key_id_ref': 'ASC_KEY_ID',
+                'issuer_id_ref': 'ASC_ISSUER_ID',
+                'p8_ref': 'ASC_KEY_P8_BASE64',
+              },
+            },
+            'android': <String, dynamic>{
+              'keystore_ref': 'ANDROID_KEYSTORE_BASE64',
+              'key_properties': <String, dynamic>{
+                'store_password_ref': 'ANDROID_STORE_PASSWORD',
+                'key_password_ref': 'ANDROID_KEY_PASSWORD',
+              },
+            },
+          },
+          'targets': <String, dynamic>{
+            'play': <String, dynamic>{'track': 'internal'},
+            'firebase': <String, dynamic>{
+              'android_app_id_ref': 'FB_ANDROID_APP_ID',
+            },
+          },
+        },
+      },
+    });
+
+    final required = SecretRequirements.of(
+      config,
+      environment: RunEnvironment.ephemeralCi,
+    ).where((r) => r.isRequired).map((r) => r.name);
+
+    for (final name in required) {
+      expect(
+        rendered,
+        contains(name),
+        reason: '$name is required on CI but the workflow never provides it',
+      );
+    }
+  });
+
+  test('a project with no flavors gets no workflow', () {
+    expect(const WorkflowGenerator().render(app(flavors: false)), isEmpty);
+  });
+
+  test('it is create-once and never swept', () {
+    // By the second run it is somebody's pipeline.
+    final file = const WorkflowGenerator().render(app()).single;
+    expect(file.createOnly, isTrue);
+    expect(const WorkflowGenerator().owns(WorkflowGenerator.path), isFalse);
+  });
+}

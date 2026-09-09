@@ -197,6 +197,20 @@ the environments make likely:
 | `security: SecKeychainDelete` … `could not be found` | Teardown running against a keychain a previous crashed run already removed. Must not fail the build. |
 | `Could not create another Certificate` | Apple's certificate limit reached — the classic symptom of a runner minting a new certificate every build instead of using `match` in readonly mode. |
 
+## Current support
+
+| Environment | Status |
+|---|---|
+| **Workstation** | Supported. Login keychain, prompts allowed, nothing created. |
+| **Ephemeral CI** (GitHub-hosted) | Supported. Generated workflow, pre-flight, keychain session. |
+| **Persistent runner** | **Not yet.** Detection classifies it correctly and it shares the ephemeral code path, but nothing here has been validated against a real self-hosted machine and taxiway does not claim to support one. |
+| **Linux VPS** | Not yet. |
+
+Detection still resolves `persistentRunner` — misclassifying a self-hosted
+runner as disposable would be worse than naming it — but the work that makes
+that case *good* (guaranteed teardown proven against a cancelled job, the run
+lock exercised under real concurrency) is deliberately deferred.
+
 ## Order of work
 
 Sequenced so each step is independently useful, rather than one XL landing:

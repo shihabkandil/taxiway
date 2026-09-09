@@ -84,6 +84,23 @@ abstract final class SecretRequirements {
         'overrides signing.ios.match_git_url',
       );
       add(SecretNames.matchGitBranch, Need.optional, 'the match repository');
+
+      // A runner has neither a credential helper nor an SSH agent, so the
+      // clone needs an explicit credential. Which one depends on the URL,
+      // and they are mutually exclusive in match.
+      if (!environment.mayPrompt) {
+        final url = iosSigning!.matchGitUrl!;
+        final overSsh = url.startsWith('git@') || url.startsWith('ssh://');
+        add(
+          overSsh
+              ? SecretNames.matchGitPrivateKey
+              : SecretNames.matchGitBasicAuthorization,
+          Need.required,
+          overSsh
+              ? 'cloning the match repository over SSH'
+              : 'cloning the match repository over HTTPS',
+        );
+      }
     }
 
     // Named in the config, so the variable is only a fallback for it.

@@ -171,7 +171,8 @@ The write direction. Defaults to `all`.
 |---|---|
 | `flavors` | Android product flavors, shared Xcode schemes, Dart entrypoints, dart-define files |
 | `fastlane` | Gemfiles, Pluginfiles, Appfiles, Matchfile, ExportOptions plists, the iOS Fastfile |
-| `all` | Both, plus the `.gitignore` block |
+| `ci` | A GitHub Actions release workflow |
+| `all` | All of the above, plus the `.gitignore` block |
 
 Individual generators can also be named: `android-flavors`, `ios-schemes`,
 `entrypoints`, `dart-defines`, `gemfiles`, `pluginfiles`, `appfiles`,
@@ -365,6 +366,35 @@ that way.
 > Homebrew fastlane shadowing the bundle. Use a binstub instead:
 > `cd ios && bundle binstubs fastlane`, then `./bin/fastlane ios beta`.
 > `taxiway doctor` warns about this.
+
+## Continuous integration
+
+`taxiway generate ci` writes `.github/workflows/release.yml` — created once,
+then yours. It calls the same lanes you run locally, so green there and green
+here mean the same thing.
+
+What it handles that a hand-written workflow usually forgets:
+
+- **Match repository access.** A runner has no SSH agent and no credential
+  helper, so a private certificates repo needs an explicit credential. taxiway
+  picks `MATCH_GIT_PRIVATE_KEY` or `MATCH_GIT_BASIC_AUTHORIZATION` from the URL
+  scheme in your config — match treats them as mutually exclusive and silently
+  ignores the wrong one.
+- **The Android keystore.** A checkout has neither the keystore (binary,
+  git-ignored) nor `key.properties` (passwords). The workflow rebuilds both from
+  secrets, with an absolute `storeFile` because Gradle resolves it relative to
+  `android/app`.
+- **Path-valued service accounts.** Play and Firebase want a *file*, so the
+  workflow writes one before the lane runs.
+- **`secrets check` as the first step**, so a missing variable fails in seconds.
+
+A test asserts the workflow provides everything the pre-flight requires — a
+workflow whose own check step fails is worse than none, since it looks
+configured and refuses to run.
+
+Supported CI target is **GitHub-hosted runners**. Self-hosted runners are
+detected correctly but not yet supported; see
+[`execution-environments.md`](execution-environments.md).
 
 ## Not built yet
 

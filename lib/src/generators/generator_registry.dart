@@ -12,6 +12,7 @@ import 'fastlane_generators.dart';
 import 'generated_file.dart';
 import 'ios_generators.dart';
 import 'resolve_app.dart';
+import 'workflow_generator.dart';
 
 /// The generators taxiway ships, and how to build the input they need.
 abstract final class GeneratorRegistry {
@@ -28,6 +29,7 @@ abstract final class GeneratorRegistry {
     ExportOptionsGenerator(),
     IosFastfileGenerator(),
     AndroidFastfileGenerator(),
+    WorkflowGenerator(),
     GitignoreGenerator(),
   ];
 
@@ -48,6 +50,7 @@ abstract final class GeneratorRegistry {
       'ios-fastfile',
       'android-fastfile',
     ],
+    'ci': <String>['workflow'],
     'all': <String>[
       'android-flavors',
       'ios-schemes',
@@ -60,6 +63,7 @@ abstract final class GeneratorRegistry {
       'export-options',
       'ios-fastfile',
       'android-fastfile',
+      'workflow',
       'gitignore',
     ],
   };
