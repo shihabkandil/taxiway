@@ -14,6 +14,7 @@ import '../version.dart';
 import 'commands/adopt_command.dart';
 import 'commands/build_command.dart';
 import 'commands/secrets_command.dart';
+import 'commands/setup_command.dart';
 import 'commands/doctor_command.dart';
 import 'commands/generate_command.dart';
 import 'commands/import_command.dart';
@@ -82,6 +83,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
     addCommand(AdoptCommand(() => context));
     addCommand(BuildCommand(() => context));
     addCommand(SecretsCommand(() => context));
+    addCommand(SetupCommand(() => context));
   }
 
   final Logger _logger;
