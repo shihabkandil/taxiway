@@ -1,6 +1,7 @@
 import '../core/env/run_environment.dart';
 import '../core/secrets/secret_names.dart';
 import '../core/toolchain/fastlane_pins.dart';
+import '../version.dart';
 import 'generated_file.dart';
 
 /// Writes `.github/workflows/release.yml`.
@@ -108,8 +109,7 @@ ${_indent(_iosEnv(app), 6)}
           bundler-cache: true
           working-directory: ios
 
-      - name: Install taxiway
-        run: dart pub global activate --source git https://github.com/your-org/taxiway
+${_installStep()}
 
       # Fails in seconds naming the missing variable, rather than twenty
       # minutes later at the upload.
@@ -162,6 +162,29 @@ ${_matchAccessStep(app)}
 ''';
   }
 
+  /// How a runner gets the same taxiway that generated this file.
+  ///
+  /// Pinned to the tag matching the generating version, because a workflow that
+  /// installs whatever the default branch holds today can start failing on a
+  /// morning nobody touched this repository — and the failure arrives looking
+  /// like the app's, in a job that was green yesterday.
+  ///
+  /// A pre-release has no tag behind it, so it says so rather than naming a ref
+  /// that does not resolve.
+  static String _installStep() {
+    final ref = packageGitRef;
+    final pin = ref == null ? '' : ' --git-ref $ref';
+    final note = ref == null
+        ? '      # taxiway $packageVersion is a pre-release with no tag, so this\n'
+              '      # tracks the default branch. Add `--git-ref v<version>` once you\n'
+              '      # are on a released one.\n'
+        : '      # Pinned to the version that generated this workflow.\n';
+    return '$note'
+        '      - name: Install taxiway\n'
+        '        run: dart pub global activate --source git '
+        '$packageRepository$pin';
+  }
+
   String _androidJob(ResolvedApp app) =>
       '''
   android:
@@ -188,8 +211,7 @@ ${_indent(_androidEnv(app), 6)}
           bundler-cache: true
           working-directory: android
 
-      - name: Install taxiway
-        run: dart pub global activate --source git https://github.com/your-org/taxiway
+${_installStep()}
 
 ${_androidSigningStep(app)}${_playKeyStep(app)}${_firebaseKeyStep(app)}
       - name: Check credentials

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:taxiway/src/core/config/taxiway_config.dart';
 import 'package:taxiway/src/core/env/run_environment.dart';
 import 'package:taxiway/src/core/model/android_model.dart';
@@ -5,6 +7,7 @@ import 'package:taxiway/src/core/secrets/secret_names.dart';
 import 'package:taxiway/src/generators/generated_file.dart';
 import 'package:taxiway/src/generators/workflow_generator.dart';
 import 'package:taxiway/src/secrets/secret_requirements.dart';
+import 'package:taxiway/src/version.dart';
 import 'package:test/test.dart';
 import 'package:yaml/yaml.dart';
 
@@ -72,6 +75,13 @@ YamlMap job(ResolvedApp resolved, String name) =>
 List<String> stepNames(YamlMap job) => <String>[
   for (final step in job['steps'] as YamlList)
     ((step as YamlMap)['name'] ?? step['uses']).toString(),
+];
+
+/// The `dart pub global activate` lines, which are what a runner actually
+/// executes — the surrounding comment mentions the flag too.
+List<String> activateCommands(String workflow) => <String>[
+  for (final line in workflow.split('\n'))
+    if (line.contains('dart pub global activate')) line.trim(),
 ];
 
 void main() {
@@ -216,6 +226,47 @@ void main() {
         reason: '$name is required on CI but the workflow never provides it',
       );
     }
+  });
+
+  group('installing taxiway on the runner', () {
+    test('both jobs install it from the package own repository', () {
+      final commands = activateCommands(render(app()));
+      expect(
+        commands,
+        hasLength(2),
+        reason: 'both jobs run taxiway, so both have to install it',
+      );
+      expect(commands, everyElement(contains(packageRepository)));
+    });
+
+    test('the repository it names is the one pubspec declares', () {
+      // Two places have to agree, and the one a runner uses is the one nobody
+      // looks at until it 404s in somebody else's repository.
+      final pubspec =
+          loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+      expect(packageRepository, pubspec['repository']);
+    });
+
+    test('a released version is pinned to its tag, a pre-release is not', () {
+      // Installing the default branch means a workflow can break on a morning
+      // nobody touched this repository; naming a tag that does not exist means
+      // it breaks immediately. Neither is acceptable, so which one is emitted
+      // follows the version.
+      final rendered = render(app());
+      final ref = packageGitRef;
+      if (ref == null) {
+        expect(
+          activateCommands(rendered),
+          everyElement(isNot(contains('--git-ref'))),
+        );
+        expect(rendered, contains('pre-release'));
+      } else {
+        expect(
+          activateCommands(rendered),
+          everyElement(contains('--git-ref $ref')),
+        );
+      }
+    });
   });
 
   test('a project with no flavors gets no workflow', () {
