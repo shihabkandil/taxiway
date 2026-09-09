@@ -1,0 +1,289 @@
+# taxiway command reference
+
+Every command taxiway currently ships. Phases 0, 1A, 1B and the first half of
+Phase 2 are implemented; commands the plan describes but which do not exist yet
+are listed under [Not built yet](#not-built-yet) rather than documented as if
+they worked.
+
+```
+taxiway <command> [arguments]
+```
+
+## The shape of the thing
+
+taxiway reads a project as readily as it writes one, and the two directions are
+deliberately separate:
+
+```
+  read                                   write
+  ────                                   ─────
+  import  ──▶ taxiway.yaml ──▶ generate ──▶ project files
+  status  ──▶ what differs      adopt   ──▶ permission to write
+  doctor  ──▶ can this machine ship it?
+  build   ──▶ the artifact
+```
+
+`import` never modifies your project. `generate` never writes a file taxiway
+does not own — `adopt` is the only way to hand one over, and it shows you the
+diff first.
+
+## Global options
+
+Accepted before any command.
+
+| Option | Meaning |
+|---|---|
+| `-h, --help` | Usage for taxiway or for one command. |
+| `--version` | Print the version and exit. |
+| `-v, --verbose` | Show every command taxiway runs and its full output. |
+| `--no-color` | Disable coloured output. |
+| `-y, --yes` | Assume yes for every prompt. Implies non-interactive. |
+| `--config=<path>` | Use this `taxiway.yaml` instead of searching for one. |
+| `--app=<id>` | Which app in a monorepo to act on. |
+
+## Exit codes
+
+Coarse on purpose, so a CI script can tell the three kinds of failure apart
+without parsing output.
+
+| Code | Meaning |
+|---|---|
+| `0` | Success. |
+| `1` | You asked for something invalid — bad flags, bad config, a conflict needing a decision. |
+| `2` | This machine cannot do it — a missing or too-old tool, a failing check, a failed build. |
+| `70` | A bug in taxiway. Worth reporting. |
+
+---
+
+## `taxiway doctor`
+
+> Check whether this machine can build and ship this app.
+
+```
+taxiway doctor [--json] [--only <id>]
+```
+
+Runs every environment check and prints a checklist with a fix hint for
+anything wrong. Works **before** `init` does — its whole job is telling you why
+nothing else will, so it never requires a `taxiway.yaml`.
+
+| Option | Meaning |
+|---|---|
+| `--json` | Emit the report as JSON, for CI. |
+| `--only=<id>` | Run only the named checks. Repeatable. |
+
+Check ids: `flutter`, `dart`, `xcode`, `cocoapods`, `ruby`, `bundler`,
+`fastlane`, `xcodeproj_gem`, `pbxproj_object_version`, `jdk`, `gradle_dsl`,
+`gradle_wrapper`, `play_target_sdk`, `firebase`, `flutterfire`, `keychain`,
+`fastlane-shim`, `gemfile-pins`.
+
+A **warning** means it will work now and bite later — a Ruby near end of
+support, a store deadline approaching. A **failure** blocks shipping.
+
+Two checks are worth knowing about because their symptoms are misleading:
+
+- `fastlane-shim` catches a Homebrew `fastlane`, which is a shell script that
+  overrides `GEM_HOME` and `GEM_PATH`. `bundle exec fastlane` then silently runs
+  a different fastlane against different gems, and fails with
+  `Could not find <gem> in locally installed gems` — which reads like a broken
+  bundle rather than a hijacked one. The fix is a binstub.
+- `gemfile-pins` checks that the pins in the generated Gemfile can actually be
+  solved on your Ruby. `bundle install` does not degrade when they cannot; it
+  installs nothing.
+
+## `taxiway init`
+
+> Set up taxiway in this project.
+
+```
+taxiway init [--force]
+```
+
+The front door. Looks at the project, then writes a `taxiway.yaml` describing
+what is already there. **No project file is modified.**
+
+| Option | Meaning |
+|---|---|
+| `--force` | Overwrite an existing `taxiway.yaml`. |
+
+## `taxiway import`
+
+> Read this project and write a taxiway.yaml describing it.
+
+```
+taxiway import [--deep] [--dry-run] [--out <path>] [--force]
+```
+
+The read direction, in full. Derives a config from the Gradle files, the Xcode
+project, the Dart entrypoints, the Firebase config and any existing fastlane
+setup. Writes exactly two things — `taxiway.yaml` and `.taxiway/lock.json` —
+and nothing else.
+
+Anything the readers could not determine is **left out** rather than guessed.
+
+| Option | Meaning |
+|---|---|
+| `--deep` | Ask Gradle for the resolved build model. Slower, but reads values the fast parser cannot — computed application ids, values from `ext` blocks. |
+| `--dry-run` | Print the derived config without writing. |
+| `--out=<path>` | Where to write it. Defaults to `taxiway.yaml`. |
+| `--force` | Overwrite an existing config. |
+
+`--deep` runs a real Gradle build model, so it needs a project whose wrapper
+Gradle version satisfies Flutter's floor. `doctor`'s `gradle_wrapper` check
+tells you if it does not.
+
+## `taxiway status`
+
+> Show how this project differs from taxiway.yaml.
+
+```
+taxiway status [--json]
+```
+
+Re-reads the project and compares it to the config. On a freshly imported
+project this reports no drift — that round trip is a correctness gate, not a
+nicety.
+
+| Option | Meaning |
+|---|---|
+| `--json` | Emit the drift report as JSON. |
+
+## `taxiway generate`
+
+> Write the files taxiway.yaml describes.
+
+```
+taxiway generate [flavors|fastlane|all] [--dry-run] [--force]
+```
+
+The write direction. Defaults to `all`.
+
+| Option | Meaning |
+|---|---|
+| `--dry-run` | Show what would change, write nothing. |
+| `--force` | Overwrite content you have edited *inside a taxiway block*. Never overrides an unadopted file. |
+
+**Groups**
+
+| Group | Produces |
+|---|---|
+| `flavors` | Android product flavors, shared Xcode schemes, Dart entrypoints, dart-define files |
+| `fastlane` | Gemfiles, Pluginfiles, Appfiles, Matchfile, ExportOptions plists, the iOS Fastfile |
+| `all` | Both, plus the `.gitignore` block |
+
+Individual generators can also be named: `android-flavors`, `ios-schemes`,
+`entrypoints`, `dart-defines`, `gemfiles`, `pluginfiles`, `appfiles`,
+`matchfile`, `export-options`, `ios-fastfile`, `gitignore`.
+
+**What it refuses to do.** A file that existed before taxiway is reported as
+`conflict` and left alone. That refusal is the feature: on a real project the
+Gradle build file and the Xcode project were there first, and generating over
+them would replace a working build. Run `taxiway adopt` to hand one over.
+
+Re-running is a byte-identical no-op.
+
+Besides files, `generate` also mutates `ios/Runner.xcodeproj/project.pbxproj`
+and `ios/Runner/Info.plist` through adapters that back up, verify and restore on
+failure.
+
+## `taxiway adopt`
+
+> Let taxiway write to a file that was here before it.
+
+```
+taxiway adopt <path|all> [--dry-run]
+```
+
+Shows the difference adopting would make, then records the file as taxiway's to
+write. Ownership lives in `.taxiway/lock.json`, which is committed on purpose —
+it is a team-wide fact, and a teammate who pulls the repo inherits the same
+permissions.
+
+| Option | Meaning |
+|---|---|
+| `--dry-run` | Show what adopting would change without recording anything. |
+
+## `taxiway build`
+
+> Build a flavor for one platform.
+
+```
+taxiway build ios|android --flavor <flavor> [options]
+```
+
+Constructs the `flutter build` invocation from the same resolved config the
+generators used. This exists because the command is easy to get wrong in ways
+that **do not fail**:
+
+- omit `--target` and Flutter compiles `lib/main.dart` under the flavor's bundle
+  id — the wrong app, built successfully;
+- omit `--dart-define-from-file` and it builds against the wrong backend.
+
+Neither produces an error, so taxiway assembles the command rather than leaving
+it to memory.
+
+| Option | Meaning |
+|---|---|
+| `-f, --flavor <name>` | Which flavor. Required when the config declares any. |
+| `--artifact appbundle\|apk` | Android only. Defaults to `appbundle`. |
+| `--debug` | Build debug instead of release. |
+| `--no-codesign` | iOS only: archive without signing, which is what the generated fastlane lane uses because gym signs on export. |
+| `--dry-run` | Print the command that would run, and stop. |
+
+**It reads successful builds too.** `flutter build` exits `0` on an archive
+whose `Info.plist` lost its version keys, and App Store Connect then rejects the
+upload. A zero exit code is not evidence an artifact can be shipped, so the
+output of a *successful* build is classified as well, and anything recognised is
+reported as a warning with its remedy.
+
+For iOS the reported artifact is the `.xcarchive`, not an `.ipa`: the export
+names the `.ipa` after `CFBundleDisplayName` under Flutter and after the product
+target under gym, so it can only be found by globbing `build/ios/ipa/*.ipa`.
+
+## Generated fastlane lanes
+
+`taxiway generate fastlane` writes lanes you run yourself, always through
+bundler:
+
+```
+cd ios && bundle install
+bundle exec fastlane ios beta flavor:prod
+```
+
+| Lane | Does |
+|---|---|
+| `certificates` | Syncs signing via `match`, readonly unless asked otherwise. |
+| `build_ipa` | Builds and signs an `.ipa` for one flavor. |
+| `beta` | `certificates` → `build_ipa` → upload to TestFlight. Takes `dry_run: true`. |
+
+Every credential reaches a lane through `ENV`; nothing that could be a secret is
+written into a generated file, and a test greps all fastlane output to keep it
+that way.
+
+> **If `bundle exec fastlane` fails with `Could not find <gem>`,** you have a
+> Homebrew fastlane shadowing the bundle. Use a binstub instead:
+> `cd ios && bundle binstubs fastlane`, then `./bin/fastlane ios beta`.
+> `taxiway doctor` warns about this.
+
+## Not built yet
+
+Planned, and deliberately absent rather than half-present:
+
+| Command | Phase |
+|---|---|
+| `taxiway setup ios-signing \| android-signing \| firebase` | 3 |
+| `taxiway release ios\|android --target testflight\|appstore\|play\|firebase` | 4 |
+| `taxiway run <pipeline>` | 5 |
+| `taxiway secrets set\|list\|import` | 3 |
+| `taxiway upgrade`, `taxiway completion install` | 6 |
+
+Android fastlane lanes are also not generated yet; the Gemfile, Appfile and
+Pluginfile for Android are.
+
+## See also
+
+- [`config-schema.md`](config-schema.md) — every `taxiway.yaml` field.
+- [`ios-build-division.md`](ios-build-division.md) — who builds the iOS archive,
+  and why gym must not.
+- [`deviations.md`](deviations.md) — where the built thing differs from the plan,
+  and why.
