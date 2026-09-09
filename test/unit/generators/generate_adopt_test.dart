@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:mason_logger/mason_logger.dart';
 import 'package:taxiway/src/cli/exit_codes.dart';
 import 'package:taxiway/src/cli/taxiway_command_runner.dart';
@@ -118,6 +120,7 @@ $flavors
       ..withSharedScheme('prod', launch: 'Debug-prod', archive: 'Release-prod');
 
     stubConfigure(runner, flavors: const <String>['dev', 'prod']);
+    stubPlutil(runner);
     stubBridge(
       runner,
       stubBridgeJson(
@@ -380,6 +383,92 @@ $flavors
       expect(gitignore, isNot(contains('.taxiway/lock.json')));
       // An example file must stay trackable.
       expect(gitignore, contains('!.env*.example'));
+    });
+  });
+
+  group('iOS display name', () {
+    setUp(makeAgreeingProject);
+
+    test('points Info.plist at the build setting', () async {
+      await run(<String>['import']);
+      await run(<String>['adopt', 'all']);
+      logger.clear();
+
+      await run(<String>['generate']);
+
+      final replace = runner.invocation('plutil -replace');
+      expect(
+        replace.arguments,
+        containsAllInOrder(<String>[
+          'CFBundleDisplayName',
+          '-string',
+          r'$(APP_DISPLAY_NAME)',
+        ]),
+      );
+      expect(logger.output, contains(r'$(APP_DISPLAY_NAME)'));
+    });
+
+    test('defines APP_DISPLAY_NAME for the unflavored build types too', () async {
+      await run(<String>['import']);
+      await run(<String>['adopt', 'all']);
+      await run(<String>['generate']);
+
+      final request =
+          jsonDecode(runner.invocation('configure').stdin!)
+              as Map<String, dynamic>;
+      final byName = <String, Map<String, dynamic>>{
+        for (final c
+            in (request['configurations'] as List<dynamic>)
+                .cast<Map<String, dynamic>>())
+          c['name'] as String: c,
+      };
+
+      // Once the plist says \$(APP_DISPLAY_NAME), a configuration that does not
+      // define it produces an app with an *empty* name. The unflavored build
+      // types must therefore keep whatever the plist said before.
+      for (final buildType in const <String>['Debug', 'Release', 'Profile']) {
+        final settings =
+            byName[buildType]!['buildSettings'] as Map<String, dynamic>;
+        expect(settings['APP_DISPLAY_NAME'], 'Demo App');
+      }
+    });
+
+    test('gives each flavor its own display name', () async {
+      await run(<String>['import']);
+      await run(<String>['adopt', 'all']);
+      await run(<String>['generate']);
+
+      final request =
+          jsonDecode(runner.invocation('configure').stdin!)
+              as Map<String, dynamic>;
+      final byName = <String, Map<String, dynamic>>{
+        for (final c
+            in (request['configurations'] as List<dynamic>)
+                .cast<Map<String, dynamic>>())
+          c['name'] as String: c,
+      };
+
+      expect(
+        (byName['Release-dev']!['buildSettings']
+            as Map<String, dynamic>)['APP_DISPLAY_NAME'],
+        'Acme Dev',
+      );
+      expect(
+        (byName['Release-prod']!['buildSettings']
+            as Map<String, dynamic>)['APP_DISPLAY_NAME'],
+        'Acme',
+      );
+    });
+
+    test('mentions it in --dry-run without touching the plist', () async {
+      await run(<String>['import']);
+      await run(<String>['adopt', 'all']);
+      logger.clear();
+
+      await run(<String>['generate', '--dry-run']);
+
+      expect(logger.output, contains('own name on the home screen'));
+      expect(runner.ran('plutil -replace'), isFalse);
     });
   });
 

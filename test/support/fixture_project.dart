@@ -92,11 +92,22 @@ class FixtureProject {
   /// The `project.pbxproj` is a placeholder: its contents come from the stubbed
   /// bridge, but the file must exist because the mutator backs it up before
   /// touching it and refuses to run when it is absent.
-  FixtureProject withIosProject() {
+  FixtureProject withIosProject({String displayName = 'Demo App'}) {
     write(
       'ios/Runner.xcodeproj/project.pbxproj',
       '// !\$*UTF8*\$!\n{ objectVersion = 60; }\n',
     );
+    write('ios/Runner/Info.plist', '''
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>$displayName</string>
+  <key>CFBundleName</key>
+  <string>demo_app</string>
+</dict>
+</plist>
+''');
     return this;
   }
 
@@ -254,6 +265,31 @@ String stubBridgeJson({
       ],
     },
   });
+}
+
+/// Models `plutil` reading and rewriting `CFBundleDisplayName`.
+///
+/// The mutator verifies its own edit by reading the key back, so the double has
+/// to change what the read returns once the replace has happened — otherwise
+/// every run looks like a silently-failed edit.
+void stubPlutil(
+  RecordingProcessRunner runner, {
+  String currentDisplayName = 'Demo App',
+}) {
+  runner.stub('plutil -extract', stdout: currentDisplayName);
+  runner.stub('plutil -replace');
+
+  final previous = runner.onRun;
+  runner.onRun = (invocation) {
+    previous?.call(invocation);
+    if (invocation.executable == 'plutil' &&
+        invocation.arguments.contains('-replace')) {
+      final index = invocation.arguments.indexOf('-string');
+      if (index != -1 && index + 1 < invocation.arguments.length) {
+        runner.stub('plutil -extract', stdout: invocation.arguments[index + 1]);
+      }
+    }
+  };
 }
 
 /// Stubs the bridge's `read` op on [runner].

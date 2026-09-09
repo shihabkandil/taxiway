@@ -3,8 +3,10 @@ import 'package:mason_logger/mason_logger.dart';
 
 import '../../generators/generated_file.dart';
 import '../../generators/generated_file_writer.dart';
+import '../../core/model/project_model.dart';
 import '../../generators/generator_registry.dart';
 import '../../inspect/xcodeproj_bridge.dart';
+import '../../platform/ios/info_plist_mutator.dart';
 import '../../platform/ios/xcode_project_mutator.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
@@ -121,8 +123,9 @@ class GenerateCommand extends Command<int> {
   bool _touchesIos(List<Generator> generators) =>
       generators.any((g) => g.name == 'ios-schemes' || g.name == 'xcconfigs');
 
-  /// Creates the `<BuildType>-<flavor>` configurations and the Firebase copy
-  /// step, backing up and restoring `project.pbxproj` around the change.
+  /// Creates the `<BuildType>-<flavor>` configurations, points Info.plist at
+  /// the display-name build setting, and adds the Firebase copy step — backing
+  /// up and restoring both files around the change.
   Future<MutationResult?> _configureXcodeProject(
     ResolvedApp app, {
     required bool dryRun,
@@ -131,21 +134,60 @@ class GenerateCommand extends Command<int> {
     final context = _context;
     final logger = context.logger;
 
-    final configurations = XcodeProjectMutator.configurationsFor(
-      app.flavors.map((f) => f.name),
-      xcconfigFor: (flavor) => 'Flutter/$flavor.xcconfig',
-      bundleIdFor: (flavor) => app.flavor(flavor)?.iosBundleId,
+    final plistMutator = InfoPlistMutator(
+      runner: context.runner,
+      root: context.projectRoot,
     );
 
+    // Seeding the unflavored build types with the plist's current literal is a
+    // one-time migration. Once the plist references APP_DISPLAY_NAME the
+    // literal is gone, and re-deriving it every run would both be wrong — the
+    // package name is not the display name — and overwrite a value the user may
+    // since have changed.
+    final plistAlreadyConfigured = await plistMutator.isConfigured();
+    final baseDisplayName = plistAlreadyConfigured
+        ? null
+        : (await plistMutator.readDisplayName() ?? app.projectName);
+
+    final configurations = <DesiredConfiguration>[
+      if (baseDisplayName != null)
+        for (final buildType in flutterBuildTypes)
+          DesiredConfiguration(
+            name: buildType,
+            basedOn: buildType,
+            buildSettings: <String, String>{
+              InfoPlistMutator.displayNameSetting: baseDisplayName,
+            },
+          ),
+      ...XcodeProjectMutator.configurationsFor(
+        app.flavors.map((f) => f.name),
+        xcconfigFor: (flavor) => 'Flutter/$flavor.xcconfig',
+        bundleIdFor: (flavor) => app.flavor(flavor)?.iosBundleId,
+        displayNameFor: (flavor) =>
+            app.flavor(flavor)?.displayNameOr(app.projectName),
+      ),
+    ];
+
     if (dryRun) {
+      final flavored = configurations
+          .where((c) => c.name.contains('-'))
+          .toList();
       logger
         ..info('')
         ..info('Xcode project:')
         ..info(
-          '  would ensure ${configurations.length} build '
-          'configuration${configurations.length == 1 ? '' : 's'}: '
-          '${configurations.map((c) => c.name).join(', ')}',
+          '  would ensure ${flavored.length} build '
+          'configuration${flavored.length == 1 ? '' : 's'}: '
+          '${flavored.map((c) => c.name).join(', ')}',
         );
+      if (!plistAlreadyConfigured) {
+        logger.info(
+          '  would point ${InfoPlistMutator.plistPath} '
+          '${InfoPlistMutator.displayNameKey} at '
+          '${InfoPlistMutator.displayNameReference}, so each flavor gets its '
+          'own name on the home screen',
+        );
+      }
       return null;
     }
 
@@ -199,12 +241,35 @@ class GenerateCommand extends Command<int> {
       return mutation;
     }
 
+    // Only after the build settings exist, so the plist never references a
+    // setting nothing defines.
+    final plist = await plistMutator.pointDisplayNameAtBuildSetting();
+    if (!plist.succeeded) {
+      progress.fail('Could not update Info.plist');
+      logger.err(plist.failureReason!);
+      final remedy = plist.failureRemedy;
+      if (remedy != null) logger.info(remedy);
+      return MutationResult(
+        changed: mutation.changed,
+        changes: mutation.changes,
+        failureReason: plist.failureReason,
+      );
+    }
+
+    final total = mutation.changes.length + (plist.changed ? 1 : 0);
     progress.complete(
-      mutation.changed
-          ? 'Configured Xcode project (${mutation.changes.length} '
-                'change${mutation.changes.length == 1 ? '' : 's'})'
-          : 'Xcode project already configured',
+      total == 0
+          ? 'Xcode project already configured'
+          : 'Configured Xcode project ($total change'
+                '${total == 1 ? '' : 's'})',
     );
+    if (plist.changed) {
+      logger.info(
+        '  ${InfoPlistMutator.plistPath} now uses '
+        '${InfoPlistMutator.displayNameReference}; unflavored builds keep '
+        '"${baseDisplayName ?? app.projectName}".',
+      );
+    }
     return mutation;
   }
 

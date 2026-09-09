@@ -316,6 +316,7 @@ class XcodeProjectMutator {
     Iterable<String> flavors, {
     String Function(String flavor)? xcconfigFor,
     String? Function(String flavor)? bundleIdFor,
+    String? Function(String flavor)? displayNameFor,
   }) => <DesiredConfiguration>[
     for (final flavor in flavors)
       for (final buildType in flutterBuildTypes)
@@ -329,6 +330,10 @@ class XcodeProjectMutator {
             // in the xcconfig builds under the unflavored id.
             if (bundleIdFor?.call(flavor) != null)
               'PRODUCT_BUNDLE_IDENTIFIER': bundleIdFor!(flavor)!,
+            // Referenced by Info.plist, which is the only way the home-screen
+            // name can vary per build configuration.
+            if (displayNameFor?.call(flavor) != null)
+              'APP_DISPLAY_NAME': displayNameFor!(flavor)!,
           },
         ),
   ];

@@ -44,6 +44,14 @@ class RecordingProcessRunner implements ProcessRunner {
   /// tests that only assert argv free of stub boilerplate.
   final ProcessResultLite? defaultResponse;
 
+  /// Called before each invocation is answered.
+  ///
+  /// Lets a test model a side effect a real command would have had — a file
+  /// written, a value changed — usually by re-stubbing what a later read
+  /// returns. Without it, any code that writes and then verifies its own work
+  /// is untestable against this double.
+  void Function(RecordedInvocation invocation)? onRun;
+
   /// Stubs any command whose command line contains [contains].
   ///
   /// Later registrations win, so a test can override a fixture-wide default.
@@ -115,6 +123,7 @@ class RecordingProcessRunner implements ProcessRunner {
       false,
       stdin: stdin,
     );
+    onRun?.call(invocations.last);
     final stub = _match(executable, arguments);
     return ProcessResultLite(
       executable: executable,
@@ -133,6 +142,7 @@ class RecordingProcessRunner implements ProcessRunner {
     Map<String, String>? environment,
   }) async* {
     _record(executable, arguments, workingDirectory, environment, true);
+    onRun?.call(invocations.last);
     final stub = _match(executable, arguments);
     for (final line in stub?.lines ?? const <String>[]) {
       yield line;

@@ -35,7 +35,7 @@ apps:                         # keyed by app id; a single-app repo uses `main`
         suffix: .dev                   # appended to the base id on both platforms
         version_name_suffix: "-dev"    # Android versionNameSuffix
         dimension: environment         # omit unless it is not `environment`
-        display_name: "Acme Dev"
+        display_name: "Acme Dev"       # app_name on Android, CFBundleDisplayName on iOS
         entrypoint: lib/main_dev.dart  # omit when it is lib/main_<flavor>.dart
         dart_defines: { ENV: dev, API: "https://dev.api" }
         icon: assets/icon/dev.png
@@ -135,3 +135,21 @@ must have somewhere to live.
 | `flavors.<name>.entrypoint` | Flavors named `development`/`production` very often have `main_dev.dart`/`main_prod.dart`. Assuming `main_<flavor>.dart` would build the wrong app under the right bundle id — a failure that looks like success. |
 | `flavors.<name>.version_name_suffix` | Read from Gradle's `versionNameSuffix`. Without it the round trip loses the value and `status` reports drift on a freshly imported project. |
 | `flavors.<name>.dimension` | Recorded only when it is not `environment`, the dimension taxiway generates. Projects using another name would otherwise drift forever. |
+
+## How `display_name` reaches each platform
+
+On Android it becomes a `resValue("string", "app_name", …)` per flavor, and the
+generated block enables `buildFeatures { resValues = true }` because AGP 8+
+generates no resource values without it.
+
+On iOS it becomes an `APP_DISPLAY_NAME` build setting per configuration, and
+`ios/Runner/Info.plist` is pointed at `$(APP_DISPLAY_NAME)` — Xcode expands
+build-setting references in the plist at build time, which is the only mechanism
+that varies the home-screen name per configuration.
+
+That plist rewrite has a trap worth knowing about: once the literal is replaced,
+any configuration that does **not** define `APP_DISPLAY_NAME` produces an app
+with an empty name. taxiway therefore seeds the unflavored `Debug`, `Release`
+and `Profile` configurations with whatever the plist said before — once, as a
+migration. It does not re-derive that value on later runs, both because the
+package name is not the display name and because you may have changed it since.
