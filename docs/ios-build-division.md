@@ -6,7 +6,9 @@ fastlane only signs and uploads.** If that were wrong, Phase 2 would change
 shape entirely, so it was tested before any generator was written.
 
 Verified 2026-09-09 against Flutter 3.47.2 (Dart 3.13.2), Xcode 26.6,
-fastlane 2.238.0, on a `flutter create` app.
+fastlane 2.238.0 — on a throwaway `flutter create` app for the archive and gym
+questions, and on a real two-flavor CocoaPods app with real signing for the
+export leg, which produced an actual signed `.ipa`.
 
 **The assumption holds.** The reasoning the plan gives for it is out of date,
 and the failure it names no longer appears — a different one does, earlier and
@@ -33,7 +35,7 @@ first and prints `Codesigning disabled with --no-codesign, skipping IPA.`
    is passed straight through; `--export-method` generates a plist instead, and
    the two flags are mutually exclusive.
 
-So there is nothing left for `gym` to add, and taxiway generates the
+So `gym` has nothing to add to the archive step, and taxiway generates the
 `ExportOptions-<flavor>.plist` that `--export-options-plist` consumes.
 
 ## Why letting `gym` drive the build breaks
@@ -100,37 +102,116 @@ fastlane:
 | `upload_to_play_store` / `supply` | `aab:`, `apk:`, `aab_paths:` | plus `track`, `release_status`, `rollout` |
 | `firebase_app_distribution` | plugin 1.0.0 installed | service-account JSON, not the deprecated token |
 
-Plus `match` in readonly mode for signing. No `gym`, ever.
+Plus `match` in readonly mode for signing. `gym` never *archives* -- though it
+may legitimately export, see the third shape below.
 
-## Not yet verified: the signed export
+## The signed export, verified end to end
 
-Every result above was obtained with `--no-codesign` or `skip_codesigning`,
-because signing on this machine fails before it reaches the export step:
+Confirmed on a real project rather than a scaffold: a two-flavor CocoaPods app
+(Firebase, Google Maps, an entitlements file with push, associated domains and
+in-app payments), signed with a genuine Apple Development identity.
 
 ```
-.../App.framework/App: replacing existing signature
-.../App.framework/App: errSecInternalComponent
+flutter build ipa --release --no-pub --flavor development \
+  --export-options-plist=<generated> lib/main_dev.dart
 ```
 
-The login keychain is unlocked and holds three valid Apple Development
-identities; a bare `codesign` of a trivial binary fails the same way, so this is
-the private key's ACL refusing a non-interactive process rather than anything to
-do with Flutter or taxiway. Clearing it needs the login password:
+```
+Xcode archive done.                    168.0s
+* Built build/ios/archive/Runner.xcarchive (285.2MB)
+[OK] App Settings Validation
+     Version Number: 3.0.3   Build Number: 1
+     Display Name: Lahent Dev
+     Bundle Identifier: com.la-hent.client.dev
+Building development IPA...             20.8s
+* Built IPA to build/ios/ipa (25.4MB)
+```
+
+The artifact is properly signed, not an unsigned bundle:
+
+```
+Identifier=com.la-hent.client.dev
+Authority=Apple Development: Shihab Kandil (CT29X3L3DC)
+Authority=Apple Worldwide Developer Relations Certification Authority
+Authority=Apple Root CA
+TeamIdentifier=76M2WGPM33
+```
+
+with `embedded.mobileprovision` naming the profile used. Export took 21 seconds
+against 168 for the archive, which is the ratio that makes re-exporting cheap
+and re-archiving expensive.
+
+Two details a generated lane must get right:
+
+- **The `.ipa` is named after `CFBundleDisplayName`, not the target.** This build
+  produced `build/ios/ipa/Lahent Dev.ipa` -- a flavor's display name, spaces and
+  all. A lane that hardcodes `Runner.ipa` finds nothing. Glob
+  `build/ios/ipa/*.ipa` rather than construct the name.
+- **Xcode 26 rewrites the export method.** `method: development` comes back as
+  `method: "debugging"` in the `ExportOptions.plist` Xcode leaves beside the
+  `.ipa`. The old names (`app-store`, `ad-hoc`, `development`, `enterprise`) are
+  still accepted and normalised to the new ones (`app-store-connect`,
+  `release-testing`, `debugging`, ...).
+
+The earlier `errSecInternalComponent` that blocked this turned out to be a
+per-key keychain ACL awaiting a one-time interactive grant, not a property of
+the machine -- all three development identities sign non-interactively now.
+Worth keeping in the classifier anyway, with the remedy:
 
 ```
 security set-key-partition-list -S apple-tool:,apple: -s \
   -k <login password> ~/Library/Keychains/login.keychain-db
 ```
 
-What remains untested is therefore the export leg only — that
-`xcodebuild -exportArchive` with a taxiway-written `ExportOptions.plist` yields
-a `.ipa`. The archive it consumes is verified well-formed, and the command line
-is read from Flutter's own source, so the risk is low; but it is not zero, and
-it should be closed before the fastlane generators are trusted end to end.
+## A third shape: let `gym` do only the export
 
-`errSecInternalComponent` belongs in the error classifier with the remedy above:
-it is the failure a developer hits the first time they run a build from a script
-rather than from Xcode, and it names nothing they could usefully search for.
+A real shipping Fastfile for the project above divides the work one notch
+differently from this plan, and it works:
+
+```ruby
+flutter_build(type: "ipa", flavor: flavor, ...)   # flutter archives
+
+build_app(
+  skip_build_archive: true,                       # gym does NOT archive
+  archive_path: "build/ios/archive/Runner.xcarchive",
+  output_directory: "build/ios/ipa",
+  export_method: "app-store",
+  export_options: { provisioningProfiles: { bundle_id => profile_name } }
+)
+```
+
+`skip_build_archive: true` is the whole difference between this and the broken
+arrangement: gym exports a Flutter-made archive instead of trying to make one.
+
+So there are two workable shapes, not one:
+
+| | archive | export | upload |
+|---|---|---|---|
+| **A** -- this plan | `flutter build ipa --export-options-plist` | same command | fastlane |
+| **B** -- the real project | `flutter build ipa` | `build_app(skip_build_archive: true)` | fastlane |
+| **C** -- the trap | `build_app` | `build_app` | fastlane |
+
+B has a real advantage: with `match`, the profile name is only known at lane
+runtime, from `SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING`, and gym's
+`export_options:` takes it directly. A static `ExportOptions-<flavor>.plist` has
+to have the name written into it ahead of time.
+
+Which taxiway generates is still open.
+
+## What the Android side does
+
+The same project, confirming the plan without qualification -- `flutter build`
+then `supply`, with these artifact paths:
+
+| type | path |
+|---|---|
+| appbundle | `build/app/outputs/bundle/<flavor>Release/app-<flavor>-release.aab` |
+| apk | `build/app/outputs/flutter-apk/app-<flavor>-release.apk` |
+| mapping | `build/app/outputs/mapping/<flavor>Release/mapping.txt` |
+
+Its package names also justify the two-base-id schema field: Android
+`com.la_hent.client` against iOS `com.la-hent.client`, because an Android
+`applicationId` may not contain a hyphen.
 
 ## Incidental finding
 
