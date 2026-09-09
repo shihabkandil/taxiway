@@ -107,6 +107,9 @@ class GeneratedFile {
 /// trivial and what keeps the decision of *what* to write separate from the far
 /// more delicate question of *whether* taxiway is allowed to write it.
 abstract class Generator {
+  /// Subclasses are const singletons, so the base needs a const constructor.
+  const Generator();
+
   /// Stable identifier, used by `taxiway generate <name>`.
   String get name;
 
@@ -114,6 +117,25 @@ abstract class Generator {
   String get description;
 
   List<GeneratedFile> render(ResolvedApp app);
+
+  /// Whether [path] is one this generator is responsible for.
+  ///
+  /// A predicate rather than a list, because the point is to recognise files
+  /// belonging to flavors that are *no longer in the config* — whose names
+  /// cannot be enumerated from it. Used only to decide whether a file taxiway
+  /// once generated and no longer produces is this generator's to clean up.
+  ///
+  /// Defaults to owning nothing: a generator opts in to having its leftovers
+  /// swept, so adding one cannot accidentally start deleting files.
+  bool owns(String path) => false;
+
+  /// Whether this generator's silence means the config no longer asks for
+  /// something.
+  ///
+  /// False when it could not run for reasons unrelated to the config — a
+  /// missing template it copies from, say. Producing nothing is then not
+  /// evidence of removal, and cleanup is suppressed rather than guessed at.
+  bool canDetermineOwnership(ResolvedApp app) => true;
 }
 
 /// A config narrowed to one app, with the values every generator needs already

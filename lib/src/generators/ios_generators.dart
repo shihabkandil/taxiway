@@ -13,7 +13,7 @@ import 'generated_file.dart';
 ///
 /// Always written to `xcshareddata/xcschemes/`, never `xcuserdata`: a per-user
 /// scheme is git-ignored and works only for its author.
-class IosSchemeGenerator implements Generator {
+class IosSchemeGenerator extends Generator {
   const IosSchemeGenerator();
 
   @override
@@ -24,6 +24,20 @@ class IosSchemeGenerator implements Generator {
 
   static const String schemeDirectory =
       'ios/Runner.xcodeproj/xcshareddata/xcschemes';
+
+  /// Every shared scheme except `Runner.xcscheme`, which is the project's own
+  /// and is the template the rest are derived from.
+  @override
+  bool owns(String path) =>
+      path.startsWith('$schemeDirectory/') &&
+      path.endsWith('.xcscheme') &&
+      path != '$schemeDirectory/Runner.xcscheme';
+
+  /// A missing template means this generator could not run, not that the
+  /// config stopped asking for schemes. Sweeping on that basis would delete
+  /// every working scheme the moment the template became unreadable.
+  @override
+  bool canDetermineOwnership(ResolvedApp app) => app.iosSchemeTemplate != null;
 
   /// Which build configuration each scheme action should point at.
   static Map<String, String> configurationsFor(String flavor) =>

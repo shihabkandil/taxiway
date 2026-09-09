@@ -5,6 +5,7 @@ import '../../generators/generated_file.dart';
 import '../../generators/generated_file_writer.dart';
 import '../../core/model/project_model.dart';
 import '../../generators/generator_registry.dart';
+import '../../generators/orphan_sweep.dart';
 import '../../inspect/xcodeproj_bridge.dart';
 import '../../platform/ios/info_plist_mutator.dart';
 import '../../platform/ios/legacy_xcconfig_cleanup.dart';
@@ -31,6 +32,13 @@ class GenerateCommand extends Command<int> {
         help:
             'Overwrite content you have edited inside a taxiway block. '
             'Never overrides an unadopted file.',
+      )
+      ..addFlag(
+        'prune',
+        defaultsTo: true,
+        help:
+            'Remove files taxiway generated that the config no longer '
+            'describes. Never touches one you have edited.',
       );
   }
 
@@ -96,11 +104,26 @@ class GenerateCommand extends Command<int> {
       results_.add(dryRun ? await writer.plan(file) : await writer.write(file));
     }
 
-    if (!dryRun && results_.any((r) => r.outcome.changesFile)) {
+    // Swept before the lock is saved, so one write covers both. `files` rather
+    // than the write results: a generator declaring a file it then skips —
+    // create-once scaffolding — has still claimed it, and it is not an orphan.
+    final sweep = await OrphanSweep.run(
+      root: context.projectRoot,
+      lock: lock,
+      app: app,
+      generators: generators,
+      produced: files.map((f) => f.path),
+      appCount: config.apps.length,
+      dryRun: dryRun,
+      enabled: results['prune'] as bool,
+    );
+
+    if (!dryRun &&
+        (results_.any((r) => r.outcome.changesFile) || !sweep.isEmpty)) {
       await lock.save(context.projectRoot);
     }
 
-    final exit = _report(results_, dryRun: dryRun);
+    final exit = _report(results_, sweep: sweep, dryRun: dryRun);
 
     // The Xcode project is mutated after the generators, because the schemes
     // they write name the build configurations this creates. Skipped when
@@ -319,7 +342,11 @@ class GenerateCommand extends Command<int> {
     return plists;
   }
 
-  int _report(List<WriteResult> results, {required bool dryRun}) {
+  int _report(
+    List<WriteResult> results, {
+    required SweepReport sweep,
+    required bool dryRun,
+  }) {
     final logger = _context.logger;
     logger.info('');
 
@@ -344,6 +371,26 @@ class GenerateCommand extends Command<int> {
       }
     }
 
+    for (final orphan in sweep.results) {
+      final label = orphan.outcome.isRemoval
+          ? (dryRun ? ' remove' : 'removed')
+          : (dryRun ? 'release' : 'release');
+      final colour = orphan.outcome.isRemoval ? red : yellow;
+      logger
+        ..info('  ${colour.wrap(label) ?? label} ${orphan.path}')
+        ..info('           ${darkGray.wrap(orphan.detail) ?? orphan.detail}');
+    }
+
+    if (sweep.skipped == SweepSkipReason.monorepo) {
+      logger.info(
+        darkGray.wrap(
+              '  Skipped cleanup: this config declares more than one app, and '
+              'generated paths are not app-scoped yet.',
+            ) ??
+            '',
+      );
+    }
+
     final conflicts = results.where((r) => r.outcome.isConflict).toList();
     final failures = results
         .where((r) => r.outcome == WriteOutcome.failed)
@@ -357,7 +404,8 @@ class GenerateCommand extends Command<int> {
     if (dryRun) {
       logger.info(
         '$changed to write, $unchanged already correct'
-        '${conflicts.isEmpty ? '' : ', ${conflicts.length} blocked'}.',
+        '${conflicts.isEmpty ? '' : ', ${conflicts.length} blocked'}'
+        '${sweep.isEmpty ? '' : ', ${sweep.results.length} to clean up'}.',
       );
       if (!_context.verbose && results.any((r) => r.diff.isNotEmpty)) {
         logger.info(
@@ -368,7 +416,8 @@ class GenerateCommand extends Command<int> {
     } else {
       logger.info(
         '$changed written, $unchanged unchanged'
-        '${conflicts.isEmpty ? '' : ', ${conflicts.length} blocked'}.',
+        '${conflicts.isEmpty ? '' : ', ${conflicts.length} blocked'}'
+        '${sweep.isEmpty ? '' : ', ${sweep.results.length} cleaned up'}.',
       );
     }
 

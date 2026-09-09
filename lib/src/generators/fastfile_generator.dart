@@ -11,7 +11,7 @@ import 'generated_file.dart';
 /// Every value a lane needs at runtime is read from `ENV`. Nothing that could
 /// be a credential is ever written into this file, and a golden test greps the
 /// rendered output to keep it that way.
-class IosFastfileGenerator implements Generator {
+class IosFastfileGenerator extends Generator {
   const IosFastfileGenerator();
 
   @override

@@ -7,7 +7,7 @@ import 'generated_file.dart';
 /// Fully-managed, but only ever *created*: the writer refuses to overwrite an
 /// entrypoint the user has edited, and an entrypoint is the most likely file in
 /// this set to contain real code.
-class DartEntrypointGenerator implements Generator {
+class DartEntrypointGenerator extends Generator {
   const DartEntrypointGenerator();
 
   @override
@@ -18,6 +18,17 @@ class DartEntrypointGenerator implements Generator {
 
   /// The shared bootstrap every generated entrypoint delegates to.
   static const String commonPath = 'lib/main_common.dart';
+
+  /// `lib/main_<flavor>.dart`, and nothing else in `lib/`.
+  ///
+  /// `main.dart` is the project's own and `main_common.dart` is create-once
+  /// scaffolding holding the user's setup: neither is ever taxiway's to
+  /// remove, whatever the lock says.
+  static final RegExp _entrypointPattern = RegExp(r'^lib/main_[^/]+\.dart$');
+
+  @override
+  bool owns(String path) =>
+      path != commonPath && _entrypointPattern.hasMatch(path);
 
   @override
   List<GeneratedFile> render(ResolvedApp app) {
@@ -98,11 +109,15 @@ class FlavorPlaceholder extends StatelessWidget {
 ///
 /// Passed to `--dart-define-from-file`, which is why the file is a flat map of
 /// strings: Flutter rejects nested values there.
-class DartDefinesGenerator implements Generator {
+class DartDefinesGenerator extends Generator {
   const DartDefinesGenerator();
 
   @override
   String get name => 'dart-defines';
+
+  @override
+  bool owns(String path) =>
+      RegExp(r'^dart_defines/[^/]+\.json$').hasMatch(path);
 
   @override
   String get description => 'A dart-define file per flavor that declares one.';
@@ -134,7 +149,7 @@ class DartDefinesGenerator implements Generator {
 ///
 /// Block-managed and appended: a project's `.gitignore` is entirely the user's,
 /// and taxiway adds one clearly-marked region to it.
-class GitignoreGenerator implements Generator {
+class GitignoreGenerator extends Generator {
   const GitignoreGenerator();
 
   @override

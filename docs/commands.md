@@ -153,7 +153,7 @@ nicety.
 > Write the files taxiway.yaml describes.
 
 ```
-taxiway generate [flavors|fastlane|all] [--dry-run] [--force]
+taxiway generate [flavors|fastlane|all] [--dry-run] [--force] [--no-prune]
 ```
 
 The write direction. Defaults to `all`.
@@ -162,6 +162,7 @@ The write direction. Defaults to `all`.
 |---|---|
 | `--dry-run` | Show what would change, write nothing. |
 | `--force` | Overwrite content you have edited *inside a taxiway block*. Never overrides an unadopted file. |
+| `--no-prune` | Keep files taxiway generated that the config no longer describes. |
 
 **Groups**
 
@@ -181,6 +182,30 @@ Gradle build file and the Xcode project were there first, and generating over
 them would replace a working build. Run `taxiway adopt` to hand one over.
 
 Re-running is a byte-identical no-op.
+
+**Cleaning up after a config change.** Rename a flavor from `dev` to `staging`
+and the files derived from the old name are removed:
+
+```
+  removed  lib/main_dev.dart
+           no longer described by taxiway.yaml
+  release  dart_defines/dev.json
+           no longer described by taxiway.yaml, but you have edited it —
+           left in place and no longer managed
+```
+
+A file is only deleted when taxiway wrote it *and* its content is still exactly
+what taxiway wrote, so nothing you authored is ever removed. One you have edited
+is left alone and handed back to you — reported once, then never again.
+
+Cleanup is scoped to the generators that ran, so `taxiway generate flavors`
+cannot touch the fastlane files, and a generator that could not run (no readable
+`Runner.xcscheme` to derive schemes from) sweeps nothing, because producing
+nothing is not the same as no longer being asked to. See
+[`orphan-cleanup.md`](orphan-cleanup.md).
+
+Cleanup is skipped, with a note, when the config declares more than one app:
+generated paths are not app-scoped yet.
 
 Besides files, `generate` also mutates `ios/Runner.xcodeproj/project.pbxproj`
 and `ios/Runner/Info.plist` through adapters that back up, verify and restore on
@@ -285,5 +310,7 @@ Pluginfile for Android are.
 - [`config-schema.md`](config-schema.md) — every `taxiway.yaml` field.
 - [`ios-build-division.md`](ios-build-division.md) — who builds the iOS archive,
   and why gym must not.
+- [`orphan-cleanup.md`](orphan-cleanup.md) — how files the config no longer
+  describes are removed without deleting anybody's work.
 - [`deviations.md`](deviations.md) — where the built thing differs from the plan,
   and why.

@@ -13,7 +13,7 @@ import 'generated_file.dart';
 /// separately in the Gemfile makes the two drift; listing it only in the
 /// Pluginfile without the eval makes fastlane report that plugins "couldn't be
 /// loaded" and carry on without them.
-class GemfileGenerator implements Generator {
+class GemfileGenerator extends Generator {
   const GemfileGenerator();
 
   @override
@@ -54,7 +54,7 @@ eval_gemfile(plugins_path) if File.exist?(plugins_path)
 }
 
 /// Writes the `Pluginfile` fastlane reads alongside the Gemfile.
-class PluginfileGenerator implements Generator {
+class PluginfileGenerator extends Generator {
   const PluginfileGenerator();
 
   @override
@@ -86,7 +86,7 @@ gem "fastlane-plugin-firebase_app_distribution", "${FastlanePins.firebaseAppDist
 /// Every value is read from the environment. The team id is the one exception
 /// and is still not a secret — it is printed in every build log — but it is
 /// defaulted from the config so an unconfigured machine still resolves.
-class AppfileGenerator implements Generator {
+class AppfileGenerator extends Generator {
   const AppfileGenerator();
 
   @override
@@ -94,6 +94,12 @@ class AppfileGenerator implements Generator {
 
   @override
   String get description => 'The fastlane Appfile per platform.';
+
+  /// The Android Appfile is conditional on a package name being known, so it
+  /// can legitimately stop being produced.
+  @override
+  bool owns(String path) =>
+      path == 'ios/fastlane/Appfile' || path == 'android/fastlane/Appfile';
 
   @override
   List<GeneratedFile> render(ResolvedApp app) {
@@ -141,7 +147,7 @@ package_name("$packageName")
 }
 
 /// Writes `ios/fastlane/Matchfile`.
-class MatchfileGenerator implements Generator {
+class MatchfileGenerator extends Generator {
   const MatchfileGenerator();
 
   @override
@@ -149,6 +155,10 @@ class MatchfileGenerator implements Generator {
 
   @override
   String get description => 'The match configuration for iOS signing.';
+
+  /// Removing `signing.ios.match_git_url` should take the Matchfile with it.
+  @override
+  bool owns(String path) => path == 'ios/fastlane/Matchfile';
 
   @override
   List<GeneratedFile> render(ResolvedApp app) {
@@ -189,7 +199,7 @@ app_identifier([${list.map((i) => '"$i"').join(', ')}])
 /// Only for [IosExport.flutter]. Under [IosExport.gym] the export options are
 /// built in the lane from match's runtime profile mapping, and a stale plist
 /// sitting next to it would be a trap.
-class ExportOptionsGenerator implements Generator {
+class ExportOptionsGenerator extends Generator {
   const ExportOptionsGenerator();
 
   @override
@@ -200,6 +210,13 @@ class ExportOptionsGenerator implements Generator {
       'An ExportOptions plist per flavor, when Flutter does the export.';
 
   static String pathFor(String flavor) => 'ios/ExportOptions-$flavor.plist';
+
+  /// Owns every export plist, so switching `ios.export` to `gym` sweeps the
+  /// ones nothing reads any more. A plist naming a match profile that no
+  /// longer applies is exactly the trap that shape was chosen to avoid.
+  @override
+  bool owns(String path) =>
+      RegExp(r'^ios/ExportOptions-[^/]+\.plist$').hasMatch(path);
 
   /// The `match` profile name for a bundle id, which is fixed by match itself.
   static String matchProfileName(String bundleId) => 'match AppStore $bundleId';

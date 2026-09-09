@@ -7,7 +7,7 @@ import 'generated_file.dart';
 /// Block-managed: the build file belongs to the user and almost always contains
 /// signing, dependencies and plugin configuration taxiway must not touch. Only
 /// the marked region is ours.
-class AndroidFlavorGenerator implements Generator {
+class AndroidFlavorGenerator extends Generator {
   const AndroidFlavorGenerator();
 
   @override
