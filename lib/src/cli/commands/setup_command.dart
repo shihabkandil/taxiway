@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../../core/config/config_patch.dart';
 import '../../core/config/taxiway_config.dart';
 import '../../platform/android/keystore_creator.dart';
+import '../../platform/ios/match_repository.dart';
 import '../../secrets/secret_store.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
@@ -41,6 +42,25 @@ class SetupCommand extends Command<int> {
         help:
             'android-signing: use the password on standard input rather than '
             'generating one.',
+      )
+      ..addOption(
+        'match-url',
+        help:
+            'ios-signing: the certificates repository. Defaults to the one '
+            'taxiway.yaml already names.',
+        valueHelp: 'url',
+      )
+      ..addOption(
+        'branch',
+        help: 'ios-signing: the branch to read.',
+        defaultsTo: 'master',
+      )
+      ..addFlag(
+        'create',
+        negatable: false,
+        help:
+            'ios-signing: allow creating what is missing. Without it, setup '
+            'only reads and reports.',
       );
   }
 
@@ -52,7 +72,10 @@ class SetupCommand extends Command<int> {
   /// point of view and the same file works on every checkout.
   static const String defaultKeystorePath = 'android/upload-keystore.jks';
 
-  static const List<String> actions = <String>['android-signing'];
+  static const List<String> actions = <String>[
+    'android-signing',
+    'ios-signing',
+  ];
 
   @override
   String get name => 'setup';
@@ -62,7 +85,7 @@ class SetupCommand extends Command<int> {
       'Create the credentials a project needs, once, and record their names.';
 
   @override
-  String get invocation => 'taxiway setup android-signing';
+  String get invocation => 'taxiway setup ${actions.join('|')}';
 
   @override
   Future<int> run() async {
@@ -79,7 +102,186 @@ class SetupCommand extends Command<int> {
       return TaxiwayExit.userError;
     }
 
-    return _androidSigning(results, await _context.requireConfig());
+    final config = await _context.requireConfig();
+    return action == 'ios-signing'
+        ? _iosSigning(results, config)
+        : _androidSigning(results, config);
+  }
+
+  /// `taxiway setup ios-signing` — adopt a certificates repository.
+  ///
+  /// Read-only by default, and the read is deliberately shallow: match
+  /// encrypts each file in place and leaves its *name* alone, so which bundle
+  /// ids are covered is answerable from the layout without a passphrase,
+  /// without decrypting anything and without talking to Apple. taxiway
+  /// therefore never handles a certificate — only the question of whether one
+  /// exists.
+  ///
+  /// It adopts rather than initialises. A certificates repository is shared:
+  /// reshaping one breaks signing for everyone else using it, and creating a
+  /// certificate spends one of a team's limited allowance. Gaps are reported;
+  /// filling them needs `--create`.
+  Future<int> _iosSigning(ArgResults results, TaxiwayConfig config) async {
+    final context = _context;
+    final logger = context.logger;
+
+    final appId = context.appId ?? config.defaultAppId;
+    final app = config.appOrNull(appId);
+    if (app == null) {
+      logger.err('No app to set up. Check `apps:` in taxiway.yaml.');
+      return TaxiwayExit.userError;
+    }
+
+    final url =
+        (results['match-url'] as String?) ?? app.signing.ios?.matchGitUrl;
+    if (url == null) {
+      logger
+        ..err('No certificates repository to read.')
+        ..info(
+          'Pass --match-url, or set signing.ios.match_git_url in '
+          'taxiway.yaml. It is the git repository match keeps your '
+          'certificates and profiles in.',
+        );
+      return TaxiwayExit.userError;
+    }
+
+    final branch = results['branch'] as String;
+    final progress = logger.progress('Reading $url');
+
+    final MatchRepositoryContents contents;
+    try {
+      contents = await MatchRepository.read(
+        gitUrl: url,
+        runner: context.runner,
+        branch: branch,
+      );
+    } on MatchRepositoryFailure catch (failure) {
+      progress.fail('Could not read the certificates repository');
+      logger.err(failure.message);
+      final hint = failure.fixHint;
+      if (hint != null) logger.info(hint);
+      return TaxiwayExit.environmentError;
+    }
+    progress.complete('Read $url');
+
+    return _reportCoverage(
+      results,
+      app: app,
+      appId: appId!,
+      url: url,
+      contents: contents,
+    );
+  }
+
+  /// Compares what the repository holds against what the config asks for.
+  int _reportCoverage(
+    ArgResults results, {
+    required AppConfig app,
+    required String appId,
+    required String url,
+    required MatchRepositoryContents contents,
+  }) {
+    final logger = _context.logger;
+
+    // The type taxiway's generated Matchfile syncs. A repository full of
+    // development profiles does not make an App Store build signable.
+    const type = 'appstore';
+
+    final wanted = <String>[
+      for (final flavor in app.flavors.entries)
+        if (_bundleIdFor(app, flavor.value) != null)
+          _bundleIdFor(app, flavor.value)!,
+    ];
+    if (wanted.isEmpty && app.ios?.bundleId != null) {
+      wanted.add(app.ios!.bundleId!);
+    }
+
+    if (contents.isEmpty) {
+      logger
+        ..info('')
+        ..warn('That repository is empty — no certificates, no profiles.')
+        ..info(
+          results['create'] as bool
+              ? 'Run `bundle exec fastlane match appstore` from ios/ to '
+                    'populate it. taxiway does not create Apple certificates '
+                    'itself: match already does it well, and doing it twice '
+                    'is how a team runs out of them.'
+              : 'Re-run with --create for what to do about it.',
+        );
+      return TaxiwayExit.environmentError;
+    }
+
+    logger.info('');
+    for (final profile in contents.profiles) {
+      logger.info(
+        '  ${darkGray.wrap(profile.type.padRight(12)) ?? profile.type} '
+        '${profile.bundleId}',
+      );
+    }
+
+    final missing = contents.missingFrom(wanted, type);
+    logger.info('');
+    if (wanted.isEmpty) {
+      logger.info(
+        'This config names no iOS bundle ids yet, so there is nothing to '
+        'check the repository against.',
+      );
+    } else if (missing.isEmpty) {
+      logger.info(
+        green.wrap('Every bundle id this config ships has an $type profile.') ??
+            '',
+      );
+    } else {
+      logger
+        ..err(
+          '${missing.length} bundle '
+          '${missing.length == 1 ? 'id has' : 'ids have'} no $type profile: '
+          '${missing.join(', ')}',
+        )
+        ..info(
+          results['create'] as bool
+              ? 'Run `bundle exec fastlane match appstore` from ios/ — it '
+                    'registers the bundle id and creates the profile. That '
+                    'needs an App Store Connect key with write access.'
+              : 'Re-run with --create to be told how to fill them, or add '
+                    'them with match yourself.',
+        );
+    }
+
+    _recordMatchInConfig(appId: appId, url: url, existing: app.signing.ios);
+    logger.info('Recorded the repository in taxiway.yaml. No value is in it.');
+
+    logger
+      ..info('')
+      ..info('Next:')
+      ..info('  taxiway secrets check     — MATCH_PASSWORD and the rest')
+      ..info('  taxiway build ios --flavor <f>');
+
+    return missing.isEmpty ? TaxiwayExit.success : TaxiwayExit.environmentError;
+  }
+
+  /// A flavor's full bundle id, or null when the config does not say.
+  static String? _bundleIdFor(AppConfig app, FlavorConfig flavor) {
+    final base = app.ios?.bundleId;
+    return base == null ? null : '$base${flavor.suffix}';
+  }
+
+  void _recordMatchInConfig({
+    required String appId,
+    required String url,
+    required IosSigningConfig? existing,
+  }) {
+    // Only what was missing: a team that already named its storage or team id
+    // keeps them.
+    final values = <List<String>, Object?>{
+      if (existing?.matchGitUrl == null)
+        <String>['apps', appId, 'signing', 'ios', 'match_git_url']: url,
+    };
+    if (values.isEmpty) return;
+
+    final file = _context.configFile;
+    if (file == null) return;
+    file.writeAsStringSync(ConfigPatch.setAll(file.readAsStringSync(), values));
   }
 
   Future<int> _androidSigning(ArgResults results, TaxiwayConfig config) async {

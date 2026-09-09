@@ -240,6 +240,36 @@ permissions.
 |---|---|
 | `--dry-run` | Show what adopting would change without recording anything. |
 
+### `ios-signing`
+
+Adopts a certificates repository rather than initialising one. It clones the
+repo, lists which bundle ids have an App Store profile, compares that against
+the flavors in your config, and records the repository in `taxiway.yaml`.
+
+```
+$ taxiway setup ios-signing
+
+  appstore     com.acme.app
+  appstore     com.acme.app.dev
+  development  com.acme.app
+
+1 bundle id has no appstore profile: com.acme.app.staging
+Re-run with --create to be told how to fill them, or add them with match yourself.
+```
+
+Exits `2` when a bundle id is uncovered, so it works as a pre-flight.
+
+**It never decrypts anything.** match encrypts each file in place and leaves the
+*name* alone, so which bundle ids are covered is answerable from the layout —
+no `MATCH_PASSWORD`, no Apple credentials, and taxiway never handles a
+certificate, only the question of whether one exists. The only command it runs
+is `git clone`.
+
+**It never creates.** A certificates repository is shared: reshaping one breaks
+signing for everyone using it, and every certificate spends one of a team's
+limited Apple allowance. `--create` changes the *advice* — it tells you the
+`fastlane match` command to run — not the safety.
+
 ## `taxiway build`
 
 > Build a flavor for one platform.
@@ -443,6 +473,7 @@ cover.
 ```
 taxiway setup android-signing [--alias <name>] [--keystore <path>]
                               [--password-stdin]
+taxiway setup ios-signing [--match-url <url>] [--branch <name>] [--create]
 ```
 
 Deliberately not part of `generate`. `generate` is idempotent and derivable —
@@ -571,7 +602,7 @@ Planned, and deliberately absent rather than half-present:
 
 | Command | Phase |
 |---|---|
-| `taxiway setup ios-signing \| firebase` | 3 |
+| `taxiway setup firebase` | 3 |
 | `taxiway release ios\|android --target testflight\|appstore\|play\|firebase` | 4 |
 | `taxiway run <pipeline>` | 5 |
 | `taxiway upgrade`, `taxiway completion install` | 6 |

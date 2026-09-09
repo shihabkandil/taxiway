@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import 'package:mason_logger/mason_logger.dart';
 import 'package:taxiway/src/cli/exit_codes.dart';
 import 'package:taxiway/src/cli/taxiway_command_runner.dart';
@@ -82,6 +84,184 @@ void main() {
         workingDirectory: project.path,
         host: host ?? HostPlatform.macos,
       ).run(<String>['--config=${project.path}/taxiway.yaml', ...args]);
+
+  group('ios-signing', () {
+    /// A match repository, cloned by the double into wherever git was told to
+    /// put it. Contents are nonsense on purpose: match encrypts files in place
+    /// and leaves their names alone, which is the whole reason coverage is
+    /// answerable without a passphrase.
+    void matchRepoWith(List<String> profiles) {
+      runner.onRun = (invocation) {
+        if (invocation.arguments.first != 'clone') return;
+        final destination = invocation.arguments.last;
+        for (final relative in profiles) {
+          File(p.join(destination, p.joinAll(p.posix.split(relative))))
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync('ENCRYPTED');
+        }
+      };
+      runner.stub('git clone');
+    }
+
+    setUp(() {
+      project.write('taxiway.yaml', '''
+version: 1
+project:
+  name: acme_app
+apps:
+  main:
+    path: .
+    ios:
+      bundle_id: com.acme.app
+    flavors:
+      dev:
+        suffix: .dev
+      prod:
+        suffix: ""
+''');
+    });
+
+    test('reports full coverage and succeeds', () async {
+      matchRepoWith(<String>[
+        'profiles/appstore/AppStore_com.acme.app.mobileprovision',
+        'profiles/appstore/AppStore_com.acme.app.dev.mobileprovision',
+      ]);
+
+      final code = await run(<String>[
+        'setup',
+        'ios-signing',
+        '--match-url',
+        'git@github.com:acme/certs.git',
+      ]);
+
+      expect(code, TaxiwayExit.success);
+      expect(logger.output, contains('com.acme.app.dev'));
+    });
+
+    test('names the bundle ids with no profile, and fails', () async {
+      // Reporting a gap as success would be worse than silence: the build
+      // fails later, at signing, naming a profile instead of a flavor.
+      matchRepoWith(<String>[
+        'profiles/appstore/AppStore_com.acme.app.mobileprovision',
+      ]);
+
+      final code = await run(<String>[
+        'setup',
+        'ios-signing',
+        '--match-url',
+        'git@github.com:acme/certs.git',
+      ]);
+
+      expect(code, TaxiwayExit.environmentError);
+      expect(logger.output, contains('com.acme.app.dev'));
+      expect(logger.output, contains('no appstore profile'));
+    });
+
+    test('a development profile does not count as coverage', () async {
+      matchRepoWith(<String>[
+        'profiles/development/Development_com.acme.app.mobileprovision',
+        'profiles/development/Development_com.acme.app.dev.mobileprovision',
+      ]);
+
+      final code = await run(<String>[
+        'setup',
+        'ios-signing',
+        '--match-url',
+        'git@github.com:acme/certs.git',
+      ]);
+
+      expect(code, TaxiwayExit.environmentError);
+    });
+
+    test('it never decrypts, and never asks for the passphrase', () async {
+      matchRepoWith(<String>[
+        'profiles/appstore/AppStore_com.acme.app.mobileprovision',
+        'profiles/appstore/AppStore_com.acme.app.dev.mobileprovision',
+      ]);
+
+      await run(<String>[
+        'setup',
+        'ios-signing',
+        '--match-url',
+        'git@github.com:acme/certs.git',
+      ]);
+
+      // The only thing it runs is a clone. No openssl, no match, no fastlane.
+      for (final invocation in runner.invocations) {
+        expect(invocation.executable, 'git', reason: invocation.commandLine);
+      }
+      expect(logger.output, isNot(contains('MATCH_PASSWORD is')));
+    });
+
+    test(
+      'the repository is recorded in taxiway.yaml, and no value is',
+      () async {
+        matchRepoWith(<String>[
+          'profiles/appstore/AppStore_com.acme.app.mobileprovision',
+          'profiles/appstore/AppStore_com.acme.app.dev.mobileprovision',
+        ]);
+
+        await run(<String>[
+          'setup',
+          'ios-signing',
+          '--match-url',
+          'git@github.com:acme/certs.git',
+        ]);
+
+        final written = project.read('taxiway.yaml');
+        expect(
+          written,
+          contains('match_git_url: git@github.com:acme/certs.git'),
+        );
+      },
+    );
+
+    test(
+      'an empty repository says so rather than reporting coverage',
+      () async {
+        matchRepoWith(const <String>[]);
+
+        final code = await run(<String>[
+          'setup',
+          'ios-signing',
+          '--match-url',
+          'git@github.com:acme/certs.git',
+        ]);
+
+        expect(code, TaxiwayExit.environmentError);
+        expect(logger.output, contains('empty'));
+      },
+    );
+
+    test('--create changes the advice, not the safety', () async {
+      // Creating a certificate spends one of a team's limited allowance, so
+      // taxiway says what to run rather than running it.
+      matchRepoWith(<String>[
+        'profiles/appstore/AppStore_com.acme.app.mobileprovision',
+      ]);
+
+      await run(<String>[
+        'setup',
+        'ios-signing',
+        '--match-url',
+        'git@github.com:acme/certs.git',
+        '--create',
+      ]);
+
+      expect(logger.output, contains('fastlane match appstore'));
+      expect(
+        runner.invocations.any((i) => i.executable != 'git'),
+        isFalse,
+        reason: 'nothing but the clone should have run',
+      );
+    });
+
+    test('without a url anywhere, it says where to put one', () async {
+      final code = await run(<String>['setup', 'ios-signing']);
+      expect(code, TaxiwayExit.userError);
+      expect(logger.output, contains('match_git_url'));
+    });
+  });
 
   group('android-signing', () {
     test(
