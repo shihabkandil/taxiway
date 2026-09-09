@@ -33,6 +33,17 @@ class AndroidFlavorGenerator implements Generator {
       }
     }
 
+    // AGP 8+ generates no resValue unless the feature is switched on, and a
+    // build that uses one without it fails with "contains custom resource
+    // values, but the feature is disabled". Configuring `buildFeatures` twice
+    // is harmless — it is the same object — so this is safe to emit next to a
+    // project's own block.
+    buffer
+      ..writeln('buildFeatures {')
+      ..writeln(kotlin ? '    resValues = true' : '    resValues true')
+      ..writeln('}')
+      ..writeln();
+
     for (final dimension in dimensions) {
       buffer.writeln(
         kotlin

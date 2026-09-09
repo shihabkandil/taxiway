@@ -87,10 +87,16 @@ class FixtureProject {
     return this;
   }
 
-  /// Creates the directory the iOS inspector looks for. Its contents come from
-  /// the stubbed bridge, not from disk.
+  /// Creates the iOS project the inspector and mutator look for.
+  ///
+  /// The `project.pbxproj` is a placeholder: its contents come from the stubbed
+  /// bridge, but the file must exist because the mutator backs it up before
+  /// touching it and refuses to run when it is absent.
   FixtureProject withIosProject() {
-    Directory(p.join(path, 'ios/Runner.xcodeproj')).createSync(recursive: true);
+    write(
+      'ios/Runner.xcodeproj/project.pbxproj',
+      '// !\$*UTF8*\$!\n{ objectVersion = 60; }\n',
+    );
     return this;
   }
 
@@ -250,6 +256,49 @@ String stubBridgeJson({
   });
 }
 
-/// Stubs the bridge invocation on [runner].
+/// Stubs the bridge's `read` op on [runner].
 void stubBridge(RecordingProcessRunner runner, String json) =>
     runner.stub('xcodeproj_bridge.rb read', stdout: json);
+
+/// Stubs the bridge's `configure` op with a project that already declares
+/// every configuration [flavors] requires.
+///
+/// The mutator verifies its own work by reading the response back, so a stub
+/// that claims success without listing the configurations would — correctly —
+/// be reported as a failed mutation.
+void stubConfigure(
+  RecordingProcessRunner runner, {
+  required Iterable<String> flavors,
+  bool changed = true,
+  String targetName = 'Runner',
+}) {
+  final configurations = <String, String>{
+    'Debug': 'com.acme.app',
+    'Release': 'com.acme.app',
+    'Profile': 'com.acme.app',
+    for (final flavor in flavors)
+      for (final buildType in const <String>['Debug', 'Release', 'Profile'])
+        '$buildType-$flavor': 'com.acme.app',
+  };
+
+  final read =
+      jsonDecode(
+            stubBridgeJson(
+              configurations: configurations,
+              targetName: targetName,
+            ),
+          )
+          as Map<String, dynamic>;
+
+  runner.stub(
+    'xcodeproj_bridge.rb configure',
+    stdout: jsonEncode(<String, Object?>{
+      'ok': true,
+      'bridgeVersion': 1,
+      'xcodeprojVersion': '1.28.1',
+      'changed': changed,
+      'changes': <String>[if (changed) 'Runner/Debug-flavor'],
+      'project': read['project'],
+    }),
+  );
+}

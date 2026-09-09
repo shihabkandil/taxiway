@@ -16,15 +16,57 @@ class DartEntrypointGenerator implements Generator {
   @override
   String get description => 'A Dart entrypoint per flavor.';
 
+  /// The shared bootstrap every generated entrypoint delegates to.
+  static const String commonPath = 'lib/main_common.dart';
+
   @override
-  List<GeneratedFile> render(ResolvedApp app) => <GeneratedFile>[
-    for (final flavor in app.flavors)
-      GeneratedFile.full(
-        path: flavor.entrypoint,
-        contents: _entrypoint(flavor),
-        description: 'entrypoint for ${flavor.name}',
+  List<GeneratedFile> render(ResolvedApp app) {
+    if (!app.hasFlavors) return const <GeneratedFile>[];
+    return <GeneratedFile>[
+      // Created once so the entrypoints below compile on a fresh project, then
+      // never touched again: by the second run it holds the user's own setup.
+      GeneratedFile.scaffold(
+        path: commonPath,
+        contents: _common(),
+        description: 'shared bootstrap for every flavor (yours to edit)',
       ),
-  ];
+      for (final flavor in app.flavors)
+        GeneratedFile.full(
+          path: flavor.entrypoint,
+          contents: _entrypoint(flavor),
+          description: 'entrypoint for ${flavor.name}',
+        ),
+    ];
+  }
+
+  /// A bootstrap that compiles and runs, and is obviously a placeholder.
+  String _common() => '''
+import 'package:flutter/material.dart';
+
+/// Shared entrypoint for every flavor.
+///
+/// taxiway created this file once and will not modify it again — this is where
+/// your app setup belongs. Each `main_<flavor>.dart` calls it with its own
+/// flavor name.
+Future<void> bootstrap({required String flavor}) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(FlavorPlaceholder(flavor: flavor));
+}
+
+/// Replace this with your real app widget.
+class FlavorPlaceholder extends StatelessWidget {
+  const FlavorPlaceholder({required this.flavor, super.key});
+
+  final String flavor;
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        home: Scaffold(
+          body: Center(child: Text('Running the \$flavor flavor')),
+        ),
+      );
+}
+''';
 
   /// A deliberately thin entrypoint.
   ///

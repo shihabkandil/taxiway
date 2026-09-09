@@ -4,6 +4,8 @@ import 'package:mason_logger/mason_logger.dart';
 import '../../generators/generated_file.dart';
 import '../../generators/generated_file_writer.dart';
 import '../../generators/generator_registry.dart';
+import '../../inspect/xcodeproj_bridge.dart';
+import '../../platform/ios/xcode_project_mutator.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
@@ -95,7 +97,128 @@ class GenerateCommand extends Command<int> {
       await lock.save(context.projectRoot);
     }
 
-    return _report(results_, dryRun: dryRun);
+    final exit = _report(results_, dryRun: dryRun);
+
+    // The Xcode project is mutated after the generators, because the build
+    // configurations it creates point at xcconfigs the generators just wrote.
+    // Skipped when anything was blocked: half-configuring a project is worse
+    // than not touching it.
+    if (_touchesIos(generators) && app.hasFlavors) {
+      final mutation = await _configureXcodeProject(
+        app,
+        dryRun: dryRun,
+        skipped: exit != TaxiwayExit.success,
+      );
+      if (mutation != null && !mutation.succeeded) {
+        return TaxiwayExit.environmentError;
+      }
+    }
+
+    return exit;
+  }
+
+  /// True when the selected generators include anything iOS-shaped.
+  bool _touchesIos(List<Generator> generators) =>
+      generators.any((g) => g.name == 'ios-schemes' || g.name == 'xcconfigs');
+
+  /// Creates the `<BuildType>-<flavor>` configurations and the Firebase copy
+  /// step, backing up and restoring `project.pbxproj` around the change.
+  Future<MutationResult?> _configureXcodeProject(
+    ResolvedApp app, {
+    required bool dryRun,
+    required bool skipped,
+  }) async {
+    final context = _context;
+    final logger = context.logger;
+
+    final configurations = XcodeProjectMutator.configurationsFor(
+      app.flavors.map((f) => f.name),
+      xcconfigFor: (flavor) => 'Flutter/$flavor.xcconfig',
+      bundleIdFor: (flavor) => app.flavor(flavor)?.iosBundleId,
+    );
+
+    if (dryRun) {
+      logger
+        ..info('')
+        ..info('Xcode project:')
+        ..info(
+          '  would ensure ${configurations.length} build '
+          'configuration${configurations.length == 1 ? '' : 's'}: '
+          '${configurations.map((c) => c.name).join(', ')}',
+        );
+      return null;
+    }
+
+    if (skipped) {
+      logger
+        ..info('')
+        ..info(
+          'Skipped the Xcode project: something above is blocked, and '
+          'half-configuring it is worse than leaving it alone.',
+        );
+      return null;
+    }
+
+    final scriptPath = XcodeprojBridge.locateScript();
+    if (scriptPath == null) {
+      logger.err(
+        'taxiway could not find its own Xcode bridge. This is a packaging '
+        'bug, not a problem with your project.',
+      );
+      return const MutationResult(
+        changed: false,
+        changes: <String>[],
+        failureReason: 'bridge missing',
+      );
+    }
+
+    final progress = logger.progress('Configuring Xcode project');
+    final mutation =
+        await XcodeProjectMutator(
+          runner: context.runner,
+          scriptPath: scriptPath,
+          root: context.projectRoot,
+        ).configure(
+          configurations: configurations,
+          firebasePlists: _firebasePlists(app),
+        );
+
+    if (!mutation.succeeded) {
+      progress.fail('Could not configure the Xcode project');
+      logger.err(mutation.failureReason!);
+      final remedy = mutation.failureRemedy;
+      if (remedy != null) logger.info(remedy);
+      logger.info(
+        mutation.restored
+            ? 'project.pbxproj was restored'
+                  '${mutation.backupPath == null ? '' : '; a copy is at '
+                            '${mutation.backupPath}'}.'
+            : 'project.pbxproj could NOT be restored automatically. '
+                  'Recover it from ${mutation.backupPath ?? 'version control'}.',
+      );
+      return mutation;
+    }
+
+    progress.complete(
+      mutation.changed
+          ? 'Configured Xcode project (${mutation.changes.length} '
+                'change${mutation.changes.length == 1 ? '' : 's'})'
+          : 'Xcode project already configured',
+    );
+    return mutation;
+  }
+
+  /// Which plist each configuration should copy, keyed by configuration name.
+  Map<String, String> _firebasePlists(ResolvedApp app) {
+    final plists = <String, String>{};
+    for (final flavor in app.flavors) {
+      final plist = flavor.firebaseIos;
+      if (plist == null) continue;
+      for (final configuration in flavor.iosConfigurations) {
+        plists[configuration] = plist;
+      }
+    }
+    return plists;
   }
 
   int _report(List<WriteResult> results, {required bool dryRun}) {

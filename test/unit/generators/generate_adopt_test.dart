@@ -99,17 +99,14 @@ void main() {
 
     project
       ..withPubspec(name: 'acme_app')
-      ..withGradle(
-        '''
+      ..withGradle('''
 android {
     defaultConfig {
         applicationId ${kotlin ? '= ' : ''}"com.acme.app"
     }
 $flavors
 }
-''',
-        kotlin: kotlin,
-      )
+''', kotlin: kotlin)
       ..withEntrypoint('dev')
       ..withEntrypoint('prod')
       ..withIosProject()
@@ -120,6 +117,7 @@ $flavors
       ..withSharedScheme('dev', launch: 'Debug-dev', archive: 'Release-dev')
       ..withSharedScheme('prod', launch: 'Debug-prod', archive: 'Release-prod');
 
+    stubConfigure(runner, flavors: const <String>['dev', 'prod']);
     stubBridge(
       runner,
       stubBridgeJson(
@@ -146,10 +144,10 @@ $flavors
   });
 
   Future<int> run(List<String> args) => TaxiwayCommandRunner(
-        logger: logger,
-        runner: runner,
-        workingDirectory: project.path,
-      ).run(<String>['--no-color', '--yes', ...args]);
+    logger: logger,
+    runner: runner,
+    workingDirectory: project.path,
+  ).run(<String>['--no-color', '--yes', ...args]);
 
   group('generate refuses to touch what taxiway does not own', () {
     setUp(makeAgreeingProject);
@@ -218,8 +216,11 @@ $flavors
 
       await run(<String>['adopt', 'all']);
 
-      expect(project.read('android/app/build.gradle.kts'), before,
-          reason: 'adopt records ownership; generate is what writes');
+      expect(
+        project.read('android/app/build.gradle.kts'),
+        before,
+        reason: 'adopt records ownership; generate is what writes',
+      );
       expect(project.read('.taxiway/lock.json'), contains('"adopted"'));
     });
 
@@ -296,8 +297,11 @@ $flavors
 
         expect(exit, TaxiwayExit.success);
         for (final entry in snapshot.entries) {
-          expect(project.read(entry.key), entry.value,
-              reason: '${entry.key} changed on a second generate');
+          expect(
+            project.read(entry.key),
+            entry.value,
+            reason: '${entry.key} changed on a second generate',
+          );
         }
         expect(logger.output, contains('0 written'));
       });
@@ -318,37 +322,41 @@ $flavors
   group('generated content', () {
     setUp(makeAgreeingProject);
 
-    test('schemes are written shared and keep the blueprint and prepare step',
-        () async {
-      await run(<String>['import']);
-      await run(<String>['adopt', 'all']);
-      await run(<String>['generate']);
+    test(
+      'schemes are written shared and keep the blueprint and prepare step',
+      () async {
+        await run(<String>['import']);
+        await run(<String>['adopt', 'all']);
+        await run(<String>['generate']);
 
-      final scheme = project.read(
-        'ios/Runner.xcodeproj/xcshareddata/xcschemes/dev.xcscheme',
-      );
-      // A scheme without these is syntactically fine and does not build.
-      expect(scheme, contains('97C146ED1CF9000F007C117D'));
-      expect(scheme, contains('xcode_backend.sh'));
-      expect(scheme, contains('buildConfiguration="Debug-dev"'));
-      expect(scheme, contains('buildConfiguration="Release-dev"'));
-      expect(scheme, contains('buildConfiguration="Profile-dev"'));
-      // Never xcuserdata.
-      expect(project.exists('ios/Runner.xcodeproj/xcuserdata'), isFalse);
-    });
+        final scheme = project.read(
+          'ios/Runner.xcodeproj/xcshareddata/xcschemes/dev.xcscheme',
+        );
+        // A scheme without these is syntactically fine and does not build.
+        expect(scheme, contains('97C146ED1CF9000F007C117D'));
+        expect(scheme, contains('xcode_backend.sh'));
+        expect(scheme, contains('buildConfiguration="Debug-dev"'));
+        expect(scheme, contains('buildConfiguration="Release-dev"'));
+        expect(scheme, contains('buildConfiguration="Profile-dev"'));
+        // Never xcuserdata.
+        expect(project.exists('ios/Runner.xcodeproj/xcuserdata'), isFalse);
+      },
+    );
 
     test('an xcconfig per flavor carries its bundle id', () async {
       await run(<String>['import']);
       await run(<String>['adopt', 'all']);
       await run(<String>['generate']);
 
+      // The bundle id is documented here but assigned on the build
+      // configuration, because a target's own settings win over its xcconfig.
       expect(
         project.read('ios/Flutter/dev.xcconfig'),
-        contains('PRODUCT_BUNDLE_IDENTIFIER = com.acme.app.dev'),
+        contains('// configuration itself, and is com.acme.app.dev.'),
       );
       expect(
-        project.read('ios/Flutter/prod.xcconfig'),
-        contains('PRODUCT_BUNDLE_IDENTIFIER = com.acme.app'),
+        project.read('ios/Flutter/dev.xcconfig'),
+        contains('APP_DISPLAY_NAME = Acme Dev'),
       );
     });
 

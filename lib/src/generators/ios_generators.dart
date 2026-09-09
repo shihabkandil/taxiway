@@ -117,7 +117,12 @@ class XcconfigGenerator implements Generator {
 
     final bundleId = flavor.iosBundleId;
     if (bundleId != null) {
-      buffer.writeln('PRODUCT_BUNDLE_IDENTIFIER = $bundleId');
+      // Shown, not set. A target's own build settings take precedence over its
+      // base configuration, so a bundle id assigned here would be silently
+      // ignored and the flavor would build under the unflavored id. taxiway
+      // writes the real one onto the build configuration itself.
+      buffer.writeln('// PRODUCT_BUNDLE_IDENTIFIER is set on the build');
+      buffer.writeln('// configuration itself, and is $bundleId.');
     }
     buffer.writeln(
       'APP_DISPLAY_NAME = ${flavor.displayNameOr(app.projectName)}',

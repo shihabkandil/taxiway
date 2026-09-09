@@ -8,6 +8,7 @@ class RecordedInvocation {
     required this.workingDirectory,
     required this.environment,
     required this.streamed,
+    this.stdin,
   });
 
   final String executable;
@@ -15,6 +16,9 @@ class RecordedInvocation {
   final String? workingDirectory;
   final Map<String, String>? environment;
   final bool streamed;
+
+  /// What was written to the process's stdin, if anything.
+  final String? stdin;
 
   String get commandLine => ([executable, ...arguments]).join(' ');
 
@@ -101,8 +105,16 @@ class RecordingProcessRunner implements ProcessRunner {
     List<String> arguments, {
     String? workingDirectory,
     Map<String, String>? environment,
+    String? stdin,
   }) async {
-    _record(executable, arguments, workingDirectory, environment, false);
+    _record(
+      executable,
+      arguments,
+      workingDirectory,
+      environment,
+      false,
+      stdin: stdin,
+    );
     final stub = _match(executable, arguments);
     return ProcessResultLite(
       executable: executable,
@@ -136,8 +148,9 @@ class RecordingProcessRunner implements ProcessRunner {
     List<String> arguments,
     String? workingDirectory,
     Map<String, String>? environment,
-    bool streamed,
-  ) {
+    bool streamed, {
+    String? stdin,
+  }) {
     invocations.add(
       RecordedInvocation(
         executable: executable,
@@ -147,6 +160,7 @@ class RecordingProcessRunner implements ProcessRunner {
             ? null
             : Map<String, String>.unmodifiable(environment),
         streamed: streamed,
+        stdin: stdin,
       ),
     );
   }

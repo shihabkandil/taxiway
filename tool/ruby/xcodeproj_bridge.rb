@@ -9,11 +9,17 @@
 # this bridge over a narrow JSON-in / JSON-out contract.
 #
 # Usage:
-#   ruby xcodeproj_bridge.rb read  <path/to/Runner.xcodeproj>
-#   ruby xcodeproj_bridge.rb <op>  <path/to/Runner.xcodeproj>  <<< '{...}'
+#   ruby xcodeproj_bridge.rb read      <path/to/Runner.xcodeproj>
+#   ruby xcodeproj_bridge.rb configure <path/to/Runner.xcodeproj> <<< '{...}'
 #
 # Always exits with a JSON object on stdout. Diagnostics go to stderr so a
 # caller can parse stdout unconditionally.
+#
+# `configure` is declarative and idempotent: it is handed the build
+# configurations and run-script phase that should exist, and makes the project
+# match. Running it twice changes nothing the second time, which is what lets
+# `taxiway generate` be safe to re-run. Backing up and restoring
+# `project.pbxproj` is the Dart side's job, not this script's.
 
 require 'json'
 
@@ -161,6 +167,143 @@ rescue StandardError => e
   )
 end
 
+# --- write side -------------------------------------------------------------
+
+# Finds the file reference for an xcconfig, adding one if the project has none.
+#
+# A build configuration's `baseConfigurationReference` must point at a real file
+# reference in the project, not just a path, so a newly generated xcconfig has
+# to be introduced to the project before it can be attached.
+def find_or_create_file_reference(project, relative_path)
+  basename = File.basename(relative_path)
+  existing = project.files.find do |file|
+    file.path == relative_path || File.basename(file.path.to_s) == basename
+  rescue StandardError
+    false
+  end
+  return existing if existing
+
+  group = project.main_group.find_subpath('Flutter', true)
+  group.set_source_tree('SOURCE_ROOT') if group.respond_to?(:set_source_tree)
+  group.new_reference(relative_path)
+end
+
+# Duplicates `source_name` into `name` on one configuration list, or returns the
+# existing configuration when it is already there.
+def ensure_configuration(list, name, source_name)
+  existing = list.build_configurations.find { |c| c.name == name }
+  return [existing, false] if existing
+
+  source = list.build_configurations.find { |c| c.name == source_name }
+  return [nil, false] if source.nil?
+
+  created = list.project.new(Xcodeproj::Project::Object::XCBuildConfiguration)
+  created.name = name
+  # Copy rather than share: a flavor configuration starts identical to the
+  # build type it derives from and then diverges.
+  created.build_settings = Marshal.load(Marshal.dump(source.build_settings))
+  created.base_configuration_reference = source.base_configuration_reference
+  list.build_configurations << created
+  [created, true]
+end
+
+# Makes the project match the requested configurations and run script.
+def configure_project(project, request)
+  target_name = request['target'] || 'Runner'
+  target = project.targets.find { |t| t.name == target_name }
+  fail_with('target_missing', "No target named #{target_name}.") if target.nil?
+
+  changes = []
+
+  Array(request['configurations']).each do |spec|
+    name = spec['name']
+    based_on = spec['basedOn']
+    next if name.nil? || based_on.nil?
+
+    # Project level first: Xcode expects every configuration to exist there,
+    # and a target-only configuration behaves inconsistently.
+    _, created = ensure_configuration(project.build_configuration_list, name, based_on)
+    changes << "project configuration #{name}" if created
+
+    project.targets.each do |candidate|
+      configuration, made = ensure_configuration(
+        candidate.build_configuration_list, name, based_on
+      )
+      changes << "#{candidate.name}/#{name}" if made
+      next if configuration.nil?
+
+      # The xcconfig belongs to the app target only; a test bundle inheriting it
+      # would pick up the app's bundle identifier.
+      next unless candidate == target
+
+      # Build settings on the configuration itself, not only in the xcconfig:
+      # a target's own settings take precedence over its base configuration, so
+      # a bundle id left only in the xcconfig is silently ignored.
+      Hash(spec['buildSettings']).each do |key, value|
+        next if configuration.build_settings[key] == value
+
+        configuration.build_settings[key] = value
+        changes << "#{candidate.name}/#{name} #{key}"
+      end
+
+      xcconfig = spec['xcconfig']
+      next if xcconfig.nil?
+
+      reference = find_or_create_file_reference(project, xcconfig)
+      if configuration.base_configuration_reference != reference
+        configuration.base_configuration_reference = reference
+        changes << "#{candidate.name}/#{name} xcconfig"
+      end
+    end
+  end
+
+  script = request['runScript']
+  changes.concat(configure_run_script(target, script)) unless script.nil?
+
+  changes
+end
+
+# Adds or updates one taxiway-owned shell script phase, matched by name.
+#
+# Matched by name so re-running updates the same phase instead of appending a
+# second one, and so a user's own script phases are never touched.
+def configure_run_script(target, script)
+  name = script['name']
+  body = script['script'].to_s
+  changes = []
+
+  phase = target.build_phases.find do |candidate|
+    candidate.isa == 'PBXShellScriptBuildPhase' &&
+      candidate.respond_to?(:name) && candidate.name == name
+  end
+
+  if phase.nil?
+    phase = target.new_shell_script_build_phase(name)
+    changes << "run script #{name}"
+  end
+
+  if phase.shell_script != body
+    phase.shell_script = body
+    changes << "run script #{name} body" unless changes.include?("run script #{name}")
+  end
+  phase.shell_path = '/bin/sh'
+  phase.input_paths = Array(script['inputPaths'])
+  phase.output_paths = Array(script['outputPaths'])
+  # Without this Xcode reruns the phase on every build and warns about it.
+  phase.always_out_of_date = '1' if phase.respond_to?(:always_out_of_date=)
+
+  changes
+end
+
+def read_request
+  raw = $stdin.tty? ? '' : $stdin.read
+  return {} if raw.nil? || raw.strip.empty?
+
+  JSON.parse(raw)
+rescue JSON::ParserError => e
+  fail_with('bad_request', "Could not parse the request JSON: #{e.message}")
+end
+
 case op
 when 'read'
   puts JSON.generate(
@@ -171,6 +314,33 @@ when 'read'
       'project' => read_project(project)
     }
   )
+when 'configure'
+  request = read_request
+  begin
+    changes = configure_project(project, request)
+    project.save if changes.any?
+  rescue StandardError => e
+    fail_with(
+      'configure_failed',
+      "Could not configure #{project_path}: #{e.message}",
+      remedy: 'taxiway restored the original project file. Open it in Xcode ' \
+              'to check it is intact.'
+    )
+  end
+
+  puts JSON.generate(
+    {
+      'ok' => true,
+      'bridgeVersion' => 1,
+      'xcodeprojVersion' => Xcodeproj::VERSION,
+      'changed' => changes.any?,
+      'changes' => changes,
+      'project' => read_project(project)
+    }
+  )
 else
-  fail_with('unknown_op', "Unknown operation `#{op}`. Known operations: read.")
+  fail_with(
+    'unknown_op',
+    "Unknown operation `#{op}`. Known operations: read, configure."
+  )
 end

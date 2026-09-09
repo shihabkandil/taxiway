@@ -114,6 +114,12 @@ class GeneratedFileWriter {
 
     final current = await target.readAsString();
 
+    // Scaffolding exists to be edited. Once it is there, taxiway is done with
+    // it — even asking about a conflict would be wrong.
+    if (file.createOnly) {
+      return WriteResult(file: file, outcome: WriteOutcome.unchanged);
+    }
+
     if (ownership == Ownership.unmanaged) {
       // The single most likely real-project collision. It must be an explicit,
       // actionable error rather than a duplicated block or a silent overwrite.

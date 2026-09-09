@@ -26,6 +26,7 @@ class GeneratedFile {
     CommentStyle? commentStyle,
     this.anchor,
     this.description,
+    this.createOnly = false,
   }) : _commentStyle = commentStyle;
 
   /// Fully-managed file: taxiway owns the whole thing.
@@ -38,6 +39,24 @@ class GeneratedFile {
          contents: contents,
          mode: WriteMode.full,
          description: description,
+       );
+
+  /// Written once if missing, then never touched again.
+  ///
+  /// For scaffolding a user is meant to fill in — a shared bootstrap, a
+  /// starting point. taxiway must create it so the generated entrypoints
+  /// compile, and must never overwrite it, because by the second run it
+  /// contains their code.
+  const GeneratedFile.scaffold({
+    required String path,
+    required String contents,
+    String? description,
+  }) : this(
+         path: path,
+         contents: contents,
+         mode: WriteMode.full,
+         description: description,
+         createOnly: true,
        );
 
   /// Block-managed file: taxiway owns only the marked region.
@@ -76,6 +95,9 @@ class GeneratedFile {
 
   /// One line for `--dry-run`, saying what this file is for.
   final String? description;
+
+  /// Create if absent, then leave alone forever.
+  final bool createOnly;
 }
 
 /// Turns configuration into files.

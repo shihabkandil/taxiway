@@ -56,11 +56,16 @@ class ProcessResultLite {
 /// Ruby, a keychain, or Apple credentials.
 abstract class ProcessRunner {
   /// Runs [executable] to completion and captures its output.
+  ///
+  /// [stdin] is written to the process and the pipe is then closed. Used for
+  /// payloads too large to pass as arguments — the Xcode bridge's configure
+  /// request grows with the number of flavors.
   Future<ProcessResultLite> run(
     String executable,
     List<String> arguments, {
     String? workingDirectory,
     Map<String, String>? environment,
+    String? stdin,
   });
 
   /// Runs [executable], emitting output line by line as it arrives.
@@ -102,6 +107,7 @@ class SystemProcessRunner implements ProcessRunner {
     List<String> arguments, {
     String? workingDirectory,
     Map<String, String>? environment,
+    String? stdin,
   }) async {
     final Process process;
     try {
@@ -119,6 +125,11 @@ class SystemProcessRunner implements ProcessRunner {
         stdout: '',
         stderr: redactor.redact(e.message),
       );
+    }
+
+    if (stdin != null) {
+      process.stdin.write(stdin);
+      unawaited(process.stdin.close());
     }
 
     final stdoutFuture = _collect(process.stdout);
