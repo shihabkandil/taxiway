@@ -20,8 +20,23 @@ class AndroidFastfileGenerator extends Generator {
 
   static const String path = 'android/fastlane/Fastfile';
 
-  /// The environment variable naming the Play service-account JSON.
+  /// The environment variable holding a *path* to the Play service-account
+  /// JSON, used when the config names no variable of its own.
   static const String playKeyEnv = SecretNames.playServiceAccountPath;
+
+  /// Which variable the play lane reads, and how it hands it to `supply`.
+  ///
+  /// `targets.play.service_account_ref` names a variable holding the JSON
+  /// itself, so it goes to `json_key_data`; the default convention is a path,
+  /// which goes to `json_key`. Getting this wrong is not visible in a generated
+  /// file — the pre-flight passes and `supply` fails at the upload with an
+  /// authentication error naming nothing.
+  static ({String name, String parameter}) playKey(ResolvedApp app) {
+    final contentRef = app.play?.serviceAccountRef;
+    return contentRef == null
+        ? (name: playKeyEnv, parameter: 'json_key')
+        : (name: contentRef, parameter: 'json_key_data');
+  }
 
   /// The environment variable naming the Firebase service-account JSON.
   ///
@@ -127,13 +142,14 @@ $keyPropertiesGuard
     final artifact = (play?.artifact ?? PlayArtifact.aab).name;
     final isAab = artifact == 'aab';
     final rollout = play?.rollout;
+    final key = playKey(app);
 
     return '''
   desc "Build and upload to the Play Store $track track"
   lane :play do |options|
     flavor = require_flavor(options)
     config = flavor_config(flavor)
-    require_env("$playKeyEnv")
+    require_env("${key.name}")
 
     artifact = build(flavor: flavor, type: "${isAab ? 'appbundle' : 'apk'}")
 
@@ -141,7 +157,7 @@ $keyPropertiesGuard
 
     upload_to_play_store(
       package_name: config[:package_name],
-      json_key: ENV.fetch("$playKeyEnv"),
+      ${key.parameter}: ENV.fetch("${key.name}"),
       track: options.fetch(:track, "$track"),
       release_status: "$status",${rollout == null ? '' : '\n      rollout: "$rollout",'}
       ${isAab ? 'aab' : 'apk'}: artifact,

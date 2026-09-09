@@ -197,9 +197,35 @@ void main() {
       expect(fastfile, isNot(contains(pattern)));
     }
     // Everything sensitive arrives through the environment.
-    expect(
-      fastfile,
-      contains('ENV.fetch("${AndroidFastfileGenerator.playKeyEnv}")'),
-    );
+    expect(fastfile, contains('ENV.fetch("PLAY_JSON")'));
+  });
+
+  group('which variable the play lane reads', () {
+    /// The pre-flight derives this name from the config, so a lane that reads
+    /// a different one is the exact failure `secret_names.dart` exists to
+    /// prevent: `secrets check` reports green and `supply` fails at the upload
+    /// with an authentication error naming nothing.
+    test('the configured ref, passed as content', () {
+      final fastfile = render(
+        app(play: const PlayTarget(serviceAccountRef: 'PLAY_JSON')),
+      );
+
+      expect(fastfile, contains('require_env("PLAY_JSON")'));
+      // The variable holds the JSON, so there is no file to point at.
+      expect(fastfile, contains('json_key_data: ENV.fetch("PLAY_JSON")'));
+      expect(fastfile, isNot(contains('json_key: ')));
+    });
+
+    test('the path convention when the config names nothing', () {
+      final fastfile = render(app(play: const PlayTarget()));
+
+      expect(
+        fastfile,
+        contains(
+          'json_key: ENV.fetch("${AndroidFastfileGenerator.playKeyEnv}")',
+        ),
+      );
+      expect(fastfile, isNot(contains('json_key_data')));
+    });
   });
 }

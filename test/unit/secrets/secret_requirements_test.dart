@@ -53,6 +53,16 @@ List<SecretRequirement> requirementsFor(
 Set<String> namesOf(List<SecretRequirement> requirements) =>
     requirements.map((r) => r.name).toSet();
 
+/// Whether [rendered] reads the variable [name], as opposed to merely
+/// containing those characters.
+///
+/// A plain substring test is wrong here and quietly so: `PLAY_SERVICE_ACCOUNT_
+/// JSON` is a prefix of `PLAY_SERVICE_ACCOUNT_JSON_PATH`, so one name being
+/// present would vouch for another that is not.
+bool mentions(String rendered, String name) => RegExp(
+  '(?<![A-Za-z0-9_])${RegExp.escape(name)}(?![A-Za-z0-9_])',
+).hasMatch(rendered);
+
 void main() {
   group('what a config implies', () {
     test('every *_ref becomes a requirement', () {
@@ -213,7 +223,7 @@ void main() {
       final rendered = lanes();
 
       for (final name in SecretNames.all) {
-        if (!rendered.contains(name)) continue;
+        if (!mentions(rendered, name)) continue;
         expect(
           known,
           contains(name),
@@ -234,8 +244,8 @@ void main() {
         SecretNames.firebaseServiceAccountPath,
       ]) {
         expect(
-          rendered,
-          contains(name),
+          mentions(rendered, name),
+          isTrue,
           reason: '$name is checked for nothing',
         );
       }

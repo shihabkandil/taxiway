@@ -263,21 +263,24 @@ ${_androidSigningStep(app)}${_playKeyStep(app)}${_firebaseKeyStep(app)}
     if (app.firebase == null) return '';
     return '''
       - name: Materialise the Firebase service account
-        run: echo "\$FIREBASE_SERVICE_ACCOUNT_JSON" > "\$GITHUB_WORKSPACE/firebase.json"
+        run: echo "\$${SecretNames.firebaseServiceAccountJson}" > "\$GITHUB_WORKSPACE/firebase.json"
         env:
-          FIREBASE_SERVICE_ACCOUNT_JSON: \${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          ${SecretNames.firebaseServiceAccountJson}: \${{ secrets.${SecretNames.firebaseServiceAccountJson} }}
 
 ''';
   }
 
   /// The Play service account is a *file path*, so the file has to exist.
+  ///
+  /// Unless the config names its own variable, which holds the JSON itself —
+  /// then there is no file to write and the lane reads the secret directly.
   String _playKeyStep(ResolvedApp app) {
-    if (app.play == null) return '';
+    if (app.play == null || app.play!.serviceAccountRef != null) return '';
     return '''
       - name: Materialise the Play service account
-        run: echo "\$PLAY_SERVICE_ACCOUNT_JSON" > "\$GITHUB_WORKSPACE/play.json"
+        run: echo "\$${SecretNames.playServiceAccountJson}" > "\$GITHUB_WORKSPACE/play.json"
         env:
-          PLAY_SERVICE_ACCOUNT_JSON: \${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          ${SecretNames.playServiceAccountJson}: \${{ secrets.${SecretNames.playServiceAccountJson} }}
 
 ''';
   }
@@ -317,7 +320,11 @@ ${_androidSigningStep(app)}${_playKeyStep(app)}${_firebaseKeyStep(app)}
     final lines = <String>[];
     void secret(String name) => lines.add('$name: \${{ secrets.$name }}');
 
-    if (app.play != null) {
+    final playRef = app.play?.serviceAccountRef;
+    if (playRef != null) {
+      // The variable holds the JSON, so it is an ordinary repository secret.
+      secret(playRef);
+    } else if (app.play != null) {
       // A path, and the step above is what makes the file exist.
       lines.add(
         '${SecretNames.playServiceAccountPath}: '

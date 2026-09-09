@@ -48,6 +48,26 @@ abstract final class SecretNames {
   static const String firebaseServiceAccountPath =
       'FIREBASE_SERVICE_ACCOUNT_JSON_PATH';
 
+  /// The *contents* of those two service accounts.
+  ///
+  /// A runner has no file to point at, so the workflow writes one from a
+  /// repository secret and sets the `_PATH` variable to where it wrote it. The
+  /// secret you set in GitHub is therefore not the variable the lane reads,
+  /// which is exactly the kind of thing nobody works out from a failure
+  /// message — so `secrets export` names the one you can actually set.
+  static const String playServiceAccountJson = 'PLAY_SERVICE_ACCOUNT_JSON';
+  static const String firebaseServiceAccountJson =
+      'FIREBASE_SERVICE_ACCOUNT_JSON';
+
+  /// The repository secret that supplies [pathVariable]'s content, if the
+  /// variable is one a workflow materialises into a file.
+  static String? contentSecretFor(String pathVariable) =>
+      switch (pathVariable) {
+        playServiceAccountPath => playServiceAccountJson,
+        firebaseServiceAccountPath => firebaseServiceAccountJson,
+        _ => null,
+      };
+
   /// Password for the dedicated keychain taxiway creates off-workstation.
   static const String keychainPassword = 'TAXIWAY_KEYCHAIN_PASSWORD';
 
@@ -63,6 +83,8 @@ abstract final class SecretNames {
     appStoreConnectTeamId,
     playServiceAccountPath,
     firebaseServiceAccountPath,
+    playServiceAccountJson,
+    firebaseServiceAccountJson,
     keychainPassword,
   ];
 }

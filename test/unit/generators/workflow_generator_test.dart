@@ -269,6 +269,34 @@ void main() {
     });
   });
 
+  group('a Play service account named by the config', () {
+    test('travels as a repository secret, with no file to write', () {
+      // The lane reads the JSON itself here, so materialising a file would
+      // write one nothing opens and demand a secret nobody set.
+      final resolved = app(
+        play: const PlayTarget(serviceAccountRef: 'PLAY_JSON'),
+      );
+      final env = job(resolved, 'android')['env'] as YamlMap;
+
+      expect(env.keys, contains('PLAY_JSON'));
+      expect(env.keys, isNot(contains(SecretNames.playServiceAccountPath)));
+      expect(
+        stepNames(job(resolved, 'android')),
+        isNot(contains('Materialise the Play service account')),
+      );
+    });
+
+    test('otherwise the path convention writes the file', () {
+      final env = job(app(), 'android')['env'] as YamlMap;
+
+      expect(env.keys, contains(SecretNames.playServiceAccountPath));
+      expect(
+        stepNames(job(app(), 'android')),
+        contains('Materialise the Play service account'),
+      );
+    });
+  });
+
   test('a project with no flavors gets no workflow', () {
     expect(const WorkflowGenerator().render(app(flavors: false)), isEmpty);
   });
