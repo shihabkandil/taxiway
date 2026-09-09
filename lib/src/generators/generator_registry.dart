@@ -6,6 +6,8 @@ import '../core/config/taxiway_config.dart';
 import '../core/gradle/gradle_layout.dart';
 import 'android_flavor_generator.dart';
 import 'dart_generators.dart';
+import 'fastfile_generator.dart';
+import 'fastlane_generators.dart';
 import 'generated_file.dart';
 import 'ios_generators.dart';
 import 'resolve_app.dart';
@@ -18,6 +20,12 @@ abstract final class GeneratorRegistry {
     IosSchemeGenerator(),
     DartEntrypointGenerator(),
     DartDefinesGenerator(),
+    GemfileGenerator(),
+    PluginfileGenerator(),
+    AppfileGenerator(),
+    MatchfileGenerator(),
+    ExportOptionsGenerator(),
+    IosFastfileGenerator(),
     GitignoreGenerator(),
   ];
 
@@ -29,11 +37,25 @@ abstract final class GeneratorRegistry {
       'entrypoints',
       'dart-defines',
     ],
+    'fastlane': <String>[
+      'gemfiles',
+      'pluginfiles',
+      'appfiles',
+      'matchfile',
+      'export-options',
+      'ios-fastfile',
+    ],
     'all': <String>[
       'android-flavors',
       'ios-schemes',
       'entrypoints',
       'dart-defines',
+      'gemfiles',
+      'pluginfiles',
+      'appfiles',
+      'matchfile',
+      'export-options',
+      'ios-fastfile',
       'gitignore',
     ],
   };

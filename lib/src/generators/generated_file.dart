@@ -1,3 +1,4 @@
+import '../core/config/taxiway_config.dart';
 import '../core/managed/comment_style.dart';
 import '../core/model/android_model.dart';
 import '../core/managed/lock_file.dart';
@@ -132,6 +133,10 @@ class ResolvedApp {
     required this.gradleDsl,
     this.iosTeamId,
     this.iosSchemeTemplate,
+    this.iosExport = IosExport.gym,
+    this.matchGitUrl,
+    this.matchStorage = MatchStorage.git,
+    this.ascApiKey,
   });
 
   final String appId;
@@ -158,6 +163,15 @@ class ResolvedApp {
   /// generator stays pure, and so a project with no readable scheme produces no
   /// schemes instead of broken ones.
   final String? iosSchemeTemplate;
+
+  /// Which tool exports the `.ipa`; decides the shape of the build lane.
+  final IosExport iosExport;
+
+  final String? matchGitUrl;
+  final MatchStorage matchStorage;
+
+  /// App Store Connect key, by reference only — never a value.
+  final AscApiKeyConfig? ascApiKey;
 
   bool get hasFlavors => flavors.isNotEmpty;
 

@@ -122,9 +122,30 @@ class AndroidAppConfig {
   Map<String, dynamic> toJson() => _$AndroidAppConfigToJson(this);
 }
 
+/// Which tool turns the `.xcarchive` into a signed `.ipa`.
+///
+/// `flutter build ipa` always produces the archive; only the export leg is in
+/// question, and both answers are verified working.
+enum IosExport {
+  /// `build_app(skip_build_archive: true)` exports the archive Flutter made.
+  ///
+  /// The default. Under `match` the provisioning profile name is only known at
+  /// lane runtime, from `MATCH_PROVISIONING_PROFILE_MAPPING`, and gym takes it
+  /// directly — a static plist would have to have the name written into it in
+  /// advance and would be silently wrong the day match's naming changed. gym
+  /// also writes a dSYM zip, which the crash-reporting upload wants.
+  gym,
+
+  /// `flutter build ipa --export-options-plist=<generated>` does both legs.
+  ///
+  /// One step and no gym in the build lane, at the cost of naming the profile
+  /// ahead of time in `ExportOptions-<flavor>.plist`.
+  flutter,
+}
+
 @JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
 class IosAppConfig {
-  const IosAppConfig({this.bundleId});
+  const IosAppConfig({this.bundleId, this.export = IosExport.gym});
 
   factory IosAppConfig.fromJson(Map<dynamic, dynamic> json) =>
       _$IosAppConfigFromJson(json);
@@ -132,6 +153,9 @@ class IosAppConfig {
   /// `PRODUCT_BUNDLE_IDENTIFIER`, before any flavor suffix.
   @JsonKey(name: 'bundle_id')
   final String? bundleId;
+
+  /// Which tool exports the `.ipa`. See [IosExport].
+  final IosExport export;
 
   Map<String, dynamic> toJson() => _$IosAppConfigToJson(this);
 }

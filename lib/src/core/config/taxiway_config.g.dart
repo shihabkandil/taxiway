@@ -138,15 +138,24 @@ Map<String, dynamic> _$AndroidAppConfigToJson(AndroidAppConfig instance) =>
 
 IosAppConfig _$IosAppConfigFromJson(Map json) =>
     $checkedCreate('IosAppConfig', json, ($checkedConvert) {
-      $checkKeys(json, allowedKeys: const ['bundle_id']);
+      $checkKeys(json, allowedKeys: const ['bundle_id', 'export']);
       final val = IosAppConfig(
         bundleId: $checkedConvert('bundle_id', (v) => v as String?),
+        export: $checkedConvert(
+          'export',
+          (v) => $enumDecodeNullable(_$IosExportEnumMap, v) ?? IosExport.gym,
+        ),
       );
       return val;
     }, fieldKeyMap: const {'bundleId': 'bundle_id'});
 
 Map<String, dynamic> _$IosAppConfigToJson(IosAppConfig instance) =>
-    <String, dynamic>{'bundle_id': ?instance.bundleId};
+    <String, dynamic>{
+      'bundle_id': ?instance.bundleId,
+      'export': _$IosExportEnumMap[instance.export]!,
+    };
+
+const _$IosExportEnumMap = {IosExport.gym: 'gym', IosExport.flutter: 'flutter'};
 
 FlavorConfig _$FlavorConfigFromJson(Map json) => $checkedCreate(
   'FlavorConfig',

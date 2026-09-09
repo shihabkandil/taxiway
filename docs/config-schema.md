@@ -29,6 +29,7 @@ apps:                         # keyed by app id; a single-app repo uses `main`
       application_id: com.acme.app     # defaultConfig.applicationId, unsuffixed
     ios:
       bundle_id: com.acme.app          # PRODUCT_BUNDLE_IDENTIFIER, unsuffixed
+      export: gym                      # gym | flutter — who turns the archive into an .ipa
 
     flavors:
       dev:
@@ -135,6 +136,31 @@ must have somewhere to live.
 | `flavors.<name>.entrypoint` | Flavors named `development`/`production` very often have `main_dev.dart`/`main_prod.dart`. Assuming `main_<flavor>.dart` would build the wrong app under the right bundle id — a failure that looks like success. |
 | `flavors.<name>.version_name_suffix` | Read from Gradle's `versionNameSuffix`. Without it the round trip loses the value and `status` reports drift on a freshly imported project. |
 | `flavors.<name>.dimension` | Recorded only when it is not `environment`, the dimension taxiway generates. Projects using another name would otherwise drift forever. |
+
+## `ios.export` — who exports the `.ipa`
+
+`flutter build ipa` always produces the `.xcarchive`; only the export leg is in
+question, and both answers are verified working.
+
+`gym` (the default) has Flutter archive with `--no-codesign` and then
+`build_app(skip_build_archive: true)` export it. The provisioning profile name
+is read from match's `MATCH_PROVISIONING_PROFILE_MAPPING` at lane runtime, so it
+cannot go stale, and gym also writes a dSYM zip.
+
+`flutter` has `flutter build ipa --export-options-plist=<generated>` do both
+legs in one command, with no gym in the build lane. It needs the profile name
+written into `ios/ExportOptions-<flavor>.plist` ahead of time, which taxiway
+generates only under this setting — a stale plist sitting beside a gym export
+would be a trap.
+
+Two consequences worth knowing:
+
+- The exported filename differs. Flutter names it after `CFBundleDisplayName`
+  (`Acme Dev.ipa`), gym after the product target (`Runner.ipa`). Generated lanes
+  glob `build/ios/ipa/*.ipa` rather than predict it.
+- Under `gym`, the lane must pass `export_team_id`. An archive built with
+  `--no-codesign` records an empty `Team`, so export has none to infer and fails
+  with `exportArchive No Team Found in Archive`.
 
 ## How `display_name` reaches each platform
 

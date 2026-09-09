@@ -34,6 +34,10 @@ abstract final class ResolveApp {
       gradleDsl: gradleDsl,
       iosTeamId: app.signing.ios?.teamId,
       iosSchemeTemplate: iosSchemeTemplate,
+      iosExport: app.ios?.export ?? IosExport.gym,
+      matchGitUrl: app.signing.ios?.matchGitUrl,
+      matchStorage: app.signing.ios?.matchStorage ?? MatchStorage.git,
+      ascApiKey: app.signing.ios?.apiKey,
       flavors: <ResolvedFlavor>[
         for (final entry in app.flavors.entries)
           _flavor(entry.key, entry.value, androidBase, iosBase),
