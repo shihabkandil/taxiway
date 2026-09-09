@@ -163,6 +163,7 @@ class ResolvedApp {
     this.play,
     this.firebase,
     this.androidSigning,
+    this.shipsIos = true,
   });
 
   final String appId;
@@ -206,6 +207,10 @@ class ResolvedApp {
   final FirebaseTarget? firebase;
 
   final AndroidSigningConfig? androidSigning;
+
+  /// Whether this app ships to Apple. Carried from `AppConfig.shipsIos` so the
+  /// generators and the pre-flight cannot answer it differently.
+  final bool shipsIos;
 
   bool get hasFlavors => flavors.isNotEmpty;
 

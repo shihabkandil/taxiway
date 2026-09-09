@@ -286,10 +286,11 @@ written after their own build began.
 
 ## `taxiway secrets`
 
-> Show which credentials this project needs, and whether they are set.
+> Show which credentials this project needs, put them somewhere, and say what
+> a CI repository has to be given.
 
 ```
-taxiway secrets list|check [--json] [--flavor <f>]
+taxiway secrets list|check|set|import|export
 ```
 
 `list` reports; `check` exits `2` when a required credential is missing. Run
@@ -344,6 +345,96 @@ is printed, listing it would be advice to put a value somewhere nothing will
 ever read it.
 
 See [`execution-environments.md`](execution-environments.md).
+
+### `taxiway secrets set <NAME>`
+
+> Put one credential in the login keychain.
+
+```
+taxiway secrets set <NAME> [--from-file <path>] [--stdin] [--base64]
+```
+
+Prompts, hidden, when given neither `--from-file` nor `--stdin` — and refuses
+rather than prompting anywhere a prompt would hang.
+
+| Option | Meaning |
+|---|---|
+| `--from-file=<path>` | Read the value from a file. |
+| `--stdin` | Read the value from standard input. |
+| `--base64` | Encode before storing. What `ASC_KEY_P8_BASE64` and the Android keystore need. |
+
+`--base64` exists rather than a line in a README because the obvious command is
+wrong on half of the machines that run it: GNU `base64` wraps at 76 columns by
+default and the wrapped form does not decode. taxiway encodes the bytes itself.
+
+**The value never reaches a command line.** `security add-generic-password -w`
+with no argument reads it from stdin, so it is not in `ps` and not in your shell
+history. Nothing is read back afterwards, not even to check the write landed —
+the check asks whether the item exists, which hands no secret back.
+
+That check matters: given a value and a confirmation that differ, `security`
+prints `passwords don't match`, stores nothing, and **exits 0**. A zero exit
+code is not evidence anything was written.
+
+The login keychain cannot hold a multi-line value, and taxiway says so instead
+of storing the first line. Encode it, or — for `MATCH_GIT_PRIVATE_KEY`, which
+only a runner reads — set it as a repository secret, where multi-line values are
+fine.
+
+Off macOS there is no login keychain, and `set` fails saying to use `.env`.
+
+### `taxiway secrets import`
+
+> Move a `.env` file into the login keychain.
+
+```
+taxiway secrets import [--from <path>] [--force] [--flavor <f>]
+```
+
+Reads every assignment and stores it. Names already in the keychain are **kept**
+and reported, not overwritten — the point of moving values off disk is not to
+lose the ones already moved. `--force` replaces them.
+
+The file is left exactly as it was, and the report says so: this is a copy, not
+a move, and deleting it is your call once `taxiway secrets check` reports green.
+
+### `taxiway secrets export`
+
+> Say what a CI repository has to be given.
+
+```
+taxiway secrets export [--format gh|actions|env]
+```
+
+Emits the **names** — never a value, because it never reads one.
+
+| Format | Produces |
+|---|---|
+| `gh` | A `gh secret set` script. Each line prompts, so no value reaches your shell history. |
+| `actions` | An `env:` block, for a workflow taxiway did not write. |
+| `env` | A `.env` template with empty values. |
+
+The list is derived for the **`ci`** environment whatever machine you run it on,
+because the thing being wired up is the runner. A workstation's list would omit
+the match credential a runner cannot clone without and add an interactive Apple
+ID nobody should put in a repository.
+
+Two names are swapped on the way out. `PLAY_SERVICE_ACCOUNT_JSON_PATH` and
+`FIREBASE_SERVICE_ACCOUNT_JSON_PATH` are *paths*, and you cannot put a path in
+GitHub — the workflow writes the file from a secret and points the variable at
+it. So what is named is `PLAY_SERVICE_ACCOUNT_JSON` and
+`FIREBASE_SERVICE_ACCOUNT_JSON`, which is not something anybody works out from
+the failure.
+
+A team id already in `taxiway.yaml` is **not** on the list: it appears in every
+build log, so the workflow writes it plainly rather than pretending it is a
+secret.
+
+A test asserts that what `export` names is exactly the set of secrets the
+generated workflow reads — in both directions. A name here the workflow never
+reads is a value someone typed into GitHub for nothing; one the workflow reads
+that is missing here is a build that fails at the step this was supposed to
+cover.
 
 ## Generated fastlane lanes
 
@@ -427,7 +518,6 @@ Planned, and deliberately absent rather than half-present:
 | `taxiway setup ios-signing \| android-signing \| firebase` | 3 |
 | `taxiway release ios\|android --target testflight\|appstore\|play\|firebase` | 4 |
 | `taxiway run <pipeline>` | 5 |
-| `taxiway secrets set\|list\|import` | 3 |
 | `taxiway upgrade`, `taxiway completion install` | 6 |
 
 The generated lanes stop at TestFlight, the Play internal track and Firebase

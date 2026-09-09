@@ -225,7 +225,9 @@ Sequenced so each step is independently useful, rather than one XL landing:
 3. **The keychain manager**, with guaranteed teardown and the run lock.
 4. **`taxiway setup ios-signing` / `android-signing`**, the wizard proper — by
    which point it is filling in a model that already works headlessly.
-5. **`taxiway generate ci`** and `secrets export`.
+5. **`taxiway generate ci`** and `secrets export`. *Done.* `export` derives its
+   list for `ci` whatever machine it runs on, and a test asserts it names
+   exactly the secrets the generated workflow reads.
 6. **Linux/Android-only support** in `doctor` and `build`. *Done.* The host OS
    is a value (`HostPlatform`) threaded through `RunContext`, so the Linux
    answer is testable from a Mac — which is the only place it was ever going to

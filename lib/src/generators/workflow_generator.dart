@@ -82,9 +82,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-${_iosJob(app)}
-${_androidJob(app)}''';
+${app.shipsIos ? _iosJob(app) : _noIosJobNote()}${_androidJob(app)}''';
   }
+
+  /// A project that configures no iOS signing and no Apple destination has no
+  /// iOS job to run. Generating one anyway makes red the repository's normal
+  /// state, which is how a failing pipeline stops being read.
+  String _noIosJobNote() =>
+      '  # No iOS job: this config arranges no iOS signing and no Apple\n'
+      '  # destination. Add signing.ios or targets.testflight and re-run\n'
+      '  # `taxiway generate ci` in a fresh checkout to get one.\n';
 
   String _iosJob(ResolvedApp app) =>
       '''

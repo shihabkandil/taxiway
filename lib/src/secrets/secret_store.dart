@@ -28,6 +28,11 @@ class SecretStoreFailure implements Exception {
 /// with no argument reads the password from stdin — twice, as a confirmation —
 /// which keeps it out of `ps` on a shared machine. Verified against the real
 /// tool on macOS 15.
+///
+/// Nothing here reads a stored value back, not even to check its own work.
+/// Verification asks whether the item exists and whether `security` announced
+/// a refusal, which is enough to catch the one failure that looks like success
+/// — and means a value only ever travels one way through this type.
 class SecretStore {
   SecretStore({
     required this.runner,
@@ -98,17 +103,25 @@ class SecretStore {
       );
     }
 
-    // `security` exits 0 after printing "passwords don't match" and storing
-    // nothing, so the exit code is not evidence. Reading it back is.
-    if (await _readBack(name) != value) {
+    // A zero exit code is not evidence anything was written: given a value and
+    // a confirmation that differ, `security` prints this, stores nothing, and
+    // still exits 0. Verified against macOS 15.
+    final refused = result.output.contains(mismatchSignature);
+    if (refused || !result.ok || !await has(name)) {
       throw SecretStoreFailure(
-        'The keychain did not accept $name.',
-        fixHint: result.output.trim().isEmpty
-            ? 'Check that the login keychain is unlocked.'
-            : result.output.trim(),
+        'The keychain did not accept $name, and nothing was stored.',
+        fixHint: refused
+            ? 'That is a taxiway bug — the value and its confirmation were '
+                  'sent identically. Please report it.'
+            : 'Check that the login keychain is unlocked.',
       );
     }
   }
+
+  /// What `security` prints when the value and its confirmation differ.
+  ///
+  /// Matched rather than inferred from the exit code, which is 0 either way.
+  static const String mismatchSignature = "passwords don't match";
 
   /// Removes [name]. True when something was there to remove.
   Future<bool> delete(String name) async {
@@ -134,18 +147,5 @@ class SecretStore {
       name,
     ]);
     return result.ok;
-  }
-
-  Future<String?> _readBack(String name) async {
-    final result = await runner.run('security', <String>[
-      'find-generic-password',
-      '-s',
-      service,
-      '-a',
-      name,
-      '-w',
-    ]);
-    if (!result.ok) return null;
-    return result.stdout.trim();
   }
 }

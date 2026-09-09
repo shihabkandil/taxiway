@@ -107,6 +107,23 @@ class AppConfig {
   final TargetsConfig targets;
   final VersioningConfig versioning;
 
+  /// Whether this app ships to Apple at all.
+  ///
+  /// [ios] is not the test, though it reads like one: that block is optional
+  /// and carries only a bundle id and an export mode, so a plainly iOS project
+  /// omits it. What decides it is whether the config arranges iOS shipping —
+  /// signing, or an Apple destination.
+  ///
+  /// Defined once because two things must agree on the answer: the pre-flight,
+  /// which demands an Apple team id, and the generators, which emit the iOS
+  /// lanes and the iOS CI job that would read it. Disagreeing means either a
+  /// job with no credential or a credential no job wants.
+  bool get shipsIos =>
+      ios != null ||
+      signing.ios != null ||
+      targets.testflight != null ||
+      targets.appstore != null;
+
   Map<String, dynamic> toJson() => _$AppConfigToJson(this);
 }
 

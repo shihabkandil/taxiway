@@ -72,6 +72,7 @@ abstract final class SecretRequirements {
         );
 
     final iosSigning = app.signing.ios;
+    final shipsIos = app.shipsIos;
     if (iosSigning?.matchGitUrl != null) {
       add(
         SecretNames.matchPassword,
@@ -106,9 +107,7 @@ abstract final class SecretRequirements {
     // Named in the config, so the variable is only a fallback for it.
     add(
       SecretNames.developerPortalTeamId,
-      iosSigning?.teamId == null && app.ios != null
-          ? Need.required
-          : Need.optional,
+      iosSigning?.teamId == null && shipsIos ? Need.required : Need.optional,
       iosSigning?.teamId == null
           ? 'the iOS export, which has no signing.ios.team_id to fall back on'
           : 'overrides signing.ios.team_id',
@@ -172,11 +171,21 @@ abstract final class SecretRequirements {
         'the firebase lane',
         isPath: true,
       );
-      for (final ref in <String?>[
-        firebase.androidAppIdRef,
-        firebase.iosAppIdRef,
-      ]) {
-        if (ref != null) add(ref, Need.required, 'targets.firebase');
+      final androidAppId = firebase.androidAppIdRef;
+      if (androidAppId != null) {
+        add(androidAppId, Need.required, 'the firebase lane');
+      }
+
+      // Optional until something reads it. There is no iOS App Distribution
+      // lane yet, so requiring it would fail a build for a variable nothing
+      // asks for — the same shape of wrong as checking a name no lane reads.
+      final iosAppId = firebase.iosAppIdRef;
+      if (iosAppId != null) {
+        add(
+          iosAppId,
+          Need.optional,
+          'targets.firebase.ios_app_id_ref; no iOS lane reads it yet',
+        );
       }
     }
 
@@ -184,7 +193,7 @@ abstract final class SecretRequirements {
     if (slack != null) add(slack, Need.optional, 'notify.slack_webhook_ref');
 
     // taxiway creates a keychain exactly where it may not use the login one.
-    if (!environment.mayUseLoginKeychain && app.ios != null) {
+    if (!environment.mayUseLoginKeychain && shipsIos) {
       add(
         SecretNames.keychainPassword,
         Need.optional,
