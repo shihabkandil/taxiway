@@ -13,6 +13,7 @@ import '../core/managed/managed_block.dart';
 import '../version.dart';
 import 'commands/adopt_command.dart';
 import 'commands/build_command.dart';
+import 'commands/release_command.dart';
 import 'commands/secrets_command.dart';
 import 'commands/setup_command.dart';
 import 'commands/doctor_command.dart';
@@ -82,6 +83,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
     addCommand(GenerateCommand(() => context));
     addCommand(AdoptCommand(() => context));
     addCommand(BuildCommand(() => context));
+    addCommand(ReleaseCommand(() => context));
     addCommand(SecretsCommand(() => context));
     addCommand(SetupCommand(() => context));
   }

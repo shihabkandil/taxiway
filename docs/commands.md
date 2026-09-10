@@ -592,6 +592,80 @@ that way.
 > `cd ios && bundle binstubs fastlane`, then `./bin/fastlane ios beta`.
 > `taxiway doctor` warns about this.
 
+## `taxiway release`
+
+> Build a flavor and send it somewhere.
+
+```
+taxiway release ios     --flavor <f> --target testflight|appstore [options]
+taxiway release android --flavor <f> --target play|firebase       [options]
+```
+
+A front door, not a second implementation: it validates, prints the plan, then
+runs the same generated lane you could run by hand.
+
+| Option | Meaning |
+|---|---|
+| `-f, --flavor <name>` | Which flavor to ship. |
+| `-t, --target <name>` | `testflight`, `appstore`, `play` or `firebase`. |
+| `--track <name>` | Play only: override the configured track. |
+| `--rollout <fraction>` | Play only: user fraction, e.g. `0.1`. |
+| `--build-number <n>` | Use this instead of what `versioning.strategy` resolves. |
+| `--version-name <v>` | Use this instead of `pubspec.yaml`. |
+| `--dry-run` | Validate and print the plan, upload nothing. |
+
+Everything cheap happens first. A target the config never configured, a flag
+belonging to another target, a rollout out of range, a credential that is not
+set — all are caught in under a second, because finding them after a
+twenty-minute build is what makes releasing feel dangerous.
+
+```
+$ taxiway release android --flavor dev --target play --rollout 0.1 --dry-run
+
+  flavor      dev
+  identifier  com.acme.app.dev
+  target      play
+  track       internal
+  rollout     0.1 → status inProgress
+  version     pubspec+versioning.strategy: remote
+
+Nothing was uploaded.
+```
+
+The plan prints on a real run too, because the first question about a broken
+release is always which build went where.
+
+**The credential check is scoped to the destination.** Releasing to Play does
+not ask for an App Store Connect key — noise in a pre-flight is how people
+learn to ignore it.
+
+### Build numbers
+
+`versioning.strategy` decides what a release claims, resolved *before* the
+build so the artifact carries the number the store is told about:
+
+| Strategy | Build number |
+|---|---|
+| `increment` (default) | what `pubspec.yaml` says |
+| `timestamp` | `yyMMddHHmm`, monotonic without asking anything |
+| `remote` | `latest_testflight_build_number + 1`, or the highest Play version code + 1 |
+
+`--build-number` overrides all three, which is how a re-run reuses a number
+rather than minting one the store has never heard of.
+
+### Promoting on Play
+
+Moving a build between tracks uploads nothing, so it is its own lane rather
+than a flag:
+
+```
+cd android && bundle exec fastlane android promote flavor:prod to:beta rollout:0.1
+```
+
+You do not pass a release status alongside a rollout: `supply` derives one from
+the fraction — `inProgress` below 1, `completed` at 1 — and passing both only
+lets them disagree.
+
 ## Continuous integration
 
 `taxiway generate ci` writes `.github/workflows/release.yml` — created once,
@@ -632,7 +706,6 @@ Planned, and deliberately absent rather than half-present:
 
 | Command | Phase |
 |---|---|
-| `taxiway release ios\|android --target testflight\|appstore\|play\|firebase` | 4 |
 | `taxiway run <pipeline>` | 5 |
 | `taxiway upgrade`, `taxiway completion install` | 6 |
 

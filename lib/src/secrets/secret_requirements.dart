@@ -19,6 +19,7 @@ class SecretRequirement {
     required this.need,
     required this.wantedBy,
     this.isPath = false,
+    this.targets = const <String>{},
   });
 
   /// The environment-variable name.
@@ -37,7 +38,20 @@ class SecretRequirement {
   /// unset one, discovered later.
   final bool isPath;
 
+  /// Which release targets need this, by id — `testflight`, `appstore`,
+  /// `play`, `firebase`.
+  ///
+  /// Empty means "not tied to one destination", which is the honest answer for
+  /// things like a keychain password. Scoping matters because demanding an App
+  /// Store Connect key before a Play upload is noise, and noise in a
+  /// pre-flight is how people learn to ignore it.
+  final Set<String> targets;
+
   bool get isRequired => need == Need.required;
+
+  /// Whether this is worth checking before shipping to [target].
+  bool appliesTo(String? target) =>
+      target == null || targets.isEmpty || targets.contains(target);
 }
 
 /// Works out which secrets a config implies.
@@ -61,15 +75,27 @@ abstract final class SecretRequirements {
     if (app == null) return const <SecretRequirement>[];
 
     final requirements = <SecretRequirement>[];
-    void add(String name, Need need, String wantedBy, {bool isPath = false}) =>
-        requirements.add(
-          SecretRequirement(
-            name: name,
-            need: need,
-            wantedBy: wantedBy,
-            isPath: isPath,
-          ),
-        );
+    void add(
+      String name,
+      Need need,
+      String wantedBy, {
+      bool isPath = false,
+      Set<String> targets = const <String>{},
+    }) => requirements.add(
+      SecretRequirement(
+        name: name,
+        need: need,
+        wantedBy: wantedBy,
+        isPath: isPath,
+        targets: targets,
+      ),
+    );
+
+    /// Every Apple destination, since signing is shared between them.
+    const apple = <String>{'testflight', 'appstore'};
+
+    /// Every Android destination: both need a signed artifact.
+    const androidTargets = <String>{'play', 'firebase'};
 
     final iosSigning = app.signing.ios;
     final shipsIos = app.shipsIos;
@@ -78,13 +104,20 @@ abstract final class SecretRequirements {
         SecretNames.matchPassword,
         Need.required,
         'the certificates lane, to decrypt the match repository',
+        targets: apple,
       );
       add(
         SecretNames.matchGitUrl,
         Need.optional,
         'overrides signing.ios.match_git_url',
+        targets: apple,
       );
-      add(SecretNames.matchGitBranch, Need.optional, 'the match repository');
+      add(
+        SecretNames.matchGitBranch,
+        Need.optional,
+        'the match repository',
+        targets: apple,
+      );
 
       // A runner has neither a credential helper nor an SSH agent, so the
       // clone needs an explicit credential. Which one depends on the URL,
@@ -100,6 +133,7 @@ abstract final class SecretRequirements {
           overSsh
               ? 'cloning the match repository over SSH'
               : 'cloning the match repository over HTTPS',
+          targets: apple,
         );
       }
     }
@@ -111,6 +145,7 @@ abstract final class SecretRequirements {
       iosSigning?.teamId == null
           ? 'the iOS export, which has no signing.ios.team_id to fall back on'
           : 'overrides signing.ios.team_id',
+      targets: apple,
     );
 
     final apiKey = iosSigning?.apiKey;
@@ -120,7 +155,9 @@ abstract final class SecretRequirements {
       'signing.ios.api_key.p8_ref': apiKey?.p8Ref,
     }.entries) {
       final name = entry.value;
-      if (name != null) add(name, Need.required, entry.key);
+      if (name != null) {
+        add(name, Need.required, entry.key, targets: apple);
+      }
     }
 
     // Only useful for the interactive login path, which is exactly the path a
@@ -130,17 +167,24 @@ abstract final class SecretRequirements {
         SecretNames.appleId,
         Need.optional,
         'interactive App Store Connect login',
+        targets: apple,
       );
       add(
         SecretNames.appStoreConnectTeamId,
         Need.optional,
         'interactive App Store Connect login',
+        targets: apple,
       );
     }
 
     final android = app.signing.android;
     if (android?.keystoreRef != null) {
-      add(android!.keystoreRef!, Need.required, 'signing.android.keystore_ref');
+      add(
+        android!.keystoreRef!,
+        Need.required,
+        'signing.android.keystore_ref',
+        targets: androidTargets,
+      );
     }
     final keyProperties = android?.keyProperties;
     for (final entry in <String, String?>{
@@ -150,7 +194,9 @@ abstract final class SecretRequirements {
           keyProperties?.keyPasswordRef,
     }.entries) {
       final name = entry.value;
-      if (name != null) add(name, Need.required, entry.key);
+      if (name != null) {
+        add(name, Need.required, entry.key, targets: androidTargets);
+      }
     }
 
     if (app.targets.play != null) {
@@ -160,6 +206,7 @@ abstract final class SecretRequirements {
         Need.required,
         'the play lane',
         isPath: app.targets.play!.serviceAccountRef == null,
+        targets: const <String>{'play'},
       );
     }
 
@@ -170,10 +217,16 @@ abstract final class SecretRequirements {
         Need.required,
         'the firebase lane',
         isPath: true,
+        targets: const <String>{'firebase'},
       );
       final androidAppId = firebase.androidAppIdRef;
       if (androidAppId != null) {
-        add(androidAppId, Need.required, 'the firebase lane');
+        add(
+          androidAppId,
+          Need.required,
+          'the firebase lane',
+          targets: const <String>{'firebase'},
+        );
       }
 
       // Optional until something reads it. There is no iOS App Distribution
@@ -185,6 +238,7 @@ abstract final class SecretRequirements {
           iosAppId,
           Need.optional,
           'targets.firebase.ios_app_id_ref; no iOS lane reads it yet',
+          targets: const <String>{'firebase'},
         );
       }
     }
