@@ -176,7 +176,12 @@ $keyPropertiesGuard
       ${isAab ? 'aab' : 'apk'}: artifact,
       mapping_paths: File.exist?(mapping_path(flavor)) ? [mapping_path(flavor)] : nil,
       # Metadata belongs to whoever writes the store listing, not to a build.
+      # `skip_upload_changelogs` is separate from `skip_upload_metadata` —
+      # supply's own description says "changelogs not included" — and
+      # `metadata_path` defaults to any fastlane/metadata/android directory it
+      # finds. Without this, an upload silently overwrites release notes.
       skip_upload_metadata: true,
+      skip_upload_changelogs: true,
       skip_upload_images: true,
       skip_upload_screenshots: true,
       skip_upload_${isAab ? 'apk' : 'aab'}: true
@@ -238,6 +243,7 @@ $keyPropertiesGuard
       skip_upload_apk: true,
       skip_upload_aab: true,
       skip_upload_metadata: true,
+      skip_upload_changelogs: true,
       skip_upload_images: true,
       skip_upload_screenshots: true
     )

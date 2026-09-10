@@ -149,6 +149,11 @@ void main() {
       final fastfile = render(app());
       for (final skip in const <String>[
         'skip_upload_metadata: true',
+        // Separate from metadata — supply's own description says "changelogs
+        // not included" — and `metadata_path` defaults to any
+        // fastlane/metadata/android directory it finds. Without this an upload
+        // silently overwrites the release notes somebody wrote.
+        'skip_upload_changelogs: true',
         'skip_upload_images: true',
         'skip_upload_screenshots: true',
       ]) {
@@ -181,6 +186,13 @@ void main() {
 
     test('validates the rollout range itself', () {
       expect(render(app()), contains('rollout must be between 0 and 1'));
+    });
+
+    test('leaves the store listing alone', () {
+      final fastfile = render(app());
+      final lane = fastfile.substring(fastfile.indexOf('lane :promote'));
+      expect(lane, contains('skip_upload_changelogs: true'));
+      expect(lane, contains('skip_upload_metadata: true'));
     });
 
     test('never passes a release status alongside a rollout', () {
