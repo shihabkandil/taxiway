@@ -164,6 +164,8 @@ class ResolvedApp {
     this.firebase,
     this.androidSigning,
     this.shipsIos = true,
+    this.versioning = const VersioningConfig(),
+    this.appstore,
   });
 
   final String appId;
@@ -207,6 +209,11 @@ class ResolvedApp {
   final FirebaseTarget? firebase;
 
   final AndroidSigningConfig? androidSigning;
+
+  /// How a release picks its build number.
+  final VersioningConfig versioning;
+
+  final AppstoreTarget? appstore;
 
   /// Whether this app ships to Apple. Carried from `AppConfig.shipsIos` so the
   /// generators and the pre-flight cannot answer it differently.

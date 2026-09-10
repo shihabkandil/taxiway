@@ -87,13 +87,19 @@ end
   static String flutterBuild() => r'''
 # The dart-defines file is passed only when it exists: a flavor may
 # legitimately have none, and naming a missing one fails the build.
-def flutter_build(type:, flavor:, entrypoint:, extra: [])
+def flutter_build(type:, flavor:, entrypoint:, version: nil, build: nil, extra: [])
   defines = root_path("dart_defines", "#{flavor}.json")
 
   args = [
     "flutter build #{type}",
     "--release",
     "--flavor #{flavor.shellescape}",
+    # Passed explicitly so the artifact carries the number the release lane
+    # resolved, rather than whatever pubspec happened to say. A build stamped
+    # with a different number than the one the store was told to expect is a
+    # duplicate-build error nobody can trace.
+    *(version ? ["--build-name #{version.shellescape}"] : []),
+    *(build ? ["--build-number #{build.shellescape}"] : []),
     # Never omitted. Without it Flutter builds lib/main.dart under this
     # flavor's identity: the wrong app, and the build succeeds.
     "--target #{entrypoint.shellescape}",

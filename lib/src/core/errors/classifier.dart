@@ -243,8 +243,8 @@ abstract final class ErrorClassifier {
           'Google Play requires a strictly increasing version code, and this '
           'one has been uploaded before.',
       fix:
-          'Bump the version code, or set versioning.strategy to `remote` so it '
-          'is taken from the track.',
+          'Set versioning.strategy to `remote` so the code is taken from the '
+          'track, or bump it in pubspec.yaml.',
     ),
 
     // catalog
@@ -271,6 +271,66 @@ abstract final class ErrorClassifier {
       fix:
           'Switch to a service-account JSON and set '
           'FIREBASE_SERVICE_ACCOUNT_JSON_PATH.',
+    ),
+
+    // catalog: Phase 4 store failures. The stores' own messages are unusually
+    // bad at naming what to change, which is the whole reason these exist.
+    ErrorSignature(
+      id: 'play.app_not_found',
+      patterns: <Pattern>[RegExp(r'applicationNotFound|Package not found')],
+      summary:
+          'Google Play has no app with this package name, or the service '
+          'account cannot see it.',
+      fix:
+          'Check apps.<id>.android.application_id, and that the service '
+          'account has been invited to this app in the Play Console.',
+    ),
+
+    ErrorSignature(
+      id: 'play.unknown_track',
+      patterns: <Pattern>[RegExp(r'is not a valid track|Could not find track')],
+      summary: 'Play does not know that track name.',
+      fix:
+          'Use internal, alpha, beta or production, or create the closed '
+          'track in the Play Console first.',
+    ),
+
+    ErrorSignature(
+      id: 'play.rollout_wrong_status',
+      patterns: <Pattern>[
+        RegExp(
+          r'Cannot rollout a release with status|rollout.*not.*inProgress',
+        ),
+      ],
+      summary: 'That release cannot take a user fraction in its current state.',
+      fix:
+          'Promote it to a track first, or set targets.play.release_status to '
+          'inProgress; supply sets the status from the fraction on upload.',
+    ),
+
+    ErrorSignature(
+      id: 'asc.key_rejected',
+      patterns: <Pattern>[
+        RegExp(r'App Store Connect API|Authentication credentials'),
+        RegExp(r'\b401\b|\b403\b|NOT_AUTHORIZED|invalid'),
+      ],
+      summary:
+          'App Store Connect refused the API key — wrong, expired, or without '
+          'the role this operation needs.',
+      fix:
+          'Check signing.ios.api_key refs resolve (`taxiway secrets check`), '
+          'and that the key has App Manager access in App Store Connect.',
+    ),
+
+    ErrorSignature(
+      id: 'testflight.external_without_groups',
+      patterns: <Pattern>['distribute_external', 'groups'],
+      summary:
+          'External distribution was asked for with no group to distribute '
+          'to.',
+      fix:
+          'Add targets.testflight.groups, or set distribute_external to '
+          'false. `taxiway release` checks this before building.',
     ),
 
     // --- toolchain -------------------------------------------------------

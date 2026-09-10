@@ -157,6 +157,41 @@ void main() {
     });
   });
 
+  group('the promote lane', () {
+    test('uploads nothing', () {
+      // Promotion is the cheap, common operation. Making it a flag on the
+      // upload lane would mean rebuilding an artifact Play already has.
+      final fastfile = render(app());
+      expect(fastfile, contains('track_promote_to: to'));
+      expect(fastfile, contains('skip_upload_apk: true'));
+      expect(fastfile, contains('skip_upload_aab: true'));
+    });
+
+    test('refuses without a destination track', () {
+      expect(render(app()), contains('Pass to:'));
+    });
+
+    test('checks arguments before credentials', () {
+      // Being told to configure a service account when the real problem is a
+      // missing `to:` sends people the wrong way.
+      final fastfile = render(app());
+      final lane = fastfile.substring(fastfile.indexOf('lane :promote'));
+      expect(lane.indexOf('Pass to:'), lessThan(lane.indexOf('require_env')));
+    });
+
+    test('validates the rollout range itself', () {
+      expect(render(app()), contains('rollout must be between 0 and 1'));
+    });
+
+    test('never passes a release status alongside a rollout', () {
+      // supply derives the status from the fraction. Passing one as well
+      // would only let the two disagree.
+      final fastfile = render(app());
+      final lane = fastfile.substring(fastfile.indexOf('lane :promote'));
+      expect(lane, isNot(contains('release_status')));
+    });
+  });
+
   group('the firebase lane', () {
     test('is absent unless an app id is configured', () {
       expect(render(app()), isNot(contains('firebase_app_distribution')));

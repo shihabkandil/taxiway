@@ -277,6 +277,111 @@ void main() {
     });
   });
 
+  group('the App Store lane', () {
+    ResolvedApp withAppStore({bool submit = false, String? metadata}) =>
+        ResolvedApp(
+          appId: 'main',
+          projectName: 'acme_app',
+          androidApplicationId: 'com.acme.app',
+          iosBundleId: 'com.acme.app',
+          gradleDsl: GradleDsl.kotlin,
+          iosTeamId: 'ABCDE12345',
+          appstore: AppstoreTarget(
+            submitForReview: submit,
+            metadataPath: metadata,
+          ),
+          flavors: app().flavors,
+        );
+
+    test('is absent unless the config names that target', () {
+      expect(
+        renderOne(
+          const IosFastfileGenerator(),
+          app(),
+          IosFastfileGenerator.path,
+        ),
+        isNot(contains('upload_to_app_store')),
+      );
+    });
+
+    test('is a separate lane from beta', () {
+      // TestFlight is a build going to testers; the App Store is a
+      // submission. Sharing a lane would make the more consequential one a
+      // flag on the other.
+      final fastfile = renderOne(
+        const IosFastfileGenerator(),
+        withAppStore(),
+        IosFastfileGenerator.path,
+      );
+      expect(fastfile, contains('lane :beta'));
+      expect(fastfile, contains('lane :release'));
+    });
+
+    test('never submits for review on its own', () {
+      // Submitting is a decision a person makes, not something a tool does
+      // because it could.
+      expect(
+        renderOne(
+          const IosFastfileGenerator(),
+          withAppStore(),
+          IosFastfileGenerator.path,
+        ),
+        contains('submit_for_review: false'),
+      );
+      expect(
+        renderOne(
+          const IosFastfileGenerator(),
+          withAppStore(submit: true),
+          IosFastfileGenerator.path,
+        ),
+        contains('submit_for_review: true'),
+      );
+    });
+
+    test('leaves the store listing alone unless given a metadata path', () {
+      final without = renderOne(
+        const IosFastfileGenerator(),
+        withAppStore(),
+        IosFastfileGenerator.path,
+      );
+      expect(without, contains('skip_metadata: true'));
+
+      final with_ = renderOne(
+        const IosFastfileGenerator(),
+        withAppStore(metadata: 'ios/fastlane/metadata'),
+        IosFastfileGenerator.path,
+      );
+      expect(with_, contains('ios/fastlane/metadata'));
+      expect(with_, isNot(contains('skip_metadata: true')));
+    });
+  });
+
+  group('the version a release claims', () {
+    test('is resolved before the build, not after', () {
+      // Resolving afterwards is how a build ends up stamped with one number
+      // and announced to the store with another.
+      final fastfile = renderOne(
+        const IosFastfileGenerator(),
+        app(),
+        IosFastfileGenerator.path,
+      );
+      final resolve = fastfile.indexOf('number = build_number(');
+      final build = fastfile.indexOf('ipa = build_ipa(');
+      expect(resolve, isNot(-1));
+      expect(resolve, lessThan(build));
+    });
+
+    test('reaches the artifact rather than only the upload', () {
+      final fastfile = renderOne(
+        const IosFastfileGenerator(),
+        app(),
+        IosFastfileGenerator.path,
+      );
+      expect(fastfile, contains('version_name: name'));
+      expect(fastfile, contains('build_number: number'));
+    });
+  });
+
   group('no generated fastlane file may contain a credential', () {
     /// Shapes that mean somebody pasted a value where a name belongs.
     ///

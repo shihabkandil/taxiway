@@ -42,6 +42,8 @@ abstract final class ResolveApp {
       play: app.targets.play,
       firebase: app.targets.firebase,
       androidSigning: app.signing.android,
+      versioning: app.versioning,
+      appstore: app.targets.appstore,
       shipsIos: app.shipsIos,
       flavors: <ResolvedFlavor>[
         for (final entry in app.flavors.entries)

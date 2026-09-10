@@ -137,6 +137,46 @@ void main() {
     });
   });
 
+  group('store failures', () {
+    void expectId(String output, String id) =>
+        expect(ErrorClassifier.classify(output)?.id, id);
+
+    test('a package name Play does not know', () {
+      expectId(
+        'Google Api Error: applicationNotFound: No application was found',
+        'play.app_not_found',
+      );
+    });
+
+    test('a track Play does not know', () {
+      expectId(
+        "Google Api Error: 'alpha2' is not a valid track",
+        'play.unknown_track',
+      );
+    });
+
+    test('a rejected App Store Connect key', () {
+      expectId(
+        'App Store Connect API returned 401 NOT_AUTHORIZED',
+        'asc.key_rejected',
+      );
+    });
+
+    test('external distribution with no group', () {
+      expectId(
+        'distribute_external is true but no groups were provided',
+        'testflight.external_without_groups',
+      );
+    });
+
+    test('a reused Play version code names the strategy that fixes it', () {
+      final diagnosis = ErrorClassifier.classify(
+        'Google Api Error: Version code has already been used.',
+      );
+      expect(diagnosis?.fix, contains('remote'));
+    });
+  });
+
   group('discipline', () {
     test('every id is unique', () {
       final ids = ErrorClassifier.ids;

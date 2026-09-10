@@ -1,6 +1,7 @@
 import '../core/config/taxiway_config.dart';
 import '../core/secrets/secret_names.dart';
 import 'fastlane_ruby.dart';
+import 'version_resolver.dart';
 import 'generated_file.dart';
 
 /// Writes `ios/fastlane/Fastfile`.
@@ -50,11 +51,17 @@ class IosFastfileGenerator extends Generator {
     ),
     FastlaneRuby.helpers(),
     FastlaneRuby.flutterBuild(),
+    VersionResolver.render(
+      strategy: app.versioning.strategy,
+      syncIosAndroid: app.versioning.syncIosAndroid,
+      platform: 'ios',
+    ),
     _ipaHelper(),
     'platform :ios do',
     _certificatesLane(app),
     _buildLane(app),
     _testflightLane(app),
+    if (app.appstore != null) _appStoreLane(app),
     'end',
   ].join('\n');
 
@@ -158,6 +165,8 @@ $auth
       type: "ipa",
       flavor: flavor,
       entrypoint: config[:entrypoint],
+      version: options[:version_name],
+      build: options[:build_number],
       extra: ["--no-codesign"]
     )
 
@@ -203,6 +212,8 @@ $auth
       type: "ipa",
       flavor: flavor,
       entrypoint: config[:entrypoint],
+      version: options[:version_name],
+      build: options[:build_number],
       extra: ["--export-options-plist=#{plist.shellescape}"]
     )
 
@@ -229,17 +240,85 @@ $auth
     config = flavor_config(flavor)
 
     api_key = asc_api_key
+    # Resolved before the build, so the artifact carries the number the store
+    # is about to be told about. Resolving afterwards is how a build ends up
+    # stamped with one number and announced with another.
+    name = version_name(options[:version_name])
+    number = build_number(
+      options[:build_number],
+      app_identifier: config[:bundle_id],
+      api_key: api_key
+    )
+    UI.message("Shipping #{config[:bundle_id]} #{name}+#{number} to TestFlight")
+
     certificates
-    ipa = build_ipa(flavor: flavor)
+    ipa = build_ipa(flavor: flavor, version_name: name, build_number: number)
 
     next UI.important("dry_run: would upload #{ipa}") if options[:dry_run]
 
     upload_to_testflight(
       api_key: api_key,
       app_identifier: config[:bundle_id],
-      ipa: ipa,${_groups(app)}
+      ipa: ipa,${_groups(app)}${_externalDistribution(app)}
+      # Processing takes minutes to hours and blocking on it holds a runner
+      # open for no benefit — the build is already Apple's problem by then.
       skip_waiting_for_build_processing: true
     )
   end
 ''';
+
+  /// External distribution, only when the config asks for it.
+  ///
+  /// `pilot` requires `groups` alongside it, which the config loader already
+  /// refuses without — so by the time this renders, the pair is sound.
+  static String _externalDistribution(ResolvedApp app) {
+    final testflight = app.testflight;
+    if (testflight == null || !testflight.distributeExternal) return '';
+    return '\n      distribute_external: true,';
+  }
+
+  /// The App Store lane, generated only when the config names that target.
+  ///
+  /// Separate from `beta` because they are different decisions: TestFlight is
+  /// a build going to testers, the App Store is a submission. Sharing a lane
+  /// would make the more consequential one a flag on the other.
+  String _appStoreLane(ResolvedApp app) {
+    final appstore = app.appstore!;
+    final metadata = appstore.metadataPath;
+
+    return '''
+  desc "Build and upload to App Store Connect"
+  lane :release do |options|
+    flavor = require_flavor(options)
+    config = flavor_config(flavor)
+
+    api_key = asc_api_key
+    name = version_name(options[:version_name])
+    number = build_number(
+      options[:build_number],
+      app_identifier: config[:bundle_id],
+      api_key: api_key
+    )
+    UI.message("Shipping #{config[:bundle_id]} #{name}+#{number} to the App Store")
+
+    certificates
+    ipa = build_ipa(flavor: flavor, version_name: name, build_number: number)
+
+    next UI.important("dry_run: would upload #{ipa}") if options[:dry_run]
+
+    upload_to_app_store(
+      api_key: api_key,
+      app_identifier: config[:bundle_id],
+      ipa: ipa,
+      # Submitting for review is a decision a person makes, not something a
+      # tool should do because it could.
+      submit_for_review: ${appstore.submitForReview},
+      # A store listing belongs to whoever writes it. taxiway uploads a build.
+${metadata == null ? '      skip_metadata: true,\n      skip_screenshots: true,' : '      metadata_path: root_path("$metadata"),\n      skip_screenshots: true,'}
+      precheck_include_in_app_purchases: false,
+      force: true
+    )
+  end
+''';
+  }
 }

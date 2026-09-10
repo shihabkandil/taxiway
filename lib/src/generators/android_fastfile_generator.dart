@@ -1,6 +1,7 @@
 import '../core/config/taxiway_config.dart';
 import '../core/secrets/secret_names.dart';
 import 'fastlane_ruby.dart';
+import 'version_resolver.dart';
 import 'generated_file.dart';
 
 /// Writes `android/fastlane/Fastfile`.
@@ -73,10 +74,16 @@ class AndroidFastfileGenerator extends Generator {
     ),
     FastlaneRuby.helpers(),
     FastlaneRuby.flutterBuild(),
+    VersionResolver.render(
+      strategy: app.versioning.strategy,
+      syncIosAndroid: app.versioning.syncIosAndroid,
+      platform: 'android',
+    ),
     _artifactHelper(),
     'platform :android do',
     _buildLane(app),
     _playLane(app),
+    _promoteLane(app),
     if (app.firebase?.androidAppIdRef != null) _firebaseLane(app),
     'end',
   ].join('\n');
@@ -124,7 +131,13 @@ end
     type = options.fetch(:type, "appbundle")
 
 $keyPropertiesGuard
-    flutter_build(type: type, flavor: flavor, entrypoint: config[:entrypoint])
+    flutter_build(
+      type: type,
+      flavor: flavor,
+      entrypoint: config[:entrypoint],
+      version: options[:version_name],
+      build: options[:build_number]
+    )
 
     artifact = artifact_path(flavor, type)
     # A Flutter build that reports success and produces nothing means the
@@ -167,6 +180,66 @@ $keyPropertiesGuard
       skip_upload_images: true,
       skip_upload_screenshots: true,
       skip_upload_${isAab ? 'apk' : 'aab'}: true
+    )
+  end
+''';
+  }
+
+  /// Moves a build already on Play from one track to another.
+  ///
+  /// Its own lane because it uploads nothing: promotion is the cheap, common
+  /// operation — internal to beta, beta to production — and making it a flag
+  /// on the upload lane would mean rebuilding an artifact Play already has.
+  ///
+  /// `rollout` is deliberately not defaulted. A promotion to production with a
+  /// silently assumed user fraction is the kind of thing that should require
+  /// somebody to type it.
+  String _promoteLane(ResolvedApp app) {
+    final play = app.play;
+    final from = (play?.track ?? PlayTrack.internal).name;
+    // The same credential the play lane uses, resolved the same way. Two lanes
+    // reading a service account differently is how one of them works and the
+    // other fails with an authentication error naming nothing.
+    final key = playKey(app);
+
+    return '''
+  desc "Promote a build already on Play to another track"
+  lane :promote do |options|
+    flavor = require_flavor(options)
+    config = flavor_config(flavor)
+
+    # Arguments before credentials: what you typed is cheaper to fix than how
+    # the machine is set up, and being told to configure a service account
+    # when the real problem is a missing `to:` sends people the wrong way.
+    to = options.fetch(:to) do
+      UI.user_error!("Pass to: — the track to promote into, e.g. to:beta")
+    end
+    from = options.fetch(:from, "$from")
+
+    rollout = options[:rollout]
+    if rollout && !(rollout.to_f > 0 && rollout.to_f <= 1)
+      UI.user_error!("rollout must be between 0 and 1, got #{rollout}")
+    end
+
+    require_env("${key.name}")
+
+    UI.message("Promoting #{config[:package_name]} from #{from} to #{to}")
+    next UI.important("dry_run: would promote to #{to}") if options[:dry_run]
+
+    upload_to_play_store(
+      package_name: config[:package_name],
+      ${key.parameter}: ENV.fetch("${key.name}"),
+      track: from,
+      track_promote_to: to,
+      # supply derives the status from the fraction: inProgress below 1,
+      # completed at 1. Passing one as well would only let them disagree.
+      rollout: rollout&.to_s,
+      # Nothing is being uploaded here — the build is already on Play.
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
     )
   end
 ''';
