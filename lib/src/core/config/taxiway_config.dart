@@ -418,8 +418,12 @@ class AppstoreTarget {
 
 enum PlayTrack { internal, alpha, beta, production }
 
-/// Play release status. Staged rollout requires `inProgress` plus a fractional
-/// rollout; `supply` rejects the combination otherwise.
+/// Play release status.
+///
+/// A staged rollout does *not* require [inProgress] to be set here: `supply`
+/// derives the status from the user fraction on both the upload and the
+/// promote path, setting `inProgress` below 1 and `completed` at 1. What is
+/// written here is a starting point, not a constraint.
 enum PlayReleaseStatus {
   draft,
   completed,

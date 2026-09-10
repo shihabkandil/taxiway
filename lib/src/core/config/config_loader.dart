@@ -147,15 +147,28 @@ abstract final class ConfigLoader {
             hint: 'It is a user fraction: 0.1 means 10% of users.',
           );
         }
-        if (rollout != null &&
-            play.releaseStatus != PlayReleaseStatus.inProgress) {
-          throw ConfigException(
-            'A staged `rollout` requires `release_status: inProgress`, but '
-            'app `${entry.key}` sets `${play.releaseStatus.name}`.',
-            path: path,
-            hint: 'Play rejects a user fraction on any other status.',
-          );
-        }
+        // A rollout used to be rejected here unless `release_status` was
+        // `inProgress`. That was wrong: `supply` sets the status itself, on
+        // both the upload and the promote path, so the pair taxiway refused is
+        // one that works. Refusing a working config is a worse failure than an
+        // unclear one; the effective status is shown by `release --dry-run`
+        // instead. See docs/deploy-targets.md.
+      }
+
+      // Uploads fine and then fails at distribution, which is after the
+      // slowest part of the job — so it is caught here instead.
+      final testflight = app.targets.testflight;
+      if (testflight != null &&
+          testflight.distributeExternal &&
+          testflight.groups.isEmpty) {
+        throw ConfigException(
+          'app `${entry.key}` sets `distribute_external: true` with no '
+          '`groups`.',
+          path: path,
+          hint:
+              'TestFlight needs a group to distribute to. Add one under '
+              'targets.testflight.groups, or set distribute_external to false.',
+        );
       }
     }
 

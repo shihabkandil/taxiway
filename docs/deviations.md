@@ -186,3 +186,19 @@ that globbed and took any match would upload the last flavor built rather than
 the one it just built. The generated lanes therefore accept only an `.ipa`
 written after their own build began, and fail loudly when the export produced
 nothing.
+
+
+## A staged Play rollout no longer requires `release_status: inProgress`
+
+The plan, this schema and a comment in `taxiway_config.dart` all stated that a
+`rollout` requires `release_status: inProgress`, and that `supply` rejects the
+pair otherwise. Reading `supply`'s uploader shows the opposite: it derives the
+status from the user fraction on **both** paths it can take, setting
+`inProgress` when the fraction is below 1 and `completed` at 1.
+
+taxiway was therefore refusing a config that ships. The range check stays —
+`(0, 1]`, which mirrors supply's own `verify_block` — and the effective status
+is shown by `taxiway release --dry-run` rather than demanded up front.
+
+Recorded because the wrong version was asserted in three places, and somebody
+reading the plan will meet it again.

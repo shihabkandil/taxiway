@@ -103,6 +103,47 @@ apps:
     });
   });
 
+  group('a staged rollout', () {
+    TaxiwayConfig parseRollout(String status, double rollout) =>
+        ConfigLoader.parse('''
+version: 1
+project:
+  name: app
+apps:
+  main:
+    targets:
+      play:
+        track: production
+        release_status: $status
+        rollout: $rollout
+''');
+
+    test('is accepted whatever the status says', () {
+      // `supply` derives the status from the user fraction on both the upload
+      // and the promote path, so this pair works. taxiway used to reject it,
+      // which refused a config that ships.
+      for (final status in const <String>['completed', 'draft', 'inProgress']) {
+        final config = parseRollout(status, 0.1);
+        expect(config.apps['main']!.targets.play!.rollout, 0.1, reason: status);
+      }
+    });
+
+    test('still has to be a fraction', () {
+      // Mirrors supply's own verify_block: greater than 0, at most 1.
+      for (final value in const <double>[0, 1.5, -0.1]) {
+        expect(
+          () => parseRollout('inProgress', value),
+          throwsA(isA<ConfigException>()),
+          reason: '$value',
+        );
+      }
+      expect(
+        parseRollout('inProgress', 1).apps['main']!.targets.play!.rollout,
+        1,
+      );
+    });
+  });
+
   group('invalid configs each report an actionable message', () {
     expectInvalid('unknown_key.yaml', contains('flavour_min'));
     expectInvalid('missing_project_name.yaml', contains('name'));
@@ -115,9 +156,11 @@ apps:
     expectInvalid('duplicate_suffix.yaml', contains('both use suffix ".dev"'));
     expectInvalid('bad_flavor_name.yaml', contains('`dev-eu`'));
     expectInvalid('secret_in_ref.yaml', contains('-----BEGIN'));
+    // `distribute_external` without a group uploads the build and then fails
+    // at distribution — after the slowest part of the job.
     expectInvalid(
-      'rollout_without_in_progress.yaml',
-      contains('requires `release_status: inProgress`'),
+      'external_without_groups.yaml',
+      contains('distribute_external'),
     );
     expectInvalid('rollout_out_of_range.yaml', contains('between 0'));
     expectInvalid('bad_enum.yaml', contains('track'));

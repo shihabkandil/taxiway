@@ -74,7 +74,7 @@ apps:                         # keyed by app id; a single-app repo uses `main`
       play:
         track: internal                # internal | alpha | beta | production
         release_status: draft          # draft | completed | inProgress | halted
-        rollout: 0.1                   # requires release_status: inProgress
+        rollout: 0.1                   # user fraction; supply derives the status
         artifact: aab                  # aab | apk
         service_account_ref: PLAY_SERVICE_ACCOUNT_JSON
       firebase:
@@ -122,8 +122,14 @@ These are semantic and cannot be expressed as a shape:
   **case-sensitively**.
 - Two flavors may not share a `suffix`. They would produce one application id,
   and installing the second would silently replace the first on a device.
-- `rollout` must be in `(0, 1]` and requires `release_status: inProgress`; Play
-  rejects a user fraction on any other status.
+- `rollout` must be in `(0, 1]`, mirroring `supply`'s own check. It does **not**
+  require `release_status: inProgress`: supply derives the status from the user
+  fraction on both the upload and the promote path, setting `inProgress` below 1
+  and `completed` at 1. `taxiway release --dry-run` shows the status that will
+  actually be used.
+- `targets.testflight.distribute_external` requires at least one entry in
+  `groups`. Without one the build uploads and then fails at distribution, which
+  is after the slowest part of the job.
 - No `*_ref` may hold a secret rather than name one.
 
 ## Fields added beyond the original plan
