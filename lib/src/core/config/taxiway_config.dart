@@ -16,6 +16,7 @@ class TaxiwayConfig {
     this.secrets = const SecretsConfig(),
     this.notify = const NotifyConfig(),
     this.ci = const CiConfig(),
+    this.pipelines = const <String, dynamic>{},
   });
 
   factory TaxiwayConfig.fromJson(Map<dynamic, dynamic> json) =>
@@ -37,6 +38,16 @@ class TaxiwayConfig {
   final SecretsConfig secrets;
   final NotifyConfig notify;
   final CiConfig ci;
+
+  /// Named pipelines, kept as written rather than parsed here.
+  ///
+  /// A step is a union — a bare name, a single-key map, a `parallel` block —
+  /// which a generated decoder reports as a type error naming neither the
+  /// pipeline nor the step. `PipelineParser` reads it on use instead, so a
+  /// malformed pipeline fails `taxiway run` rather than every command that
+  /// happens to load a config.
+  @JsonKey(fromJson: _rawMap)
+  final Map<String, dynamic> pipelines;
 
   /// The app to act on when `--app` is not given.
   ///
@@ -567,6 +578,12 @@ class NotifyConfig {
 /// A map entry written with no body — `main:` or `prod:` — is the natural way
 /// to say "this exists and takes every default", so it must not be a type
 /// error. YAML gives us a null value there; these turn it into an empty map.
+Map<String, dynamic> _rawMap(Map<dynamic, dynamic>? json) => json == null
+    ? const <String, dynamic>{}
+    : <String, dynamic>{
+        for (final entry in json.entries) entry.key.toString(): entry.value,
+      };
+
 Map<String, AppConfig> _appsFromJson(Map<dynamic, dynamic> json) =>
     _entriesFromJson(json, AppConfig.fromJson);
 

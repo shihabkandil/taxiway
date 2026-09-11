@@ -14,6 +14,7 @@ import '../version.dart';
 import 'commands/adopt_command.dart';
 import 'commands/build_command.dart';
 import 'commands/release_command.dart';
+import 'commands/run_command.dart';
 import 'commands/secrets_command.dart';
 import 'commands/setup_command.dart';
 import 'commands/doctor_command.dart';
@@ -85,6 +86,9 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
     addCommand(BuildCommand(() => context));
     addCommand(ReleaseCommand(() => context));
     addCommand(SecretsCommand(() => context));
+    // The invoker is this runner itself, so a pipeline step runs the same
+    // command a person would, with the same validation and error handling.
+    addCommand(RunCommand(() => context, run));
     addCommand(SetupCommand(() => context));
   }
 

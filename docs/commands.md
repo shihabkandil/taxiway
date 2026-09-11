@@ -666,6 +666,76 @@ You do not pass a release status alongside a rollout: `supply` derives one from
 the fraction — `inProgress` below 1, `completed` at 1 — and passing both only
 lets them disagree.
 
+## `taxiway run`
+
+> Run a named pipeline from taxiway.yaml.
+
+```
+taxiway run <pipeline> [--dry-run] [--resume]
+```
+
+A pipeline adds no shipping ability — every step can be run by hand. What it
+owns is the seams: ordering, running iOS and Android at once, and knowing what
+not to repeat after a failure.
+
+```yaml
+pipelines:
+  beta:
+    - analyze
+    - test
+    - parallel:
+        - release: { flavor: prod, target: testflight }
+        - release: { flavor: prod, target: play }
+```
+
+Steps are `analyze`, `test`, `build`, `release` and `run` (an arbitrary
+command). Steps run in order; a `parallel:` block runs its steps together.
+There are no inferred dependencies — the order in the file is the order of
+execution, always.
+
+```
+$ taxiway run beta --dry-run
+
+Pipeline beta:
+    • analyze
+    • test
+  ┌ • release prod → testflight
+  └ • release prod → play
+```
+
+### When something fails
+
+The pipeline stops. There is no continue-on-error: a pipeline that carries on
+past a failure is one whose result means nothing. Inside a `parallel` block the
+others are allowed to **finish** rather than being cancelled — killing a
+half-finished upload is worse than waiting for it.
+
+Each run writes `.taxiway/runs/<pipeline>.json` (git-ignored) with every step's
+status, duration and exit code. That is what `--resume` reads, and what answers
+"what actually happened" once the terminal is gone.
+
+```
+$ taxiway run beta --resume
+```
+
+re-runs from the first step that did not succeed. Everything before it is
+skipped.
+
+**`--resume` asks before repeating a step that may not be safe to repeat.** A
+`release` that failed might have failed *after* the upload landed — a dropped
+connection, a cancelled job — and taxiway cannot tell. Re-running risks a
+duplicate build number; skipping risks a release everyone believes shipped and
+did not. So it says so, and `--yes` is how you say you have checked.
+
+| Step | Safe to repeat |
+|---|---|
+| `analyze`, `test` | yes — they only read |
+| `build` | yes — rebuilding overwrites the artifact |
+| `release` | **no** |
+| `run` | **unknown** — taxiway has no idea what your command does |
+
+See [`pipelines.md`](pipelines.md).
+
 ## Continuous integration
 
 `taxiway generate ci` writes `.github/workflows/release.yml` — created once,
@@ -706,7 +776,6 @@ Planned, and deliberately absent rather than half-present:
 
 | Command | Phase |
 |---|---|
-| `taxiway run <pipeline>` | 5 |
 | `taxiway upgrade`, `taxiway completion install` | 6 |
 
 The generated lanes stop at TestFlight, the Play internal track and Firebase

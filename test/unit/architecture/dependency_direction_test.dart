@@ -19,6 +19,10 @@ const Map<String, Set<String>> _allowedImports = <String, Set<String>>{
   'generators': <String>{'core', 'platform'},
   'secrets': <String>{'core'},
   'doctor': <String>{'core'},
+  // The runner takes its step invoker as a function, so this layer never
+  // reaches the CLI even though `build` and `release` are taxiway's own
+  // commands.
+  'pipeline': <String>{'core'},
   'cli': <String>{
     'core',
     'inspect',
@@ -26,6 +30,7 @@ const Map<String, Set<String>> _allowedImports = <String, Set<String>>{
     'platform',
     'secrets',
     'doctor',
+    'pipeline',
   },
 };
 

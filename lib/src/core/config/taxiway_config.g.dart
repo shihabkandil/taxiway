@@ -18,6 +18,7 @@ TaxiwayConfig _$TaxiwayConfigFromJson(
       'secrets',
       'notify',
       'ci',
+      'pipelines',
     ],
   );
   final val = TaxiwayConfig(
@@ -40,6 +41,10 @@ TaxiwayConfig _$TaxiwayConfigFromJson(
       'ci',
       (v) => v == null ? const CiConfig() : CiConfig.fromJson(v as Map),
     ),
+    pipelines: $checkedConvert(
+      'pipelines',
+      (v) => v == null ? const <String, dynamic>{} : _rawMap(v as Map?),
+    ),
   );
   return val;
 });
@@ -52,6 +57,7 @@ Map<String, dynamic> _$TaxiwayConfigToJson(TaxiwayConfig instance) =>
       'secrets': instance.secrets.toJson(),
       'notify': instance.notify.toJson(),
       'ci': instance.ci.toJson(),
+      'pipelines': instance.pipelines,
     };
 
 ProjectConfig _$ProjectConfigFromJson(Map json) =>

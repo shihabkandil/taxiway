@@ -95,6 +95,14 @@ notify:
 
 ci:
   environment: persistent      # workstation | ci | persistent
+
+pipelines:                     # named sequences, run with `taxiway run <name>`
+  beta:
+    - analyze
+    - test
+    - parallel:                # these two run together
+        - release: { flavor: prod, target: testflight }
+        - release: { flavor: prod, target: play }
 ```
 
 ## Minimal valid config
