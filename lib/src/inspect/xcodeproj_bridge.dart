@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
-
-import 'package:path/path.dart' as p;
 
 import '../core/io/process_runner.dart';
+import '../core/toolchain/bundled_script.dart';
 
 /// A failure reported by the Ruby bridge, or by our attempt to run it.
 class XcodeprojBridgeException implements Exception {
@@ -33,21 +31,10 @@ class XcodeprojBridge {
   ///
   /// Works from a source checkout and from a `dart pub global activate`
   /// install, both of which keep `tool/` alongside `lib/`.
-  static String? locateScript({String? packageRoot}) {
-    final candidates = <String>[
-      if (packageRoot != null)
-        p.join(packageRoot, 'tool/ruby/xcodeproj_bridge.rb'),
-      p.join(Directory.current.path, 'tool/ruby/xcodeproj_bridge.rb'),
-      p.join(
-        p.dirname(p.dirname(Platform.script.toFilePath())),
-        'tool/ruby/xcodeproj_bridge.rb',
-      ),
-    ];
-    for (final candidate in candidates) {
-      if (File(candidate).existsSync()) return p.normalize(candidate);
-    }
-    return null;
-  }
+  static String? locateScript({String? packageRoot}) => locateBundledScript(
+    'tool/ruby/xcodeproj_bridge.rb',
+    packageRoot: packageRoot,
+  );
 
   /// Runs `read` and returns the decoded project.
   Future<Map<String, dynamic>> read(String xcodeprojPath) async =>

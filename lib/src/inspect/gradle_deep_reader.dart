@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../core/io/process_runner.dart';
+import '../core/toolchain/bundled_script.dart';
 import '../core/model/android_model.dart';
 import '../core/model/uncertainty.dart';
 
@@ -51,21 +52,10 @@ class GradleDeepReader {
   static const Duration timeout = Duration(minutes: 3);
 
   /// Locates the init script the same way the Ruby bridge is located.
-  static String? locateScript({String? packageRoot}) {
-    final candidates = <String>[
-      if (packageRoot != null)
-        p.join(packageRoot, 'tool/gradle/shipway_dump.gradle'),
-      p.join(Directory.current.path, 'tool/gradle/shipway_dump.gradle'),
-      p.join(
-        p.dirname(p.dirname(Platform.script.toFilePath())),
-        'tool/gradle/shipway_dump.gradle',
-      ),
-    ];
-    for (final candidate in candidates) {
-      if (File(candidate).existsSync()) return p.normalize(candidate);
-    }
-    return null;
-  }
+  static String? locateScript({String? packageRoot}) => locateBundledScript(
+    'tool/gradle/shipway_dump.gradle',
+    packageRoot: packageRoot,
+  );
 
   /// Runs the deep read against the project at [root].
   Future<DeepReadResult> read(String root) async {
