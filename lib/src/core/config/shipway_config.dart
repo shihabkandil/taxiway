@@ -562,17 +562,133 @@ class CiConfig {
   Map<String, dynamic> toJson() => _$CiConfigToJson(this);
 }
 
+/// A moment in a run worth telling somebody about.
+enum NotifyEvent {
+  /// The run began. Off by default, and the event that makes a live status
+  /// message possible: without a first post there is nothing to edit.
+  started,
+
+  /// The run finished clean.
+  success,
+
+  /// It did not. The default: a notification you get every time is one you
+  /// stop reading, and the run you need to hear about is the one that broke.
+  failure;
+
+  /// `always` in the config: every finished run, succeeded or not.
+  static const Set<NotifyEvent> always = <NotifyEvent>{success, failure};
+}
+
 @JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
 class NotifyConfig {
-  const NotifyConfig({this.slackWebhookRef});
+  const NotifyConfig({
+    this.slackWebhookRef,
+    this.slackBotTokenRef,
+    this.slackChannel,
+    this.on = const <NotifyEvent>{NotifyEvent.failure},
+    this.messages = const NotifyMessages(),
+  });
 
   factory NotifyConfig.fromJson(Map<dynamic, dynamic> json) =>
       _$NotifyConfigFromJson(json);
 
+  /// An incoming webhook. Posts a new message for each event.
   @JsonKey(name: 'slack_webhook_ref')
   final String? slackWebhookRef;
 
+  /// A bot token with `chat:write`. Posts one message per run and edits it as
+  /// the run goes, which a webhook cannot: it has no way to address a message
+  /// it already sent.
+  ///
+  /// Wins over the webhook when both resolve, and falls back to it when only
+  /// the webhook does, so one config serves a laptop holding just the webhook
+  /// and a runner holding both.
+  @JsonKey(name: 'slack_bot_token_ref')
+  final String? slackBotTokenRef;
+
+  /// Where the bot posts: a channel id, or `#name` for a public channel.
+  ///
+  /// Only meaningful with [slackBotTokenRef]. A webhook is bound to the channel
+  /// it was created for, and the loader refuses a channel that would be
+  /// silently ignored.
+  @JsonKey(name: 'slack_channel')
+  final String? slackChannel;
+
+  /// Which events send a message: `always`, `success`, `failure`, `started`,
+  /// or a list of the last three.
+  @JsonKey(fromJson: _notifyEventsFromJson, toJson: _notifyEventsToJson)
+  final Set<NotifyEvent> on;
+
+  final NotifyMessages messages;
+
+  bool get hasSlack => slackWebhookRef != null || slackBotTokenRef != null;
+
   Map<String, dynamic> toJson() => _$NotifyConfigToJson(this);
+}
+
+/// The text of each notification, with `{placeholders}`.
+///
+/// Each one replaces a default rather than adding to it, so a team can say
+/// exactly what it wants in a channel people actually read. See
+/// `MessageTemplate` for the placeholders.
+@JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
+class NotifyMessages {
+  const NotifyMessages({this.started, this.success, this.failure});
+
+  factory NotifyMessages.fromJson(Map<dynamic, dynamic> json) =>
+      _$NotifyMessagesFromJson(json);
+
+  final String? started;
+  final String? success;
+  final String? failure;
+
+  String? of(NotifyEvent event) => switch (event) {
+    NotifyEvent.started => started,
+    NotifyEvent.success => success,
+    NotifyEvent.failure => failure,
+  };
+
+  bool get isEmpty => started == null && success == null && failure == null;
+
+  Map<String, dynamic> toJson() => _$NotifyMessagesToJson(this);
+}
+
+/// `failure`, `always`, or `[started, failure]`.
+///
+/// A bare word stays valid because it was the whole syntax before `started`
+/// existed, and it is still what most configs want to say.
+Set<NotifyEvent> _notifyEventsFromJson(Object? json) {
+  if (json == null) return const <NotifyEvent>{NotifyEvent.failure};
+  final words = json is List ? json : <Object?>[json];
+  final events = <NotifyEvent>{};
+  for (final word in words) {
+    if (word == 'always') {
+      events.addAll(NotifyEvent.always);
+      continue;
+    }
+    final match = NotifyEvent.values.where((e) => e.name == word);
+    if (match.isEmpty) {
+      throw ArgumentError(
+        '`$word` is not an event. Use always, success, failure or started, '
+        'or a list of the last three.',
+      );
+    }
+    events.add(match.first);
+  }
+  return events;
+}
+
+/// The shortest spelling that means the same thing, so a written config reads
+/// the way a person would have written it.
+Object _notifyEventsToJson(Set<NotifyEvent> events) {
+  if (events.length == 1) return events.first.name;
+  if (const SetEquality<NotifyEvent>().equals(events, NotifyEvent.always)) {
+    return 'always';
+  }
+  return <String>[
+    for (final event in NotifyEvent.values)
+      if (events.contains(event)) event.name,
+  ];
 }
 
 /// A map entry written with no body — `main:` or `prod:` — is the natural way
@@ -612,6 +728,10 @@ Iterable<({String path, String? value})> secretRefsOf(
   yield (
     path: 'notify.slack_webhook_ref',
     value: config.notify.slackWebhookRef,
+  );
+  yield (
+    path: 'notify.slack_bot_token_ref',
+    value: config.notify.slackBotTokenRef,
   );
   for (final app in config.apps.entries) {
     final base = 'apps.${app.key}';

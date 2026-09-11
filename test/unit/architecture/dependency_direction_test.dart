@@ -23,6 +23,9 @@ const Map<String, Set<String>> _allowedImports = <String, Set<String>>{
   // reaches the CLI even though `build` and `release` are shipway's own
   // commands.
   'pipeline': <String>{'core'},
+  // Knows Slack and nothing about what it is reporting on: the CLI turns a
+  // pipeline or a release into steps and facts before handing them over.
+  'notify': <String>{'core'},
   'cli': <String>{
     'core',
     'inspect',
@@ -31,6 +34,7 @@ const Map<String, Set<String>> _allowedImports = <String, Set<String>>{
     'secrets',
     'doctor',
     'pipeline',
+    'notify',
   },
 };
 

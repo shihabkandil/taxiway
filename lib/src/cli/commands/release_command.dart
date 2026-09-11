@@ -12,6 +12,7 @@ import '../../generators/generator_registry.dart';
 import '../../secrets/secret_requirements.dart';
 import '../../secrets/secret_resolver.dart';
 import '../exit_codes.dart';
+import '../notifications.dart';
 import '../run_context.dart';
 
 /// Where a build is going.
@@ -88,6 +89,11 @@ class ReleaseCommand extends Command<int> {
         'dry-run',
         negatable: false,
         help: 'Validate and print the plan, upload nothing.',
+      )
+      ..addFlag(
+        'notify',
+        defaultsTo: true,
+        help: 'Post to Slack as notify in shipway.yaml says.',
       );
   }
 
@@ -189,7 +195,35 @@ class ReleaseCommand extends Command<int> {
       return ShipwayExit.success;
     }
 
-    return _runLane(target, flavor, results);
+    final notifier = results['notify'] as bool
+        ? await openNotifier(
+            context,
+            config,
+            name: 'release ${flavor.name} → ${target.id}',
+            flavor: flavor.name,
+            target: target.id,
+            platform: target.platform,
+            versionName: results['version-name'] as String?,
+          )
+        : null;
+    const step = 'lane';
+    notifier
+      ?..begin(<({String key, String label})>[
+        (key: step, label: 'fastlane ${target.platform} ${target.lane}'),
+      ])
+      ..stepStarted(step);
+
+    final started = DateTime.now();
+    final code = await _runLane(target, flavor, results);
+
+    notifier?.stepFinished(
+      step,
+      succeeded: code == ShipwayExit.success,
+      duration: DateTime.now().difference(started),
+      exitCode: code,
+    );
+    await notifier?.finish(succeeded: code == ShipwayExit.success);
+    return code;
   }
 
   ResolvedFlavor? _resolveFlavor(ResolvedApp app, String? requested) {

@@ -6,6 +6,7 @@ import 'package:mason_logger/mason_logger.dart';
 
 import '../core/env/host_platform.dart';
 import '../core/config/config_exception.dart';
+import '../core/io/http_poster.dart';
 import '../core/io/process_runner.dart';
 import '../core/env/run_environment.dart';
 import '../core/io/redactor.dart';
@@ -21,6 +22,7 @@ import 'commands/doctor_command.dart';
 import 'commands/generate_command.dart';
 import 'commands/import_command.dart';
 import 'commands/init_command.dart';
+import 'commands/notify_command.dart';
 import 'commands/status_command.dart';
 import 'exit_codes.dart';
 import 'run_context.dart';
@@ -37,9 +39,13 @@ class ShipwayCommandRunner extends CommandRunner<int> {
     Redactor? redactor,
     String? workingDirectory,
     HostPlatform? host,
+    HttpPoster? http,
+    Map<String, String>? environment,
   }) : _logger = logger ?? Logger(),
        _redactor = redactor ?? Redactor(),
        _injectedRunner = runner,
+       _http = http ?? SystemHttpPoster(),
+       _environment = environment ?? Platform.environment,
        _workingDirectory = workingDirectory ?? Directory.current.path,
        _host = host ?? HostPlatform.current,
        super('shipway', 'Local-first CI/CD for Flutter apps.') {
@@ -90,11 +96,14 @@ class ShipwayCommandRunner extends CommandRunner<int> {
     // command a person would, with the same validation and error handling.
     addCommand(RunCommand(() => context, run));
     addCommand(SetupCommand(() => context));
+    addCommand(NotifyCommand(() => context));
   }
 
   final Logger _logger;
   final Redactor _redactor;
   final ProcessRunner? _injectedRunner;
+  final HttpPoster _http;
+  final Map<String, String> _environment;
   final String _workingDirectory;
 
   /// Injected so the Linux refusals can be exercised from a Mac.
@@ -112,6 +121,8 @@ class ShipwayCommandRunner extends CommandRunner<int> {
     verbose: false,
     assumeYes: false,
     host: _host,
+    http: _http,
+    processEnvironment: _environment,
   );
 
   /// The context commands act on. Replaced once globals are parsed.
@@ -172,6 +183,8 @@ class ShipwayCommandRunner extends CommandRunner<int> {
       assumeYes: results['yes'] as bool,
       environmentFlag: results['env'] as String?,
       host: _host,
+      http: _http,
+      processEnvironment: _environment,
     );
   }
 }

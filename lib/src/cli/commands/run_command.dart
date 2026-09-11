@@ -4,8 +4,10 @@ import 'package:mason_logger/mason_logger.dart';
 import '../../pipeline/pipeline.dart';
 import '../../pipeline/pipeline_parser.dart';
 import '../../pipeline/pipeline_runner.dart';
+import '../../notify/run_notifier.dart';
 import '../../pipeline/run_manifest.dart';
 import '../exit_codes.dart';
+import '../notifications.dart';
 import '../run_context.dart';
 
 /// Invokes one of shipway's own commands, in process.
@@ -29,6 +31,11 @@ class RunCommand extends Command<int> {
         'resume',
         negatable: false,
         help: 'Skip the steps the last run of this pipeline finished.',
+      )
+      ..addFlag(
+        'notify',
+        defaultsTo: true,
+        help: 'Post to Slack as notify in shipway.yaml says.',
       );
   }
 
@@ -103,14 +110,22 @@ class RunCommand extends Command<int> {
       return ShipwayExit.success;
     }
 
+    final notifier = results['notify'] as bool
+        ? await openNotifier(context, config, name: pipeline.name)
+        : null;
+    notifier?.begin(<({String key, String label})>[
+      for (final step in pipeline.steps) (key: step.key, label: step.label),
+    ], done: completed);
+
     final outcome = await PipelineRunner(
       invoke: _invokeStep,
-      reporter: _Reporter(logger),
+      reporter: _Reporter(logger, notifier),
       completed: completed,
     ).run(pipeline);
 
     await outcome.manifest.save(context.projectRoot);
     _printSummary(outcome);
+    await notifier?.finish(succeeded: outcome.succeeded);
     return outcome.exitCode;
   }
 
@@ -206,6 +221,9 @@ class RunCommand extends Command<int> {
         target,
         if (track != null) ...<String>['--track', track],
         if (rollout != null) ...<String>['--rollout', rollout],
+        // The pipeline reports the run as a whole; a message per release
+        // step on top of that would say everything twice.
+        '--no-notify',
       ]),
     PipelineRun(command: final command) => _shell(command),
   };
@@ -292,9 +310,10 @@ class RunCommand extends Command<int> {
 }
 
 class _Reporter implements PipelineReporter {
-  _Reporter(this.logger);
+  _Reporter(this.logger, this.notifier);
 
   final Logger logger;
+  final RunNotifier? notifier;
 
   @override
   void stageStarting(PipelineStage stage, int index, int total) {
@@ -310,13 +329,22 @@ class _Reporter implements PipelineReporter {
     logger
       ..info('')
       ..info('▸ ${step.label}');
+    notifier?.stepStarted(step.key);
   }
 
   @override
-  void stepFinished(StepRecord record) {}
+  void stepFinished(StepRecord record) {
+    notifier?.stepFinished(
+      record.key,
+      succeeded: record.status.isSuccess,
+      duration: record.duration,
+      exitCode: record.exitCode,
+    );
+  }
 
   @override
   void stepSkipped(PipelineStep step, String why) {
     logger.info(darkGray.wrap('· ${step.label} — $why') ?? step.label);
+    notifier?.stepSkipped(step.key);
   }
 }

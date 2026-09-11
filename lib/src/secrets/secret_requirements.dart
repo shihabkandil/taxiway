@@ -243,8 +243,14 @@ abstract final class SecretRequirements {
       }
     }
 
+    // Optional both: a notification that cannot be sent is a warning, never a
+    // reason to refuse a release.
     final slack = config.notify.slackWebhookRef;
     if (slack != null) add(slack, Need.optional, 'notify.slack_webhook_ref');
+    final bot = config.notify.slackBotTokenRef;
+    if (bot != null) {
+      add(bot, Need.optional, 'notify.slack_bot_token_ref, for live updates');
+    }
 
     // shipway creates a keychain exactly where it may not use the login one.
     if (!environment.mayUseLoginKeychain && shipsIos) {

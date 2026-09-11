@@ -688,17 +688,75 @@ Map<String, dynamic> _$CiConfigToJson(CiConfig instance) => <String, dynamic>{
   'environment': ?instance.environment,
 };
 
-NotifyConfig _$NotifyConfigFromJson(Map json) =>
-    $checkedCreate('NotifyConfig', json, ($checkedConvert) {
-      $checkKeys(json, allowedKeys: const ['slack_webhook_ref']);
-      final val = NotifyConfig(
-        slackWebhookRef: $checkedConvert(
-          'slack_webhook_ref',
-          (v) => v as String?,
-        ),
-      );
-      return val;
-    }, fieldKeyMap: const {'slackWebhookRef': 'slack_webhook_ref'});
+NotifyConfig _$NotifyConfigFromJson(Map json) => $checkedCreate(
+  'NotifyConfig',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
+      json,
+      allowedKeys: const [
+        'slack_webhook_ref',
+        'slack_bot_token_ref',
+        'slack_channel',
+        'on',
+        'messages',
+      ],
+    );
+    final val = NotifyConfig(
+      slackWebhookRef: $checkedConvert(
+        'slack_webhook_ref',
+        (v) => v as String?,
+      ),
+      slackBotTokenRef: $checkedConvert(
+        'slack_bot_token_ref',
+        (v) => v as String?,
+      ),
+      slackChannel: $checkedConvert('slack_channel', (v) => v as String?),
+      on: $checkedConvert(
+        'on',
+        (v) => v == null
+            ? const <NotifyEvent>{NotifyEvent.failure}
+            : _notifyEventsFromJson(v),
+      ),
+      messages: $checkedConvert(
+        'messages',
+        (v) => v == null
+            ? const NotifyMessages()
+            : NotifyMessages.fromJson(v as Map),
+      ),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'slackWebhookRef': 'slack_webhook_ref',
+    'slackBotTokenRef': 'slack_bot_token_ref',
+    'slackChannel': 'slack_channel',
+  },
+);
 
 Map<String, dynamic> _$NotifyConfigToJson(NotifyConfig instance) =>
-    <String, dynamic>{'slack_webhook_ref': ?instance.slackWebhookRef};
+    <String, dynamic>{
+      'slack_webhook_ref': ?instance.slackWebhookRef,
+      'slack_bot_token_ref': ?instance.slackBotTokenRef,
+      'slack_channel': ?instance.slackChannel,
+      'on': _notifyEventsToJson(instance.on),
+      'messages': instance.messages.toJson(),
+    };
+
+NotifyMessages _$NotifyMessagesFromJson(Map json) =>
+    $checkedCreate('NotifyMessages', json, ($checkedConvert) {
+      $checkKeys(json, allowedKeys: const ['started', 'success', 'failure']);
+      final val = NotifyMessages(
+        started: $checkedConvert('started', (v) => v as String?),
+        success: $checkedConvert('success', (v) => v as String?),
+        failure: $checkedConvert('failure', (v) => v as String?),
+      );
+      return val;
+    });
+
+Map<String, dynamic> _$NotifyMessagesToJson(NotifyMessages instance) =>
+    <String, dynamic>{
+      'started': ?instance.started,
+      'success': ?instance.success,
+      'failure': ?instance.failure,
+    };

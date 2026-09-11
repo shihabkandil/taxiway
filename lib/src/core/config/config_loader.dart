@@ -5,6 +5,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
+import '../notify/message_template.dart';
 import 'config_exception.dart';
 import 'secret_ref_validator.dart';
 import 'shipway_config.dart';
@@ -183,6 +184,64 @@ abstract final class ConfigLoader {
         hint:
             'Every `*_ref` names an environment variable or keychain key. '
             'Move the value out of this file — it is committed to your repo.',
+      );
+    }
+
+    _validateNotify(config.notify, path);
+  }
+
+  /// Every rule here is about a notification that would otherwise fail at the
+  /// worst moment — after the release it was meant to report.
+  static void _validateNotify(NotifyConfig notify, String path) {
+    if (notify.slackBotTokenRef != null && notify.slackChannel == null) {
+      throw ConfigException(
+        '`notify.slack_bot_token_ref` is set with no `slack_channel`.',
+        path: path,
+        hint:
+            'A bot can post anywhere it is invited, so it has to be told '
+            'where. Add `slack_channel: C0123ABCD` (or `#releases` for a '
+            'public channel).',
+      );
+    }
+    if (notify.slackChannel != null && notify.slackBotTokenRef == null) {
+      throw ConfigException(
+        '`notify.slack_channel` is set with no `slack_bot_token_ref`.',
+        path: path,
+        hint:
+            'An incoming webhook always posts to the channel it was created '
+            'for, so this would be ignored. Remove it, or add '
+            '`slack_bot_token_ref` to post as a bot.',
+      );
+    }
+    if (notify.on.isEmpty) {
+      throw ConfigException(
+        '`notify.on` is an empty list, so nothing would ever be sent.',
+        path: path,
+        hint: 'Remove the `notify` block, or list at least one event.',
+      );
+    }
+    if (!notify.hasSlack && !notify.messages.isEmpty) {
+      throw ConfigException(
+        '`notify.messages` is set, but there is nowhere to send them.',
+        path: path,
+        hint: 'Add `slack_webhook_ref` or `slack_bot_token_ref`.',
+      );
+    }
+
+    for (final event in NotifyEvent.values) {
+      final template = notify.messages.of(event);
+      if (template == null) continue;
+      final unknown = MessageTemplate.unknownIn(template);
+      if (unknown.isEmpty) continue;
+      throw ConfigException(
+        '`notify.messages.${event.name}` uses '
+        '${unknown.map((u) => '{$u}').join(', ')}, which '
+        '${unknown.length == 1 ? 'is not a placeholder' : 'are not '
+                  'placeholders'}.',
+        path: path,
+        hint:
+            'Available: '
+            '${MessageTemplate.placeholders.keys.map((k) => '{$k}').join(' ')}',
       );
     }
   }

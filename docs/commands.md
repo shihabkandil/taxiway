@@ -613,6 +613,7 @@ runs the same generated lane you could run by hand.
 | `--build-number <n>` | Use this instead of what `versioning.strategy` resolves. |
 | `--version-name <v>` | Use this instead of `pubspec.yaml`. |
 | `--dry-run` | Validate and print the plan, upload nothing. |
+| `--no-notify` | Post nothing to Slack for this release. |
 
 Everything cheap happens first. A target the config never configured, a flag
 belonging to another target, a rollout out of range, a credential that is not
@@ -671,7 +672,7 @@ lets them disagree.
 > Run a named pipeline from shipway.yaml.
 
 ```
-shipway run <pipeline> [--dry-run] [--resume]
+shipway run <pipeline> [--dry-run] [--resume] [--no-notify]
 ```
 
 A pipeline adds no shipping ability — every step can be run by hand. What it
@@ -736,6 +737,27 @@ did not. So it says so, and `--yes` is how you say you have checked.
 
 See [`pipelines.md`](pipelines.md).
 
+## `shipway notify`
+
+> Send a test Slack message.
+
+```
+shipway notify test [--event started|success|failure] [--dry-run]
+```
+
+Sends one sample message through whatever `notify` in `shipway.yaml` sets up,
+so a revoked webhook or a typo in a message shows up now instead of after a
+release. The sample uses the config's first pipeline and is marked `(test)`,
+because a red "failed" in a release channel scares people even when it is fake.
+
+`--event` defaults to the first event in `notify.on`. `--dry-run` prints the
+JSON Slack would receive and sends nothing, which is the quick way to work on
+your message text.
+
+`release` and `run` post on their own when `notify` is configured. A pipeline
+sends one report for the whole run, not one for each release step inside it.
+See [`config-schema.md`](config-schema.md#notify--telling-a-channel-how-a-release-went).
+
 ## Continuous integration
 
 `shipway generate ci` writes `.github/workflows/release.yml` — created once,
@@ -791,5 +813,7 @@ rollout management are Phase 4.
   designed to run on a laptop, a hosted runner and a self-hosted Mac alike.
 - [`orphan-cleanup.md`](orphan-cleanup.md) — how files the config no longer
   describes are removed without deleting anybody's work.
+- [`notifications.md`](notifications.md) — why Slack has two transports, and why
+  a failure is broadcast when a success is not.
 - [`deviations.md`](deviations.md) — where the built thing differs from the plan,
   and why.

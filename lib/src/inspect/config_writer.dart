@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import '../core/config/shipway_config.dart';
 
 /// Renders a [ShipwayConfig] as `shipway.yaml`.
@@ -45,13 +47,36 @@ abstract final class ConfigWriter {
       _writeApp(out, entry.key, entry.value);
     }
 
-    if (config.notify.slackWebhookRef != null) {
+    final notify = config.notify;
+    if (notify.hasSlack) {
       out
         ..writeln()
-        ..writeln('notify:')
-        ..writeln(
-          '  slack_webhook_ref: ${_scalar(config.notify.slackWebhookRef!)}',
+        ..writeln('notify:');
+      if (notify.slackWebhookRef case final ref?) {
+        out.writeln('  slack_webhook_ref: ${_scalar(ref)}');
+      }
+      if (notify.slackBotTokenRef case final ref?) {
+        out.writeln('  slack_bot_token_ref: ${_scalar(ref)}');
+      }
+      if (notify.slackChannel case final channel?) {
+        out.writeln('  slack_channel: ${_scalar(channel)}');
+      }
+      if (!const SetEquality<NotifyEvent>().equals(
+        notify.on,
+        const NotifyConfig().on,
+      )) {
+        final on = notify.toJson()['on'];
+        out.writeln(
+          '  on: ${on is List ? '[${on.join(', ')}]' : _scalar('$on')}',
         );
+      }
+      if (!notify.messages.isEmpty) {
+        out.writeln('  messages:');
+        for (final event in NotifyEvent.values) {
+          final text = notify.messages.of(event);
+          if (text != null) out.writeln('    ${event.name}: ${_scalar(text)}');
+        }
+      }
     }
 
     return out.toString();
@@ -185,6 +210,7 @@ abstract final class ConfigWriter {
         value.contains(': ') ||
         value.contains(' #') ||
         value.trim() != value ||
+        value.contains('\n') ||
         const <String>[
           'true',
           'false',
@@ -196,7 +222,11 @@ abstract final class ConfigWriter {
         ].contains(value.toLowerCase()) ||
         RegExp(r'^-?\d').hasMatch(value);
     if (!needsQuoting) return value;
-    return '"${value.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
+    final escaped = value
+        .replaceAll(r'\', r'\\')
+        .replaceAll('"', r'\"')
+        .replaceAll('\n', r'\n');
+    return '"$escaped"';
   }
 
   static String _date(DateTime date) =>

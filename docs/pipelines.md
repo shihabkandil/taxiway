@@ -54,11 +54,11 @@ same command runner the CLI uses. Not by shelling out to `shipway`: that would
 require it on `PATH` inside its own pipeline, and would lose the exit codes and
 classified errors those commands already produce.
 
-`notify` is deliberately **not** here. The config carries
-`notify.slack_webhook_ref`, but posting to Slack means an HTTP client and a
-whole category of failure — retries, timeouts, a webhook that 404s — that has
-nothing to do with shipping. It belongs with the rest of the notification work
-in Phase 6.
+`notify` is deliberately **not** a step. Posting to Slack brings a whole
+category of failure — retries, timeouts, a webhook that 404s — that has nothing
+to do with shipping, so it lives beside the runner instead of inside it: the
+run reports to Slack as it goes, and a Slack failure is a warning rather than a
+failed step. See [`notifications.md`](notifications.md).
 
 ## Resume, and why it is the hard part
 

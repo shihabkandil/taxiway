@@ -8,6 +8,7 @@ import '../core/env/host_platform.dart';
 import '../core/env/run_environment.dart';
 import '../core/config/config_loader.dart';
 import '../core/config/shipway_config.dart';
+import '../core/io/http_poster.dart';
 import '../core/io/process_runner.dart';
 import '../core/io/redactor.dart';
 import '../core/managed/lock_file.dart';
@@ -35,15 +36,21 @@ class RunContext {
     required this.assumeYes,
     this.environmentFlag,
     Map<String, String>? processEnvironment,
+    HttpPoster? http,
     DateTime? now,
     HostPlatform? host,
   }) : now = now ?? DateTime.now(),
        host = host ?? HostPlatform.current,
-       _processEnvironment = processEnvironment ?? Platform.environment;
+       http = http ?? SystemHttpPoster(),
+       processEnvironment = processEnvironment ?? Platform.environment;
 
   final Logger logger;
   final Redactor redactor;
   final ProcessRunner runner;
+
+  /// The network, for notifications only. Injected like [runner], so no test
+  /// ever posts to Slack.
+  final HttpPoster http;
 
   /// Directory shipway is acting on.
   final String projectRoot;
@@ -71,7 +78,9 @@ class RunContext {
   /// `--env`, when given.
   final String? environmentFlag;
 
-  final Map<String, String> _processEnvironment;
+  /// The variables this process was started with. Injected so a test can
+  /// set a secret or pretend to be a CI runner.
+  final Map<String, String> processEnvironment;
 
   /// Where shipway is running, resolved once.
   ///
@@ -83,7 +92,7 @@ class RunContext {
       _environment ??= EnvironmentDetector.resolve(
         flag: environmentFlag,
         configured: _config?.ci.environment,
-        environment: _processEnvironment,
+        environment: processEnvironment,
       );
   ResolvedEnvironment? _environment;
 

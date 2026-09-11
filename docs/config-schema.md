@@ -91,7 +91,12 @@ secrets:
   keychain: true
 
 notify:
-  slack_webhook_ref: SLACK_WEBHOOK
+  slack_webhook_ref: SLACK_WEBHOOK       # one message per event
+  slack_bot_token_ref: SLACK_BOT_TOKEN   # optional: one live message per run
+  slack_channel: C0123ABCD               # required with the bot token
+  on: [started, failure]                 # always | success | failure, or a list
+  messages:                              # each replaces a default
+    failure: "<!here> *{name}* failed at {failed_step}"
 
 ci:
   environment: persistent      # workstation | ci | persistent
@@ -153,6 +158,47 @@ must have somewhere to live.
 | `flavors.<name>.entrypoint` | Flavors named `development`/`production` very often have `main_dev.dart`/`main_prod.dart`. Assuming `main_<flavor>.dart` would build the wrong app under the right bundle id — a failure that looks like success. |
 | `flavors.<name>.version_name_suffix` | Read from Gradle's `versionNameSuffix`. Without it the round trip loses the value and `status` reports drift on a freshly imported project. |
 | `flavors.<name>.dimension` | Recorded only when it is not `environment`, the dimension shipway generates. Projects using another name would otherwise drift forever. |
+
+## `notify` — telling a channel how a release went
+
+`shipway release` and `shipway run` post to Slack when `notify` says to. A
+notification that cannot be sent is a warning; it never fails the release.
+
+| Field | Meaning |
+|---|---|
+| `slack_webhook_ref` | An incoming webhook. Posts a new message for each event. |
+| `slack_bot_token_ref` | A bot token with `chat:write`. Posts one message and edits it as each step finishes. |
+| `slack_channel` | Where the bot posts: a channel id, or `#name` for a public channel. Only with the bot token. |
+| `on` | `failure` (the default), `success`, `always`, or a list that may also hold `started`. |
+| `messages.started` / `.success` / `.failure` | Your own text for each event. |
+
+The bot token wins when it resolves on the machine, and the webhook is used when
+only it does. One config serves a laptop that has the webhook and a runner that
+has both.
+
+With the bot token, `started` in `on` is what turns on the live message: without
+a first post there is nothing to edit. Slack notifies nobody about an edit, so a
+failure is also posted as a thread reply sent to the channel. A success is just
+the edit.
+
+Messages take Slack formatting (`*bold*`, `<!here>`) and these placeholders.
+An unknown one fails when the config loads, not when the message is sent.
+
+| Placeholder | Holds |
+|---|---|
+| `{project}` | `project.name` |
+| `{name}` | the pipeline name, or `release <flavor> → <target>` |
+| `{status}` | `started`, `success` or `failure` |
+| `{duration}` | how long the run took, e.g. `4m 12s`; empty when starting |
+| `{failed_step}` | the step that failed; empty otherwise |
+| `{flavor}`, `{target}`, `{platform}` | what was released; empty for a pipeline |
+| `{version}` | the version name from `pubspec.yaml` |
+| `{branch}`, `{commit}` | from git, or from the CI runner on a detached checkout |
+| `{host}`, `{user}` | where it ran, and who ran it |
+| `{run_url}` | a link to the CI run, when there is one |
+
+`shipway notify test` sends a sample, so a wrong webhook shows up before a
+release does.
 
 ## `changelog_from` — where the TestFlight notes come from
 
