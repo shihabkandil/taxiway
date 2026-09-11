@@ -153,7 +153,7 @@ abstract final class ConfigLoader {
         // both the upload and the promote path, so the pair shipway refused is
         // one that works. Refusing a working config is a worse failure than an
         // unclear one; the effective status is shown by `release --dry-run`
-        // instead. See docs/deploy-targets.md.
+        // instead. See doc/deploy-targets.md.
       }
 
       // Uploads fine and then fails at distribution, which is after the

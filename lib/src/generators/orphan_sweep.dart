@@ -70,7 +70,7 @@ class SweepReport {
 /// So the sweep never reasons from absence alone. A file is a candidate only
 /// when a generator that *ran in this invocation* claims it via
 /// [Generator.owns] and reports, via [Generator.canDetermineOwnership], that
-/// its silence is meaningful. See `docs/orphan-cleanup.md`.
+/// its silence is meaningful. See `doc/orphan-cleanup.md`.
 abstract final class OrphanSweep {
   /// Finds and disposes of orphans left by [generators] for [app].
   ///

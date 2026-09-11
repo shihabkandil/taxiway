@@ -247,7 +247,19 @@ void main() {
       expect(packageRepository, pubspec['repository']);
     });
 
-    test('a released version is pinned to its tag, a pre-release is not', () {
+    test('the version it pins is the one pubspec declares', () {
+      final pubspec =
+          loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+      expect(packageVersion, pubspec['version']);
+    });
+
+    test('a beta is tagged, only a dev build is not', () {
+      // A beta is published and tagged; treating every pre-release as
+      // untagged would leave a beta's workflows tracking the default branch.
+      expect(packageVersion.endsWith('-dev'), packageGitRef == null);
+    });
+
+    test('a released version is pinned to its tag, a dev build is not', () {
       // Installing the default branch means a workflow can break on a morning
       // nobody touched this repository; naming a tag that does not exist means
       // it breaks immediately. Neither is acceptable, so which one is emitted
@@ -259,7 +271,7 @@ void main() {
           activateCommands(rendered),
           everyElement(isNot(contains('--git-ref'))),
         );
-        expect(rendered, contains('pre-release'));
+        expect(rendered, contains('development build'));
       } else {
         expect(
           activateCommands(rendered),

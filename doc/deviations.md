@@ -1,7 +1,7 @@
 # Deviations from the implementation plan
 
 Each entry records a place where the built thing differs from
-`docs/research.md` and the Phases 0–3 plan, and why. Kept so a reader of the
+`doc/research.md` and the Phases 0–3 plan, and why. Kept so a reader of the
 plan is not surprised by the code, and so a deviation is a decision rather than
 a drift.
 

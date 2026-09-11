@@ -1,13 +1,25 @@
 name: shipway
-description: A local-first Flutter CI/CD file generator and runner. Scaffolds flavors, generates and invokes fastlane, and ships to TestFlight, the App Store, Play tracks and Firebase from your laptop.
-version: 0.1.0-dev
+description: Local-first CI/CD for Flutter. Sets up flavors, generates fastlane lanes, and ships to TestFlight, the App Store, Google Play and Firebase from your own machine.
+version: 0.1.0-beta.1
 repository: https://github.com/shihabkandil/shipway
+issue_tracker: https://github.com/shihabkandil/shipway/issues
+topics:
+  - flutter
+  - cli
+  - fastlane
+  - deployment
+  - ci
 
 environment:
   sdk: ^3.8.0
 
 executables:
   shipway: shipway
+
+# Fake keys that exist to prove shipway refuses a secret pasted into a config.
+false_secrets:
+  - /test/fixtures/config/invalid/secret_in_ref.yaml
+  - /test/unit/config/secret_ref_validator_test.dart
 
 dependencies:
   args: ^2.7.0

@@ -1,7 +1,7 @@
 /// Where shipway is running, which decides what it is allowed to do.
 ///
 /// One value, resolved once per run, that the secret chain, the keychain
-/// strategy and every prompt key off. See `docs/execution-environments.md`.
+/// strategy and every prompt key off. See `doc/execution-environments.md`.
 enum RunEnvironment {
   /// A developer at a machine they are sitting in front of.
   ///

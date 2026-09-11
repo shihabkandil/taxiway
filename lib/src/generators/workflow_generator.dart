@@ -176,15 +176,15 @@ ${_matchAccessStep(app)}
   /// morning nobody touched this repository — and the failure arrives looking
   /// like the app's, in a job that was green yesterday.
   ///
-  /// A pre-release has no tag behind it, so it says so rather than naming a ref
-  /// that does not resolve.
+  /// A development build has no tag behind it, so it says so rather than
+  /// naming a ref that does not resolve.
   static String _installStep() {
     final ref = packageGitRef;
     final pin = ref == null ? '' : ' --git-ref $ref';
     final note = ref == null
-        ? '      # shipway $packageVersion is a pre-release with no tag, so this\n'
-              '      # tracks the default branch. Add `--git-ref v<version>` once you\n'
-              '      # are on a released one.\n'
+        ? '      # shipway $packageVersion is a development build with no tag, so\n'
+              '      # this tracks the default branch. Add `--git-ref v<version>` once\n'
+              '      # you are on a released one.\n'
         : '      # Pinned to the version that generated this workflow.\n';
     return '$note'
         '      - name: Install shipway\n'
