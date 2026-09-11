@@ -31,6 +31,12 @@ class IosFastfileGenerator extends Generator {
   /// Where both export shapes are told to put the `.ipa`.
   static const String ipaDirectory = 'build/ios/ipa';
 
+  /// Where `changelog_from: file` looks, relative to the project root.
+  ///
+  /// A convention rather than a config field: one more path to configure buys
+  /// nothing over a name everybody can guess.
+  static const String changelogFileName = 'CHANGELOG_NEXT.md';
+
   @override
   List<GeneratedFile> render(ResolvedApp app) {
     if (!app.hasFlavors) return const <GeneratedFile>[];
@@ -57,6 +63,7 @@ class IosFastfileGenerator extends Generator {
       platform: 'ios',
     ),
     _ipaHelper(),
+    _changelogHelper(app),
     'platform :ios do',
     _certificatesLane(app),
     _buildLane(app),
@@ -251,6 +258,10 @@ $auth
     )
     UI.message("Shipping #{config[:bundle_id]} #{name}+#{number} to TestFlight")
 
+    # Resolved before the build so a changelog that cannot be produced fails
+    # in seconds rather than after the slowest part of the job.
+    changelog = what_to_test(options[:changelog])
+
     certificates
     ipa = build_ipa(flavor: flavor, version_name: name, build_number: number)
 
@@ -260,11 +271,82 @@ $auth
       api_key: api_key,
       app_identifier: config[:bundle_id],
       ipa: ipa,${_groups(app)}${_externalDistribution(app)}
+      changelog: changelog,
       # Processing takes minutes to hours and blocking on it holds a runner
       # open for no benefit — the build is already Apple's problem by then.
       skip_waiting_for_build_processing: true
     )
   end
+''';
+
+  /// The "What to Test" text, from wherever `changelog_from` says.
+  ///
+  /// This field has been in the schema since the beginning and nothing read it:
+  /// a config could ask for a changelog and get none, silently. That is worse
+  /// than not offering the option.
+  String _changelogHelper(ResolvedApp app) {
+    final source = app.testflight?.changelogFrom ?? ChangelogSource.git;
+    return switch (source) {
+      ChangelogSource.git => _changelogFromGit(),
+      ChangelogSource.file => _changelogFromFile(),
+      ChangelogSource.prompt => _changelogFromPrompt(),
+    };
+  }
+
+  String _changelogFromGit() => r'''
+# targets.testflight.changelog_from: git
+def what_to_test(override = nil)
+  return override unless override.to_s.strip.empty?
+
+  # A repository with no tag yet has no "since last release" to describe, and
+  # the action raises rather than returning nothing. The first release having
+  # no changelog is the right answer, not a failed upload.
+  notes = begin
+    changelog_from_git_commits(
+      merge_commit_filtering: "exclude_merges",
+      pretty: "- %s"
+    )
+  rescue StandardError => e
+    UI.important("No changelog from git (#{e.message}). Uploading without one.")
+    nil
+  end
+
+  notes.to_s.strip.empty? ? nil : notes
+end
+''';
+
+  String _changelogFromFile() =>
+      '''
+# targets.testflight.changelog_from: file
+def what_to_test(override = nil)
+  return override unless override.to_s.strip.empty?
+
+  path = root_path("$changelogFileName")
+  unless File.exist?(path)
+    UI.important("No $changelogFileName to read. Uploading without a changelog.")
+    return nil
+  end
+
+  notes = File.read(path).strip
+  notes.empty? ? nil : notes
+end
+''';
+
+  String _changelogFromPrompt() => r'''
+# targets.testflight.changelog_from: prompt
+def what_to_test(override = nil)
+  return override unless override.to_s.strip.empty?
+
+  # A prompt on a runner is a hang, which burns the job timeout and reports
+  # nothing. Saying so is strictly better.
+  if is_ci
+    UI.user_error!("changelog_from: prompt cannot run unattended. Pass " \\
+                   "changelog:\"...\" to the lane, or use changelog_from: git.")
+  end
+
+  notes = UI.input("What to test:")
+  notes.to_s.strip.empty? ? nil : notes
+end
 ''';
 
   /// External distribution, only when the config asks for it.

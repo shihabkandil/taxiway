@@ -67,7 +67,7 @@ apps:                         # keyed by app id; a single-app repo uses `main`
       testflight:
         groups: [internal, qa]
         distribute_external: false
-        changelog_from: git            # git | file | prompt
+        changelog_from: git            # git | file | prompt — the "What to Test" text
       appstore:
         submit_for_review: false
         metadata_path: ios/fastlane/metadata
@@ -153,6 +153,26 @@ must have somewhere to live.
 | `flavors.<name>.entrypoint` | Flavors named `development`/`production` very often have `main_dev.dart`/`main_prod.dart`. Assuming `main_<flavor>.dart` would build the wrong app under the right bundle id — a failure that looks like success. |
 | `flavors.<name>.version_name_suffix` | Read from Gradle's `versionNameSuffix`. Without it the round trip loses the value and `status` reports drift on a freshly imported project. |
 | `flavors.<name>.dimension` | Recorded only when it is not `environment`, the dimension shipway generates. Projects using another name would otherwise drift forever. |
+
+## `changelog_from` — where the TestFlight notes come from
+
+| Value | Where |
+|---|---|
+| `git` (default) | commits since the last tag, via `changelog_from_git_commits` |
+| `file` | `CHANGELOG_NEXT.md` at the project root |
+| `prompt` | asked at the terminal |
+
+Whichever is chosen, `changelog:` passed to the lane wins, and the value is
+resolved **before** the build so a changelog that cannot be produced fails in
+seconds rather than after the slowest part of the job.
+
+Two cases are handled rather than left to bite:
+
+- **A repository with no tags** — the first release — has nothing to describe,
+  and the action raises rather than returning nothing. The lane uploads without
+  a changelog instead of failing.
+- **`prompt` on CI** refuses outright. A prompt on a runner is a hang, which
+  burns the job timeout and reports nothing.
 
 ## `ios.export` — who exports the `.ipa`
 

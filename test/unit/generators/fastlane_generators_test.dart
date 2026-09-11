@@ -356,6 +356,73 @@ void main() {
     });
   });
 
+  group('the changelog', () {
+    ResolvedApp withChangelog(ChangelogSource source) => ResolvedApp(
+      appId: 'main',
+      projectName: 'acme_app',
+      androidApplicationId: 'com.acme.app',
+      iosBundleId: 'com.acme.app',
+      gradleDsl: GradleDsl.kotlin,
+      iosTeamId: 'ABCDE12345',
+      testflight: TestflightTarget(changelogFrom: source),
+      flavors: app().flavors,
+    );
+
+    String render(ChangelogSource source) => renderOne(
+      const IosFastfileGenerator(),
+      withChangelog(source),
+      IosFastfileGenerator.path,
+    );
+
+    test('reaches the upload at all', () {
+      // The field has been in the schema from the beginning and nothing read
+      // it: a config could ask for a changelog and silently get none.
+      expect(render(ChangelogSource.git), contains('changelog: changelog'));
+    });
+
+    test('is resolved before the build', () {
+      // So a changelog that cannot be produced fails in seconds rather than
+      // after the slowest part of the job.
+      final fastfile = render(ChangelogSource.git);
+      expect(
+        fastfile.indexOf('changelog = what_to_test'),
+        lessThan(fastfile.indexOf('ipa = build_ipa(')),
+      );
+    });
+
+    test('git survives a repository with no tags', () {
+      // The first release has nothing to describe, and the action raises
+      // rather than returning nothing. A failed upload is the wrong answer.
+      final fastfile = render(ChangelogSource.git);
+      expect(fastfile, contains('changelog_from_git_commits'));
+      expect(fastfile, contains('rescue StandardError'));
+    });
+
+    test('file says which file, and copes without it', () {
+      final fastfile = render(ChangelogSource.file);
+      expect(fastfile, contains(IosFastfileGenerator.changelogFileName));
+      expect(fastfile, contains('File.exist?'));
+      expect(fastfile, isNot(contains('changelog_from_git_commits')));
+    });
+
+    test('prompt refuses to hang a runner', () {
+      // A prompt on CI burns the job timeout and reports nothing.
+      final fastfile = render(ChangelogSource.prompt);
+      expect(fastfile, contains('if is_ci'));
+      expect(fastfile, contains('user_error!'));
+    });
+
+    test('an explicit changelog always wins', () {
+      for (final source in ChangelogSource.values) {
+        expect(
+          render(source),
+          contains('return override unless override.to_s.strip.empty?'),
+          reason: source.name,
+        );
+      }
+    });
+  });
+
   group('the version a release claims', () {
     test('is resolved before the build, not after', () {
       // Resolving afterwards is how a build ends up stamped with one number
