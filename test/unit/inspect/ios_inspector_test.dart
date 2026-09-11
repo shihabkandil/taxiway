@@ -1,6 +1,6 @@
-import 'package:taxiway/src/core/model/uncertainty.dart';
-import 'package:taxiway/src/inspect/ios_inspector.dart';
-import 'package:taxiway/src/inspect/xcodeproj_bridge.dart';
+import 'package:shipway/src/core/model/uncertainty.dart';
+import 'package:shipway/src/inspect/ios_inspector.dart';
+import 'package:shipway/src/inspect/xcodeproj_bridge.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';

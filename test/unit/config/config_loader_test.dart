@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:taxiway/src/core/config/config_exception.dart';
-import 'package:taxiway/src/core/config/config_loader.dart';
-import 'package:taxiway/src/core/config/taxiway_config.dart';
+import 'package:shipway/src/core/config/config_exception.dart';
+import 'package:shipway/src/core/config/config_loader.dart';
+import 'package:shipway/src/core/config/shipway_config.dart';
 import 'package:test/test.dart';
 
 String _fixture(String name) =>
@@ -98,13 +98,13 @@ apps:
 
     test('survives a JSON round-trip', () {
       final original = ConfigLoader.parse(_fixture('full.yaml'));
-      final again = TaxiwayConfig.fromJson(original.toJson());
+      final again = ShipwayConfig.fromJson(original.toJson());
       expect(again.toJson(), equals(original.toJson()));
     });
   });
 
   group('a staged rollout', () {
-    TaxiwayConfig parseRollout(String status, double rollout) =>
+    ShipwayConfig parseRollout(String status, double rollout) =>
         ConfigLoader.parse('''
 version: 1
 project:
@@ -120,7 +120,7 @@ apps:
 
     test('is accepted whatever the status says', () {
       // `supply` derives the status from the user fraction on both the upload
-      // and the promote path, so this pair works. taxiway used to reject it,
+      // and the promote path, so this pair works. shipway used to reject it,
       // which refused a config that ships.
       for (final status in const <String>['completed', 'draft', 'inProgress']) {
         final config = parseRollout(status, 0.1);
@@ -173,7 +173,7 @@ apps:
           isA<ConfigException>().having(
             (e) => e.toString(),
             'message',
-            contains('taxiway import'),
+            contains('shipway import'),
           ),
         ),
       );
@@ -186,22 +186,22 @@ apps:
       try {
         ConfigLoader.parse(
           _fixture('invalid/unknown_key.yaml'),
-          path: 'taxiway.yaml',
+          path: 'shipway.yaml',
         );
       } on ConfigException catch (e) {
         thrown = e;
       }
       expect(thrown!.line, isNotNull);
-      expect(thrown.location, startsWith('taxiway.yaml:'));
+      expect(thrown.location, startsWith('shipway.yaml:'));
     });
   });
 
   group('ConfigLoader.locate', () {
-    test('finds taxiway.yaml and returns null when absent', () async {
-      final dir = await Directory.systemTemp.createTemp('taxiway_cfg');
+    test('finds shipway.yaml and returns null when absent', () async {
+      final dir = await Directory.systemTemp.createTemp('shipway_cfg');
       addTearDown(() => dir.delete(recursive: true));
       expect(ConfigLoader.locate(dir.path), isNull);
-      File('${dir.path}/taxiway.yaml').writeAsStringSync('version: 1');
+      File('${dir.path}/shipway.yaml').writeAsStringSync('version: 1');
       expect(ConfigLoader.locate(dir.path), isNotNull);
     });
   });

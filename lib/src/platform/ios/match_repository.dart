@@ -24,7 +24,7 @@ class MatchProfile {
 /// place and leaves its name alone, so the layout says which bundle ids are
 /// covered without a passphrase, without decrypting anything, and without
 /// talking to Apple. That is what makes this checkable on a machine that has
-/// none of those things — and it means taxiway never handles the certificates
+/// none of those things — and it means shipway never handles the certificates
 /// themselves, only the question of whether they exist.
 class MatchRepositoryContents {
   const MatchRepositoryContents({
@@ -83,7 +83,7 @@ abstract final class MatchRepository {
   /// Clones [gitUrl] shallowly and reports what is in it.
   ///
   /// Shallow because only the current state matters: the history of a
-  /// certificates repository is not something taxiway has any business
+  /// certificates repository is not something shipway has any business
   /// reading, and a full clone of one with years of rotations is slow.
   static Future<MatchRepositoryContents> read({
     required String gitUrl,
@@ -92,7 +92,7 @@ abstract final class MatchRepository {
     Directory? into,
   }) async {
     final directory =
-        into ?? await Directory.systemTemp.createTemp('taxiway_match');
+        into ?? await Directory.systemTemp.createTemp('shipway_match');
     try {
       final cloned = await runner.run('git', <String>[
         'clone',
@@ -155,7 +155,7 @@ abstract final class MatchRepository {
   ///
   /// Matched against the known prefixes rather than split on the first
   /// underscore: the directory alone is not proof of the type, and a file that
-  /// does not follow the convention is something taxiway should ignore rather
+  /// does not follow the convention is something shipway should ignore rather
   /// than misread.
   static MatchProfile? parseProfilePath(String relative) {
     final parts = p.split(relative.replaceAll(r'\', '/'));
@@ -196,7 +196,7 @@ abstract final class MatchRepository {
           'MATCH_GIT_PRIVATE_KEY or MATCH_GIT_BASIC_AUTHORIZATION.';
     }
     if (output.contains('not found') || output.contains('does not exist')) {
-      return 'Check the URL. `taxiway setup ios-signing --create` can '
+      return 'Check the URL. `shipway setup ios-signing --create` can '
           'initialise an empty repository.';
     }
     return 'Check the URL and that you have access to it.';

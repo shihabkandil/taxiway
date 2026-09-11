@@ -100,7 +100,7 @@ abstract final class PlatformDeadlines {
   static bool isStaleOn(DateTime now) => ageInDaysOn(now) > staleAfterDays;
 }
 
-/// A minimum tool version taxiway enforces, with the reason it exists.
+/// A minimum tool version shipway enforces, with the reason it exists.
 class ToolFloor {
   const ToolFloor({
     required this.id,

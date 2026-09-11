@@ -20,13 +20,13 @@ enum WriteOutcome {
   /// Already exactly right.
   unchanged,
 
-  /// taxiway does not own this file. Requires `taxiway adopt`.
+  /// shipway does not own this file. Requires `shipway adopt`.
   conflictUnmanaged,
 
-  /// taxiway owns it, but the user edited the part taxiway owns.
+  /// shipway owns it, but the user edited the part shipway owns.
   conflictEdited,
 
-  /// The file could not be written for a reason taxiway cannot resolve.
+  /// The file could not be written for a reason shipway cannot resolve.
   failed;
 
   bool get isConflict =>
@@ -62,7 +62,7 @@ class WriteResult {
   String get path => file.path;
 }
 
-/// Writes generated files, and is the only thing that decides whether taxiway
+/// Writes generated files, and is the only thing that decides whether shipway
 /// is allowed to.
 ///
 /// Every generator funnels through here so ownership, hashing, marker
@@ -78,10 +78,10 @@ class GeneratedFileWriter {
   final String root;
   final LockFile lock;
 
-  /// Overwrite content the user edited inside taxiway's own region.
+  /// Overwrite content the user edited inside shipway's own region.
   ///
   /// Never overrides [Ownership.unmanaged]: an unowned file requires an
-  /// explicit `taxiway adopt`, not a flag, because `--force` is typed in a
+  /// explicit `shipway adopt`, not a flag, because `--force` is typed in a
   /// hurry and adoption is a decision.
   final bool force;
 
@@ -98,7 +98,7 @@ class GeneratedFileWriter {
           file: file,
           outcome: WriteOutcome.failed,
           reason:
-              '${file.path} does not exist, so taxiway cannot insert into '
+              '${file.path} does not exist, so shipway cannot insert into '
               'its `${file.anchor!.insideBlock}` block.',
           remedy:
               'Run `flutter create .` to generate the platform folders '
@@ -114,7 +114,7 @@ class GeneratedFileWriter {
 
     final current = await target.readAsString();
 
-    // Scaffolding exists to be edited. Once it is there, taxiway is done with
+    // Scaffolding exists to be edited. Once it is there, shipway is done with
     // it — even asking about a conflict would be wrong.
     if (file.createOnly) {
       return WriteResult(file: file, outcome: WriteOutcome.unchanged);
@@ -127,9 +127,9 @@ class GeneratedFileWriter {
         file: file,
         outcome: WriteOutcome.conflictUnmanaged,
         diff: TextDiff.unified(current, _wholeFileFor(file, current)),
-        reason: '${file.path} was here before taxiway and it does not own it.',
+        reason: '${file.path} was here before shipway and it does not own it.',
         remedy:
-            'Run `taxiway adopt ${file.path}` to review the difference and '
+            'Run `shipway adopt ${file.path}` to review the difference and '
             'hand it over.',
       );
     }
@@ -146,9 +146,9 @@ class GeneratedFileWriter {
         outcome: WriteOutcome.conflictEdited,
         diff: TextDiff.unified(current, proposed),
         reason: file.mode == WriteMode.full
-            ? '${file.path} has been edited since taxiway wrote it.'
-            : 'the taxiway block in ${file.path} has been edited since '
-                  'taxiway wrote it.',
+            ? '${file.path} has been edited since shipway wrote it.'
+            : 'the shipway block in ${file.path} has been edited since '
+                  'shipway wrote it.',
         remedy:
             'Re-run with --force to discard those edits, or move them '
             'outside the managed block.',
@@ -177,7 +177,7 @@ class GeneratedFileWriter {
     lock.record(
       LockEntry(
         path: file.path,
-        // A file taxiway created is owned outright; one it was handed keeps the
+        // A file shipway created is owned outright; one it was handed keeps the
         // ownership adoption granted.
         ownership: lock.ownershipOf(file.path) == Ownership.adopted
             ? Ownership.adopted
@@ -241,7 +241,7 @@ class GeneratedFileWriter {
     return (offset: offset, indent: '    ');
   }
 
-  /// True when the user changed the part taxiway owns.
+  /// True when the user changed the part shipway owns.
   ///
   /// For a block-managed file this compares only the block body, so an edit
   /// *around* the block — the normal case, and entirely the user's right — is

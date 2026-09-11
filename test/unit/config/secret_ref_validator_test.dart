@@ -1,5 +1,5 @@
-import 'package:taxiway/src/core/config/config_loader.dart';
-import 'package:taxiway/src/core/config/secret_ref_validator.dart';
+import 'package:shipway/src/core/config/config_loader.dart';
+import 'package:shipway/src/core/config/secret_ref_validator.dart';
 import 'package:test/test.dart';
 
 void main() {

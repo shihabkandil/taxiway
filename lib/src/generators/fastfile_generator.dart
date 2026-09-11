@@ -1,4 +1,4 @@
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/secrets/secret_names.dart';
 import 'fastlane_ruby.dart';
 import 'version_resolver.dart';
@@ -7,7 +7,7 @@ import 'generated_file.dart';
 /// Writes `ios/fastlane/Fastfile`.
 ///
 /// Whole-file managed. A Fastfile that was already in the project is never
-/// touched — the writer refuses on ownership, and `taxiway adopt` is the only
+/// touched — the writer refuses on ownership, and `shipway adopt` is the only
 /// way to hand one over — because a real Fastfile encodes a team's release
 /// process and regenerating over it destroys work no test would catch.
 ///
@@ -67,7 +67,7 @@ class IosFastfileGenerator extends Generator {
 
   /// Finds the freshly exported `.ipa` without ever constructing its name.
   ///
-  /// The filename follows `CFBundleName`, which taxiway does not vary per
+  /// The filename follows `CFBundleName`, which shipway does not vary per
   /// flavor — only `CFBundleDisplayName` is per-flavor — so every flavor of a
   /// project exports to the *same* name and overwrites the last one. Picking
   /// any match would therefore happily upload the previous flavor's build, so
@@ -98,7 +98,7 @@ end
     final auth = !complete
         ? '''
   # No App Store Connect key is configured, so match authenticates
-  # interactively. Add signing.ios.api_key to taxiway.yaml for unattended runs.
+  # interactively. Add signing.ios.api_key to shipway.yaml for unattended runs.
   private_lane :asc_api_key do
     nil
   end
@@ -203,7 +203,7 @@ $auth
     config = flavor_config(flavor)
 
     plist = root_path("ios", "ExportOptions-#{flavor}.plist")
-    UI.user_error!("Missing #{plist}; run `taxiway generate`.") unless File.exist?(plist)
+    UI.user_error!("Missing #{plist}; run `shipway generate`.") unless File.exist?(plist)
 
     started = Time.now
     # Flutter archives and exports in one command, running the same
@@ -313,7 +313,7 @@ $auth
       # Submitting for review is a decision a person makes, not something a
       # tool should do because it could.
       submit_for_review: ${appstore.submitForReview},
-      # A store listing belongs to whoever writes it. taxiway uploads a build.
+      # A store listing belongs to whoever writes it. shipway uploads a build.
 ${metadata == null ? '      skip_metadata: true,\n      skip_screenshots: true,' : '      metadata_path: root_path("$metadata"),\n      skip_screenshots: true,'}
       precheck_include_in_app_purchases: false,
       force: true

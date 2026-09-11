@@ -8,12 +8,12 @@ import '../../pipeline/run_manifest.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// Invokes one of taxiway's own commands, in process.
+/// Invokes one of shipway's own commands, in process.
 typedef CommandInvoker = Future<int> Function(List<String> arguments);
 
-/// `taxiway run <pipeline>`.
+/// `shipway run <pipeline>`.
 ///
-/// Runs a named sequence from `taxiway.yaml`. It adds no shipping ability —
+/// Runs a named sequence from `shipway.yaml`. It adds no shipping ability —
 /// every step can be run by hand — but it owns the seams between them:
 /// ordering, running iOS and Android at once, and knowing what not to repeat
 /// after a failure.
@@ -44,10 +44,10 @@ class RunCommand extends Command<int> {
   String get name => 'run';
 
   @override
-  String get description => 'Run a named pipeline from taxiway.yaml.';
+  String get description => 'Run a named pipeline from shipway.yaml.';
 
   @override
-  String get invocation => 'taxiway run <pipeline>';
+  String get invocation => 'shipway run <pipeline>';
 
   @override
   Future<int> run() async {
@@ -59,14 +59,14 @@ class RunCommand extends Command<int> {
     if (config.pipelines.isEmpty) {
       logger
         ..err('This config declares no pipelines.')
-        ..info('Add one to taxiway.yaml:')
+        ..info('Add one to shipway.yaml:')
         ..info('')
         ..info('  pipelines:')
         ..info('    beta:')
         ..info('      - analyze')
         ..info('      - test')
         ..info('      - release: { flavor: prod, target: testflight }');
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final requested = results.rest.isEmpty ? null : results.rest.first;
@@ -77,7 +77,7 @@ class RunCommand extends Command<int> {
             ? 'Say which pipeline to run. This config declares: $names.'
             : 'No pipeline named "$requested". This config declares: $names.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final Pipeline pipeline;
@@ -87,12 +87,12 @@ class RunCommand extends Command<int> {
       logger.err(e.message);
       final hint = e.hint;
       if (hint != null) logger.info(hint);
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final resume = results['resume'] as bool;
     final completed = resume ? await _resumeFrom(pipeline) : <String>{};
-    if (completed == null) return TaxiwayExit.userError;
+    if (completed == null) return ShipwayExit.userError;
 
     _printPlan(pipeline, completed);
 
@@ -100,7 +100,7 @@ class RunCommand extends Command<int> {
       logger
         ..info('')
         ..info('Nothing was run.');
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     final outcome = await PipelineRunner(
@@ -118,7 +118,7 @@ class RunCommand extends Command<int> {
   ///
   /// The awkward case is the whole point: the step that failed may be one
   /// whose effect already landed — an upload that succeeded before the process
-  /// died. taxiway cannot tell, so it says so rather than choosing silently.
+  /// died. shipway cannot tell, so it says so rather than choosing silently.
   /// Re-running risks a duplicate; skipping risks a release everybody believes
   /// shipped and did not.
   Future<Set<String>?> _resumeFrom(Pipeline pipeline) async {
@@ -151,7 +151,7 @@ class RunCommand extends Command<int> {
         )
         ..info(
           unknown
-              ? '  taxiway does not know what that command does, so it cannot '
+              ? '  shipway does not know what that command does, so it cannot '
                     'tell whether it already took effect.'
               : '  An upload can land and then the run can fail afterwards. '
                     'If it did land, uploading again is rejected as a '
@@ -170,7 +170,7 @@ class RunCommand extends Command<int> {
   }
 
   Future<int> _invokeStep(PipelineStep step) => switch (step) {
-    // Flutter's own, not taxiway's: there is no `taxiway analyze`, and adding
+    // Flutter's own, not shipway's: there is no `shipway analyze`, and adding
     // one to wrap a command that already works would be a worse answer than
     // calling it.
     PipelineAnalyze() => _flutter(<String>['analyze']),
@@ -285,7 +285,7 @@ class RunCommand extends Command<int> {
     logger
       ..err('${outcome.manifest.pipeline} stopped at `${failure?.label}`.')
       ..info(
-        '  taxiway run ${outcome.manifest.pipeline} --resume   '
+        '  shipway run ${outcome.manifest.pipeline} --resume   '
         '— skips what already finished',
       );
   }

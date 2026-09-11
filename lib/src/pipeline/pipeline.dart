@@ -11,7 +11,7 @@ sealed class PipelineStep {
 
   /// Whether running this twice is safe.
   ///
-  /// The whole of `--resume` turns on this. `null` means taxiway does not
+  /// The whole of `--resume` turns on this. `null` means shipway does not
   /// know, which is a different answer from "no" and is reported differently.
   bool? get repeatable;
 
@@ -53,7 +53,7 @@ class PipelineTest extends PipelineStep {
   String get key => 'test';
 }
 
-/// `taxiway build <platform> --flavor <flavor>`.
+/// `shipway build <platform> --flavor <flavor>`.
 class PipelineBuild extends PipelineStep {
   const PipelineBuild({
     required this.platform,
@@ -78,7 +78,7 @@ class PipelineBuild extends PipelineStep {
   String get key => 'build:$platform:$flavor';
 }
 
-/// `taxiway release <platform> --flavor <flavor> --target <target>`.
+/// `shipway release <platform> --flavor <flavor> --target <target>`.
 class PipelineRelease extends PipelineStep {
   const PipelineRelease({
     required this.platform,
@@ -118,7 +118,7 @@ class PipelineRun extends PipelineStep {
   @override
   String get label => name ?? command;
 
-  /// Unknown, not false: taxiway has no idea what the command does, and
+  /// Unknown, not false: shipway has no idea what the command does, and
   /// pretending otherwise in either direction would be a guess about somebody
   /// else's script.
   @override

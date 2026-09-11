@@ -1,12 +1,12 @@
-import 'package:taxiway/src/core/config/config_loader.dart';
-import 'package:taxiway/src/core/model/model_diff.dart';
-import 'package:taxiway/src/core/model/project_comparison.dart';
-import 'package:taxiway/src/core/model/project_model.dart';
-import 'package:taxiway/src/inspect/config_from_project.dart';
-import 'package:taxiway/src/inspect/config_writer.dart';
-import 'package:taxiway/src/inspect/project_from_config.dart';
-import 'package:taxiway/src/inspect/project_inspector.dart';
-import 'package:taxiway/src/version.dart';
+import 'package:shipway/src/core/config/config_loader.dart';
+import 'package:shipway/src/core/model/model_diff.dart';
+import 'package:shipway/src/core/model/project_comparison.dart';
+import 'package:shipway/src/core/model/project_model.dart';
+import 'package:shipway/src/inspect/config_from_project.dart';
+import 'package:shipway/src/inspect/config_writer.dart';
+import 'package:shipway/src/inspect/project_from_config.dart';
+import 'package:shipway/src/inspect/project_inspector.dart';
+import 'package:shipway/src/version.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -16,7 +16,7 @@ import '../../support/recording_process_runner.dart';
 /// with `read(p)`.
 ///
 /// This is the headline gate. If a reader finds a value the config cannot
-/// express, the round trip loses it and `taxiway status` reports drift the
+/// express, the round trip loses it and `shipway status` reports drift the
 /// moment it is run — which is exactly how the missing `versionNameSuffix`
 /// field was found.
 void main() {
@@ -166,7 +166,7 @@ $flavors
 
   group('the default dimension stays implicit', () {
     test(
-      'is omitted from the config when it is the one taxiway generates',
+      'is omitted from the config when it is the one shipway generates',
       () async {
         final project = await flavoredProject(kotlin: true);
         addTearDown(project.dispose);
@@ -191,7 +191,7 @@ $flavors
         generatedAt: DateTime.utc(2026, 9, 9),
       );
 
-      // Someone adds a flavor in Gradle without touching taxiway.yaml.
+      // Someone adds a flavor in Gradle without touching shipway.yaml.
       project.withGradle('''
 android {
     defaultConfig {
@@ -226,7 +226,7 @@ android {
         (c) => c.path == 'android.flavors.staging',
       );
       expect(change.kind, ChangeKind.onlyInProject);
-      expect(change.describe(), contains('not in taxiway.yaml'));
+      expect(change.describe(), contains('not in shipway.yaml'));
     });
 
     test('a changed suffix shows both values', () async {

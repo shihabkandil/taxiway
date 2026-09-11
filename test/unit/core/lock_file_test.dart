@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:taxiway/src/core/managed/content_hash.dart';
-import 'package:taxiway/src/core/managed/lock_file.dart';
+import 'package:shipway/src/core/managed/content_hash.dart';
+import 'package:shipway/src/core/managed/lock_file.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -15,7 +15,7 @@ void main() {
 
     test('an unknown ownership string falls back to unmanaged', () {
       // Forward compatibility must fail closed: a state written by a newer
-      // taxiway must never be read as "safe to overwrite".
+      // shipway must never be read as "safe to overwrite".
       expect(Ownership.parse('some-future-state'), Ownership.unmanaged);
     });
   });
@@ -107,8 +107,8 @@ void main() {
       expect(files.keys, ['a', 'm', 'z']);
     });
 
-    test('saves to and loads from .taxiway/lock.json', () async {
-      final dir = await Directory.systemTemp.createTemp('taxiway_lock');
+    test('saves to and loads from .shipway/lock.json', () async {
+      final dir = await Directory.systemTemp.createTemp('shipway_lock');
       addTearDown(() => dir.delete(recursive: true));
 
       await (LockFile.empty()..record(
@@ -128,9 +128,9 @@ void main() {
     });
 
     test(
-      'loads an empty lockfile for a project taxiway has never touched',
+      'loads an empty lockfile for a project shipway has never touched',
       () async {
-        final dir = await Directory.systemTemp.createTemp('taxiway_lock');
+        final dir = await Directory.systemTemp.createTemp('shipway_lock');
         addTearDown(() => dir.delete(recursive: true));
         final loaded = await LockFile.load(dir.path);
         expect(loaded.files, isEmpty);

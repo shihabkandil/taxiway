@@ -7,7 +7,7 @@ import 'recording_process_runner.dart';
 
 /// Builds a Flutter-shaped project in a temp directory.
 ///
-/// Only the files taxiway reads are created. A full `flutter create` is far
+/// Only the files shipway reads are created. A full `flutter create` is far
 /// slower and adds nothing: the readers never look at anything else, and a
 /// hand-built fixture can plant the exact defects a test is about.
 class FixtureProject {
@@ -18,7 +18,7 @@ class FixtureProject {
   String get path => directory.path;
 
   static Future<FixtureProject> create({
-    String prefix = 'taxiway_fixture',
+    String prefix = 'shipway_fixture',
   }) async {
     final dir = await Directory.systemTemp.createTemp(prefix);
     return FixtureProject._(dir);

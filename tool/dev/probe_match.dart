@@ -1,7 +1,7 @@
 // Ad-hoc: read a real match-shaped repository and report coverage.
-import 'package:taxiway/src/core/io/process_runner.dart';
-import 'package:taxiway/src/core/io/redactor.dart';
-import 'package:taxiway/src/platform/ios/match_repository.dart';
+import 'package:shipway/src/core/io/process_runner.dart';
+import 'package:shipway/src/core/io/redactor.dart';
+import 'package:shipway/src/platform/ios/match_repository.dart';
 
 Future<void> main(List<String> args) async {
   final runner = SystemProcessRunner(redactor: Redactor());

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:taxiway/src/inspect/android_inspector.dart';
+import 'package:shipway/src/inspect/android_inspector.dart';
 
 Future<void> main(List<String> args) async {
   final result = await const AndroidInspector().inspect(args.first);

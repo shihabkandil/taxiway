@@ -76,7 +76,7 @@ class DartInspector {
             field: 'dart.dartDefines.$name',
             reason: 'dart_defines/$name.json is not valid JSON: ${e.message}',
             remedy:
-                'Fix the file; taxiway passes it to '
+                'Fix the file; shipway passes it to '
                 '`--dart-define-from-file`.',
             source: 'dart_defines/$name.json',
           );
@@ -117,7 +117,7 @@ class DartInspector {
       log.defect(
         field: 'dart.pubspec',
         reason: 'pubspec.yaml could not be parsed: ${e.message}',
-        remedy: 'Fix the YAML; taxiway reads the app version from it.',
+        remedy: 'Fix the YAML; shipway reads the app version from it.',
         source: 'pubspec.yaml',
       );
       return (name: null, version: null);

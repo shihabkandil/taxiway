@@ -84,7 +84,7 @@ class Doctor {
       title: 'Dart',
       executable: 'dart',
       arguments: const <String>['--version'],
-      // taxiway itself is built against this floor: json_serializable 6.14
+      // shipway itself is built against this floor: json_serializable 6.14
       // requires SDK 3.8, so a lower SDK cannot build or run the tool.
       minimum: const ToolVersion(3, 8, 0),
       installHint: 'Dart ships with Flutter; run `flutter upgrade`.',
@@ -137,7 +137,7 @@ class Doctor {
       minimum: const ToolVersion(2, 4, 0),
       installHint: 'Run `gem install bundler`.',
       reason:
-          'taxiway always invokes fastlane as `bundle exec fastlane`, '
+          'shipway always invokes fastlane as `bundle exec fastlane`, '
           'so a pinned Gemfile controls the version.',
     ),
     VersionCheck(
@@ -196,7 +196,7 @@ class Doctor {
     return _guard(check, context);
   }
 
-  /// A check that throws is a taxiway bug, not an environment failure, and must
+  /// A check that throws is a shipway bug, not an environment failure, and must
   /// not take the rest of the report down with it.
   Future<CheckResult> _guard(Check check, DoctorContext context) async {
     try {
@@ -205,7 +205,7 @@ class Doctor {
       return CheckResult.warn(
         'This check crashed: $error',
         fixHint:
-            'That is a taxiway bug. Please report it, with `--verbose` '
+            'That is a shipway bug. Please report it, with `--verbose` '
             'output.',
       );
     }

@@ -1,4 +1,4 @@
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/secrets/secret_names.dart';
 import 'fastlane_ruby.dart';
 import 'version_resolver.dart';

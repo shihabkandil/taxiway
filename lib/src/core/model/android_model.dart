@@ -44,7 +44,7 @@ class AndroidFlavor {
   final String? signingConfig;
 
   /// `resValue("string", key, value)` entries, keyed by name. `app_name` is the
-  /// one taxiway cares about, but the rest are recorded so adoption can show a
+  /// one shipway cares about, but the rest are recorded so adoption can show a
   /// faithful diff.
   final Map<String, String> resValues;
 

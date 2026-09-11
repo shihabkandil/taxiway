@@ -11,7 +11,7 @@ class RunLockBusy implements Exception {
   final String detail;
 
   @override
-  String toString() => 'Another taxiway run is using this project. $detail';
+  String toString() => 'Another shipway run is using this project. $detail';
 }
 
 /// Stops two runs sharing what cannot be shared.
@@ -36,7 +36,7 @@ class RunLock {
   bool _released = false;
 
   static const String fileName = 'run.lock';
-  static const String directoryName = '.taxiway';
+  static const String directoryName = '.shipway';
 
   static String pathFor(String root) => p.join(root, directoryName, fileName);
 

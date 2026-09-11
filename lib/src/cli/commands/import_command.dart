@@ -17,7 +17,7 @@ import '../../version.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// `taxiway import` — derive `taxiway.yaml` from an existing project.
+/// `shipway import` — derive `shipway.yaml` from an existing project.
 ///
 /// Writes exactly one file and records everything it read as `unmanaged`. That
 /// is the whole safety story: running this on a working project cannot break
@@ -46,7 +46,7 @@ class ImportCommand extends Command<int> {
       ..addFlag(
         'force',
         negatable: false,
-        help: 'Overwrite an existing taxiway.yaml.',
+        help: 'Overwrite an existing shipway.yaml.',
       );
   }
 
@@ -59,7 +59,7 @@ class ImportCommand extends Command<int> {
 
   @override
   String get description =>
-      'Read this project and write a taxiway.yaml describing it.';
+      'Read this project and write a shipway.yaml describing it.';
 
   @override
   Future<int> run() async {
@@ -74,9 +74,9 @@ class ImportCommand extends Command<int> {
     if (!File(p.join(context.projectRoot, 'pubspec.yaml')).existsSync()) {
       logger.err(
         'No pubspec.yaml in ${context.projectRoot}.\n'
-        'Run taxiway from the root of a Flutter project.',
+        'Run shipway from the root of a Flutter project.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     if (!dryRun &&
@@ -88,7 +88,7 @@ class ImportCommand extends Command<int> {
         'Re-run with --force to overwrite it, or --dry-run to see what import '
         'would produce.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final progress = logger.progress('Reading project');
@@ -115,19 +115,19 @@ class ImportCommand extends Command<int> {
         ..info('')
         ..info(yaml.trimRight());
       _report(model, wrote: null);
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     await File(outPath).writeAsString(yaml);
     await _recordUnmanaged(context.projectRoot, model);
 
     _report(model, wrote: relativeOut);
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 
   /// Records every file the readers touched as `unmanaged`.
   ///
-  /// Nothing becomes writable here. `taxiway adopt` is the only way ownership
+  /// Nothing becomes writable here. `shipway adopt` is the only way ownership
   /// changes, and it asks first.
   Future<void> _recordUnmanaged(String root, ProjectModel model) async {
     final lock = await LockFile.load(root);
@@ -204,7 +204,7 @@ class ImportCommand extends Command<int> {
 
     if (flavors.isEmpty) {
       logger.info(
-        'No flavors found. taxiway derived a single-flavor config from this '
+        'No flavors found. shipway derived a single-flavor config from this '
         "project's bundle id and signing setup.",
       );
       return;
@@ -234,7 +234,7 @@ class ImportCommand extends Command<int> {
     if (names.isEmpty) return;
     final sorted = names.toList()..sort();
     const note =
-        '  These are names only. taxiway never reads or writes their values.';
+        '  These are names only. shipway never reads or writes their values.';
     logger
       ..info('')
       ..info('Secret names harvested from your fastlane setup:')
@@ -274,7 +274,7 @@ class ImportCommand extends Command<int> {
       (t) => red.wrap(t) ?? t,
     );
     section(
-      'Values taxiway could not determine:',
+      'Values shipway could not determine:',
       unresolved,
       (t) => yellow.wrap(t) ?? t,
     );

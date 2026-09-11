@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'taxiway_config.dart';
+import 'shipway_config.dart';
 
 /// One `*_ref` that looks like it holds a secret rather than naming one.
 class SecretRefViolation {
@@ -20,7 +20,7 @@ class SecretRefViolation {
 ///
 /// This is the single most likely user mistake — pasting the key where its name
 /// belongs — and it matters more now that import *derives* these fields from a
-/// project it just read. A committed `taxiway.yaml` with a `.p8` in it is a
+/// project it just read. A committed `shipway.yaml` with a `.p8` in it is a
 /// disclosed key.
 abstract final class SecretRefValidator {
   /// A name longer than this is not a name.
@@ -44,7 +44,7 @@ abstract final class SecretRefValidator {
   /// Environment-variable-shaped names: what a `*_ref` should be.
   static final RegExp _nameShape = RegExp(r'^[A-Za-z_][A-Za-z0-9_.-]*$');
 
-  static List<SecretRefViolation> validate(TaxiwayConfig config) {
+  static List<SecretRefViolation> validate(ShipwayConfig config) {
     final violations = <SecretRefViolation>[];
     for (final ref in secretRefsOf(config)) {
       final reason = reasonToReject(ref.value);

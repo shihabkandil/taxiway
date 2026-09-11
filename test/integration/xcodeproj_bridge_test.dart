@@ -4,19 +4,19 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:taxiway/src/core/io/process_runner.dart';
-import 'package:taxiway/src/core/io/redactor.dart';
+import 'package:shipway/src/core/io/process_runner.dart';
+import 'package:shipway/src/core/io/redactor.dart';
 import 'package:test/test.dart';
 
-/// A Flutter project to read. Set `TAXIWAY_FIXTURE_APP` to reuse one, otherwise
+/// A Flutter project to read. Set `SHIPWAY_FIXTURE_APP` to reuse one, otherwise
 /// the test scaffolds a throwaway app — `flutter create` is slow enough that
 /// reusing one locally is worth the flag.
 Future<Directory> fixtureApp(ProcessRunner runner) async {
-  final existing = Platform.environment['TAXIWAY_FIXTURE_APP'];
+  final existing = Platform.environment['SHIPWAY_FIXTURE_APP'];
   if (existing != null && Directory(existing).existsSync()) {
     return Directory(existing);
   }
-  final temp = await Directory.systemTemp.createTemp('taxiway_bridge');
+  final temp = await Directory.systemTemp.createTemp('shipway_bridge');
   final result = await runner.run('flutter', const <String>[
     'create',
     '--org',
@@ -98,7 +98,7 @@ void main() {
               .cast<Map<String, dynamic>>();
 
       // Read from the fixture rather than hardcoded, so pointing
-      // TAXIWAY_FIXTURE_APP at any `flutter create` app still exercises this.
+      // SHIPWAY_FIXTURE_APP at any `flutter create` app still exercises this.
       final expected =
           (configurations.first['buildSettings']
               as Map<String, dynamic>)['PRODUCT_BUNDLE_IDENTIFIER'];

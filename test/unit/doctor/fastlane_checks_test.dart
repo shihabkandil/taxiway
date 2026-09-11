@@ -1,4 +1,4 @@
-import 'package:taxiway/src/doctor/checks/fastlane_checks.dart';
+import 'package:shipway/src/doctor/checks/fastlane_checks.dart';
 import 'package:test/test.dart';
 
 void main() {

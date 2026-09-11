@@ -74,7 +74,7 @@ class RunManifest {
   final DateTime startedAt;
   final List<StepRecord> steps;
 
-  static const String directory = '.taxiway/runs';
+  static const String directory = '.shipway/runs';
 
   /// One file per pipeline, overwritten each run.
   ///

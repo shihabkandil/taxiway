@@ -13,7 +13,7 @@ import '../../inspect/project_inspector.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// `taxiway status` — semantic drift between `taxiway.yaml` and reality.
+/// `shipway status` — semantic drift between `shipway.yaml` and reality.
 ///
 /// Useful long after import: it is how a user finds out that someone added a
 /// flavor in Xcode without updating the config, or that a scheme stopped being
@@ -35,7 +35,7 @@ class StatusCommand extends Command<int> {
   String get name => 'status';
 
   @override
-  String get description => 'Show how this project differs from taxiway.yaml.';
+  String get description => 'Show how this project differs from shipway.yaml.';
 
   @override
   Future<int> run() async {
@@ -49,7 +49,7 @@ class StatusCommand extends Command<int> {
     ).readFromDisk(context.projectRoot);
     progress.complete('Read project');
 
-    // The DSL comes from the project, not the config: taxiway has no opinion
+    // The DSL comes from the project, not the config: shipway has no opinion
     // about which dialect a project uses, so comparing them would be noise.
     final dsl =
         actual.android.gradleDsl ??
@@ -74,13 +74,13 @@ class StatusCommand extends Command<int> {
           'ownership': <String, String>{for (final entry in lock.files.entries) entry.key: entry.value.ownership.name},
         })}\n',
       );
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     _render(diff, lock);
     // Drift is information, not failure: a user runs `status` precisely because
     // they expect the answer might be "yes, things moved".
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 
   void _render(ModelDiff diff, LockFile lock) {
@@ -89,12 +89,12 @@ class StatusCommand extends Command<int> {
 
     if (diff.isEmpty) {
       logger.info(
-        '${green.wrap('In sync.')} taxiway.yaml matches this project.',
+        '${green.wrap('In sync.')} shipway.yaml matches this project.',
       );
     } else {
       logger.info(
         '${yellow.wrap('Drift')} — ${diff.length} '
-        'difference${diff.length == 1 ? '' : 's'} between taxiway.yaml and '
+        'difference${diff.length == 1 ? '' : 's'} between shipway.yaml and '
         'this project:',
       );
       logger.info('');
@@ -109,8 +109,8 @@ class StatusCommand extends Command<int> {
         ..info('')
         ..info(
           darkGray.wrap(
-                'Update taxiway.yaml to match the project, or run '
-                '`taxiway generate` to make the project match the config.',
+                'Update shipway.yaml to match the project, or run '
+                '`shipway generate` to make the project match the config.',
               ) ??
               '',
         );
@@ -139,8 +139,8 @@ class StatusCommand extends Command<int> {
         (counts[Ownership.generated] ?? 0) == 0) {
       logger.info(
         darkGray.wrap(
-              'taxiway does not own any file in this project yet. '
-              'Run `taxiway adopt` to let it write to one.',
+              'shipway does not own any file in this project yet. '
+              'Run `shipway adopt` to let it write to one.',
             ) ??
             '',
       );

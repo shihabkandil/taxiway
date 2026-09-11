@@ -1,11 +1,11 @@
 import 'repository_secrets.dart';
 
-/// What shape `taxiway secrets export` emits.
+/// What shape `shipway secrets export` emits.
 enum ExportFormat {
   /// A `gh secret set` script. Each line prompts for its value.
   gh,
 
-  /// An Actions `env:` block, for a workflow taxiway did not write.
+  /// An Actions `env:` block, for a workflow shipway did not write.
   actions,
 
   /// A `.env` template with empty values, to fill in locally.
@@ -34,7 +34,7 @@ abstract final class SecretExport {
   }) {
     if (secrets.isEmpty) {
       return '# This config needs no repository secrets yet. Add signing or '
-          'targets to\n# taxiway.yaml and they will appear here.\n';
+          'targets to\n# shipway.yaml and they will appear here.\n';
     }
     return switch (format) {
       ExportFormat.gh => _gh(secrets),
@@ -62,7 +62,7 @@ abstract final class SecretExport {
 
   static String _actions(List<RepositorySecret> secrets) => <String>[
     '# Paste under a job. Values come from repository secrets; the names',
-    '# are what taxiway checks for and what the lanes read.',
+    '# are what shipway checks for and what the lanes read.',
     'env:',
     for (final secret in secrets) ...<String>[
       '  # ${secret.wantedBy}',
@@ -72,8 +72,8 @@ abstract final class SecretExport {
   ].join('\n');
 
   static String _dotenv(List<RepositorySecret> secrets) => <String>[
-    '# Fill these in and keep the file out of git — `taxiway generate`',
-    '# adds it to .gitignore. `taxiway secrets import` moves them into',
+    '# Fill these in and keep the file out of git — `shipway generate`',
+    '# adds it to .gitignore. `shipway secrets import` moves them into',
     '# the login keychain when you would rather not leave them on disk.',
     '',
     for (final secret in secrets) ...<String>[

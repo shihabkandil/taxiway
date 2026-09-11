@@ -6,17 +6,17 @@ import 'package:path/path.dart' as p;
 import '../../version.dart';
 import 'content_hash.dart';
 
-/// How much of a file taxiway is allowed to touch.
+/// How much of a file shipway is allowed to touch.
 enum Ownership {
-  /// Present before taxiway. We read it and describe it; we never write it.
+  /// Present before shipway. We read it and describe it; we never write it.
   /// Import leaves every discovered file in this state — which is why running
-  /// `taxiway import` on a working project cannot break it.
+  /// `shipway import` on a working project cannot break it.
   unmanaged,
 
-  /// The user ran `taxiway adopt`. A marked region is now ours.
+  /// The user ran `shipway adopt`. A marked region is now ours.
   adopted,
 
-  /// taxiway created the file and owns it whole.
+  /// shipway created the file and owns it whole.
   generated;
 
   static Ownership parse(String value) => Ownership.values.firstWhere(
@@ -56,7 +56,7 @@ class LockEntry {
   final Ownership ownership;
   final WriteMode mode;
 
-  /// Digest of the whole file as taxiway last left it.
+  /// Digest of the whole file as shipway last left it.
   final String? hash;
 
   /// Digest of just our managed region.
@@ -104,7 +104,7 @@ class LockEntry {
       );
 }
 
-/// `.taxiway/lock.json` — the record of what taxiway may write.
+/// `.shipway/lock.json` — the record of what shipway may write.
 ///
 /// Committed to version control on purpose: ownership is a team-wide fact, and
 /// a teammate who pulls the repo must inherit the same permissions.
@@ -118,7 +118,7 @@ class LockFile {
   /// Schema version of the lockfile itself.
   static const int currentVersion = 1;
 
-  static const String directoryName = '.taxiway';
+  static const String directoryName = '.shipway';
   static const String fileName = 'lock.json';
 
   final int version;
@@ -132,7 +132,7 @@ class LockFile {
 
   /// Ownership of [path], defaulting to [Ownership.unmanaged].
   ///
-  /// The default is the safe one: a file taxiway has never heard of is one it
+  /// The default is the safe one: a file shipway has never heard of is one it
   /// must not write.
   Ownership ownershipOf(String path) =>
       this[path]?.ownership ?? Ownership.unmanaged;
@@ -202,7 +202,7 @@ class LockFile {
   static String pathFor(String root) => p.join(root, directoryName, fileName);
 
   /// Loads the lockfile for [root], or an empty one if the project has never
-  /// been touched by taxiway.
+  /// been touched by shipway.
   static Future<LockFile> load(String root) async {
     final file = File(pathFor(root));
     if (!file.existsSync()) return LockFile.empty();
@@ -215,7 +215,7 @@ class LockFile {
     return LockFile.fromJson(decoded.cast<String, dynamic>());
   }
 
-  /// Writes the lockfile, creating `.taxiway/` if needed.
+  /// Writes the lockfile, creating `.shipway/` if needed.
   Future<void> save(String root) async {
     final file = File(pathFor(root));
     await file.parent.create(recursive: true);

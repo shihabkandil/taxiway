@@ -1,7 +1,7 @@
 import 'package:mason_logger/mason_logger.dart';
-import 'package:taxiway/src/cli/exit_codes.dart';
-import 'package:taxiway/src/cli/taxiway_command_runner.dart';
-import 'package:taxiway/src/core/env/host_platform.dart';
+import 'package:shipway/src/cli/exit_codes.dart';
+import 'package:shipway/src/cli/shipway_command_runner.dart';
+import 'package:shipway/src/core/env/host_platform.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -68,19 +68,19 @@ void main() {
   setUp(() async {
     project = await FixtureProject.create();
     addTearDown(project.dispose);
-    project.write('taxiway.yaml', _config);
+    project.write('shipway.yaml', _config);
     logger = _CapturingLogger();
     runner = RecordingProcessRunner();
   });
 
   Future<int> run(List<String> args, {HostPlatform? host}) =>
-      TaxiwayCommandRunner(
+      ShipwayCommandRunner(
         logger: logger,
         runner: runner,
         workingDirectory: project.path,
         host: host ?? HostPlatform.macos,
       ).run(<String>[
-        '--config=${project.path}/taxiway.yaml',
+        '--config=${project.path}/shipway.yaml',
         '--env=persistent',
         ...args,
       ]);
@@ -97,14 +97,14 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
 
   group('saying what you meant', () {
     test('no platform names the two that exist', () async {
-      expect(await run(<String>['release']), TaxiwayExit.userError);
+      expect(await run(<String>['release']), ShipwayExit.userError);
       expect(logger.output, contains('ios'));
       expect(logger.output, contains('android'));
     });
 
     test('no target lists the ones for that platform', () async {
       final code = await run(<String>['release', 'android']);
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       // Only the Android ones: offering testflight here is noise.
       expect(logger.output, contains('play'));
       expect(logger.output, isNot(contains('testflight')));
@@ -119,8 +119,8 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         '--target',
         'testflight',
       ]);
-      expect(code, TaxiwayExit.userError);
-      expect(logger.output, contains('taxiway release ios'));
+      expect(code, ShipwayExit.userError);
+      expect(logger.output, contains('shipway release ios'));
     });
 
     test('an unknown flavor lists the real ones', () async {
@@ -132,7 +132,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         '--target',
         'play',
       ]);
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       expect(logger.output, contains('dev, prod'));
     });
   });
@@ -148,7 +148,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         '--target',
         'appstore',
       ]);
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       expect(logger.output, contains('targets.appstore'));
     });
 
@@ -163,7 +163,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         '--rollout',
         '2',
       ]);
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       expect(logger.output, contains('fraction'));
     });
 
@@ -182,7 +182,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
           'testflight',
           ...flag,
         ]);
-        expect(code, TaxiwayExit.userError, reason: flag.join(' '));
+        expect(code, ShipwayExit.userError, reason: flag.join(' '));
         expect(logger.output, contains('play target only'));
       }
     });
@@ -215,7 +215,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         'play',
       ]);
 
-      expect(code, TaxiwayExit.environmentError);
+      expect(code, ShipwayExit.environmentError);
       expect(logger.output, contains('PLAY_SERVICE_ACCOUNT_JSON_PATH'));
       expect(logger.output, isNot(contains('ASC_KEY_ID')));
       expect(logger.output, isNot(contains('MATCH_PASSWORD')));
@@ -231,7 +231,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         'testflight',
       ]);
 
-      expect(code, TaxiwayExit.environmentError);
+      expect(code, ShipwayExit.environmentError);
       expect(logger.output, contains('MATCH_PASSWORD'));
       expect(logger.output, isNot(contains('PLAY_SERVICE_ACCOUNT')));
     });
@@ -266,7 +266,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         '--dry-run',
       ]);
 
-      expect(code, TaxiwayExit.success);
+      expect(code, ShipwayExit.success);
       expect(logger.output, contains('com.acme.app.dev'));
       expect(logger.output, contains('internal'));
     });
@@ -334,7 +334,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         'play',
       ]);
 
-      expect(code, TaxiwayExit.success);
+      expect(code, ShipwayExit.success);
       final invocation = runner.invocation('fastlane');
       // Through bundler, so the pinned fastlane is the one that runs.
       expect(invocation.executable, 'bundle');
@@ -392,7 +392,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         'play',
       ]);
 
-      expect(code, TaxiwayExit.environmentError);
+      expect(code, ShipwayExit.environmentError);
       // The store's own message names nothing to change; the diagnosis does.
       expect(logger.output, contains('strictly increasing'));
       expect(logger.output, contains('remote'));
@@ -414,7 +414,7 @@ PLAY_SERVICE_ACCOUNT_JSON_PATH=play.json
         'play',
       ]);
 
-      expect(code, TaxiwayExit.success);
+      expect(code, ShipwayExit.success);
       expect(logger.output, contains('Ruby'));
     });
   });

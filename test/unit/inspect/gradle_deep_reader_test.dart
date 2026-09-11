@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:taxiway/src/core/model/android_model.dart';
-import 'package:taxiway/src/core/model/uncertainty.dart';
-import 'package:taxiway/src/inspect/android_inspector.dart';
-import 'package:taxiway/src/inspect/gradle_deep_reader.dart';
+import 'package:shipway/src/core/model/android_model.dart';
+import 'package:shipway/src/core/model/uncertainty.dart';
+import 'package:shipway/src/inspect/android_inspector.dart';
+import 'package:shipway/src/inspect/gradle_deep_reader.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -84,7 +84,7 @@ android {
       project.path,
       deep: deep,
       runner: runner,
-      deepScriptPath: 'tool/gradle/taxiway_dump.gradle',
+      deepScriptPath: 'tool/gradle/shipway_dump.gradle',
     );
     return (android: result.android, uncertainties: result.uncertainties);
   }
@@ -108,7 +108,7 @@ android {
   group('--deep resolves what the fast path could not', () {
     setUp(() {
       runner.stub(
-        'taxiwayDumpVariants',
+        'shipwayDumpVariants',
         stdout: gradleOutput(
           resolvedPayload(),
           noise:
@@ -158,15 +158,15 @@ android {
 
     test('invokes the wrapper from android/ with the init script', () async {
       await inspect(deep: true);
-      final invocation = runner.invocation('taxiwayDumpVariants');
+      final invocation = runner.invocation('shipwayDumpVariants');
       expect(invocation.executable, './gradlew');
       expect(invocation.workingDirectory, endsWith('/android'));
       expect(
         invocation.arguments,
         containsAllInOrder(<String>[
           '--init-script',
-          'tool/gradle/taxiway_dump.gradle',
-          ':app:taxiwayDumpVariants',
+          'tool/gradle/shipway_dump.gradle',
+          ':app:shipwayDumpVariants',
         ]),
       );
       // A read must not leave a daemon behind.
@@ -180,7 +180,7 @@ android {
   group('a failed deep read leaves the user no worse off', () {
     test('falls back to the fast parse and explains why', () async {
       runner.stub(
-        'taxiwayDumpVariants',
+        'shipwayDumpVariants',
         exitCode: 1,
         stdout:
             'FAILURE: Build failed with an exception.\n'
@@ -213,7 +213,7 @@ android {
         bare.path,
         deep: true,
         runner: runner,
-        deepScriptPath: 'tool/gradle/taxiway_dump.gradle',
+        deepScriptPath: 'tool/gradle/shipway_dump.gradle',
       );
       final failure = result.uncertainties.firstWhere(
         (u) => u.reason.contains('could not run'),
@@ -223,7 +223,7 @@ android {
     });
 
     test('output with no JSON fence is a failure, not a bad parse', () async {
-      runner.stub('taxiwayDumpVariants', stdout: 'BUILD SUCCESSFUL in 3s');
+      runner.stub('shipwayDumpVariants', stdout: 'BUILD SUCCESSFUL in 3s');
       final result = await inspect(deep: true);
       expect(result.android.applicationId, isNull);
       expect(

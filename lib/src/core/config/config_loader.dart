@@ -7,22 +7,22 @@ import 'package:yaml/yaml.dart';
 
 import 'config_exception.dart';
 import 'secret_ref_validator.dart';
-import 'taxiway_config.dart';
+import 'shipway_config.dart';
 
-/// Loads and validates `taxiway.yaml`.
+/// Loads and validates `shipway.yaml`.
 ///
 /// Three passes, in order of how cheaply they fail: YAML syntax, schema shape
 /// (via `checked_yaml`, which carries line/column), then semantic rules that a
 /// schema cannot express.
 abstract final class ConfigLoader {
-  static const String defaultFileName = 'taxiway.yaml';
+  static const String defaultFileName = 'shipway.yaml';
 
   /// The highest schema version this build understands.
   static const int supportedVersion = 1;
 
-  /// Finds `taxiway.yaml` at [root], or null.
+  /// Finds `shipway.yaml` at [root], or null.
   static File? locate(String root) {
-    for (final name in const [defaultFileName, 'taxiway.yml']) {
+    for (final name in const [defaultFileName, 'shipway.yml']) {
       final file = File(p.join(root, name));
       if (file.existsSync()) return file;
     }
@@ -30,19 +30,19 @@ abstract final class ConfigLoader {
   }
 
   /// Parses [content] as a config originating from [path].
-  static TaxiwayConfig parse(String content, {String path = defaultFileName}) {
-    final TaxiwayConfig config;
+  static ShipwayConfig parse(String content, {String path = defaultFileName}) {
+    final ShipwayConfig config;
     try {
-      config = checkedYamlDecode<TaxiwayConfig>(
+      config = checkedYamlDecode<ShipwayConfig>(
         content,
         (m) {
           if (m == null) {
             throw ConfigException(
-              'is empty. Run `taxiway init` or `taxiway import` to create one.',
+              'is empty. Run `shipway init` or `shipway import` to create one.',
               path: path,
             );
           }
-          return TaxiwayConfig.fromJson(m);
+          return ShipwayConfig.fromJson(m);
         },
         sourceUrl: Uri.file(path),
         allowNull: true,
@@ -63,13 +63,13 @@ abstract final class ConfigLoader {
   }
 
   /// Reads and parses the config at [file].
-  static Future<TaxiwayConfig> load(File file) async {
+  static Future<ShipwayConfig> load(File file) async {
     if (!file.existsSync()) {
       throw ConfigException(
         'No config found.',
         path: file.path,
         hint:
-            'Run `taxiway import` in an existing project, or `taxiway init` '
+            'Run `shipway import` in an existing project, or `shipway init` '
             'to start one.',
       );
     }
@@ -77,14 +77,14 @@ abstract final class ConfigLoader {
   }
 
   /// Semantic rules the schema cannot express.
-  static void _validate(TaxiwayConfig config, String path) {
+  static void _validate(ShipwayConfig config, String path) {
     if (config.version != supportedVersion) {
       throw ConfigException(
         'Unsupported config version ${config.version}.',
         path: path,
         hint:
-            'This taxiway understands version $supportedVersion. '
-            'Upgrade taxiway, or set `version: $supportedVersion`.',
+            'This shipway understands version $supportedVersion. '
+            'Upgrade shipway, or set `version: $supportedVersion`.',
       );
     }
     if (config.apps.isEmpty) {
@@ -97,7 +97,7 @@ abstract final class ConfigLoader {
     }
     if (config.defaultAppId == null) {
       throw ConfigException(
-        'Several apps are declared and none is named `main`, so taxiway cannot '
+        'Several apps are declared and none is named `main`, so shipway cannot '
         'tell which to act on by default.',
         path: path,
         hint: 'Name one of them `main`, or pass `--app <id>` on every command.',
@@ -149,7 +149,7 @@ abstract final class ConfigLoader {
         }
         // A rollout used to be rejected here unless `release_status` was
         // `inProgress`. That was wrong: `supply` sets the status itself, on
-        // both the upload and the promote path, so the pair taxiway refused is
+        // both the upload and the promote path, so the pair shipway refused is
         // one that works. Refusing a working config is a worse failure than an
         // unclear one; the effective status is shown by `release --dry-run`
         // instead. See docs/deploy-targets.md.

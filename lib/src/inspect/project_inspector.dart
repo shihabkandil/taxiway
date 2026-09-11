@@ -14,7 +14,7 @@ import 'xcodeproj_bridge.dart';
 /// Reads a whole project into a [ProjectModel].
 ///
 /// The `readFromDisk` half of the two-directional contract. It reads and
-/// describes; it never writes, which is what makes `taxiway import` safe to run
+/// describes; it never writes, which is what makes `shipway import` safe to run
 /// on a working project.
 class ProjectInspector {
   ProjectInspector({
@@ -90,10 +90,10 @@ class ProjectInspector {
           const Uncertainty(
             field: 'ios',
             reason:
-                'taxiway could not find its own Xcode project bridge '
+                'shipway could not find its own Xcode project bridge '
                 '(tool/ruby/xcodeproj_bridge.rb).',
             remedy:
-                'Reinstall taxiway. This is a packaging bug, not a problem '
+                'Reinstall shipway. This is a packaging bug, not a problem '
                 'with your project.',
             severity: UncertaintySeverity.defect,
           ),
@@ -190,7 +190,7 @@ class ProjectInspector {
                 'matches it by name.',
             remedy:
                 'Create lib/main_$flavor.dart, or set this flavor\'s '
-                'entrypoint manually in taxiway.yaml.',
+                'entrypoint manually in shipway.yaml.',
             severity: UncertaintySeverity.defect,
           ),
         );

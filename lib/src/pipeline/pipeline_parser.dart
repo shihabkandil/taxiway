@@ -203,7 +203,7 @@ abstract final class PipelineParser {
 
   static PipelineException _unknownStep(String pipeline, String name) =>
       PipelineException(
-        'In pipeline `$pipeline`, `$name` is not a step taxiway knows.',
+        'In pipeline `$pipeline`, `$name` is not a step shipway knows.',
         hint: 'Expected one of: ${stepNames.join(', ')}.',
       );
 }

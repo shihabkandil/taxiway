@@ -1,4 +1,4 @@
-import 'package:taxiway/src/core/env/run_environment.dart';
+import 'package:shipway/src/core/env/run_environment.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -19,7 +19,7 @@ void main() {
         configured: 'ci',
         environment: const <String, String>{
           'CI': 'true',
-          'TAXIWAY_ENV': 'persistent',
+          'SHIPWAY_ENV': 'persistent',
         },
       );
       expect(resolved.environment, RunEnvironment.workstation);
@@ -31,7 +31,7 @@ void main() {
         configured: 'ci',
         environment: const <String, String>{
           'CI': 'true',
-          'TAXIWAY_ENV': 'workstation',
+          'SHIPWAY_ENV': 'workstation',
         },
       );
       expect(resolved.environment, RunEnvironment.workstation);

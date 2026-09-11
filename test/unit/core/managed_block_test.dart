@@ -1,5 +1,5 @@
-import 'package:taxiway/src/core/managed/comment_style.dart';
-import 'package:taxiway/src/core/managed/managed_block.dart';
+import 'package:shipway/src/core/managed/comment_style.dart';
+import 'package:shipway/src/core/managed/managed_block.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -11,9 +11,9 @@ void main() {
     test('locates a block and strips its indentation', () {
       final content = '''
 android {
-    // BEGIN taxiway (managed) — do not edit. Regenerate with `taxiway generate`.
+    // BEGIN shipway (managed) — do not edit. Regenerate with `shipway generate`.
     flavorDimensions += "env"
-    // END taxiway
+    // END shipway
 }
 ''';
       final block = ManagedBlock.find(content)!;
@@ -21,25 +21,25 @@ android {
       expect(block.body, 'flavorDimensions += "env"');
       expect(
         content.substring(block.start, block.end),
-        contains('END taxiway'),
+        contains('END shipway'),
       );
     });
 
     test('rejects a BEGIN with no END rather than guessing', () {
       expect(
-        () => ManagedBlock.find('// BEGIN taxiway (managed)\nstuff\n'),
+        () => ManagedBlock.find('// BEGIN shipway (managed)\nstuff\n'),
         throwsA(isA<ManagedBlockException>()),
       );
     });
 
     test('rejects duplicate blocks', () {
       const content = '''
-// BEGIN taxiway (managed)
+// BEGIN shipway (managed)
 a
-// END taxiway
-// BEGIN taxiway (managed)
+// END shipway
+// BEGIN shipway (managed)
 b
-// END taxiway
+// END shipway
 ''';
       expect(
         () => ManagedBlock.find(content),
@@ -56,9 +56,9 @@ b
         style: CommentStyle.hash,
       );
       expect(out, startsWith('existing\n'));
-      expect(out, contains('# BEGIN taxiway (managed)'));
+      expect(out, contains('# BEGIN shipway (managed)'));
       expect(out, contains('*.jks'));
-      expect(out, contains('# END taxiway'));
+      expect(out, contains('# END shipway'));
     });
 
     test('adds a newline before the block when the file lacks one', () {

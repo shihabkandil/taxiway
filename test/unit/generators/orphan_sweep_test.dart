@@ -1,11 +1,11 @@
-import 'package:taxiway/src/core/managed/content_hash.dart';
-import 'package:taxiway/src/core/managed/lock_file.dart';
-import 'package:taxiway/src/core/model/android_model.dart';
-import 'package:taxiway/src/generators/dart_generators.dart';
-import 'package:taxiway/src/generators/fastlane_generators.dart';
-import 'package:taxiway/src/generators/generated_file.dart';
-import 'package:taxiway/src/generators/ios_generators.dart';
-import 'package:taxiway/src/generators/orphan_sweep.dart';
+import 'package:shipway/src/core/managed/content_hash.dart';
+import 'package:shipway/src/core/managed/lock_file.dart';
+import 'package:shipway/src/core/model/android_model.dart';
+import 'package:shipway/src/generators/dart_generators.dart';
+import 'package:shipway/src/generators/fastlane_generators.dart';
+import 'package:shipway/src/generators/generated_file.dart';
+import 'package:shipway/src/generators/ios_generators.dart';
+import 'package:shipway/src/generators/orphan_sweep.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -42,7 +42,7 @@ void main() {
     lock = LockFile(version: LockFile.currentVersion, generatedBy: 'test');
   });
 
-  /// Writes a file and records it as taxiway's own, unedited.
+  /// Writes a file and records it as shipway's own, unedited.
   void generated(String path, String contents) {
     project.write(path, contents);
     lock.record(
@@ -181,7 +181,7 @@ void main() {
 
   group('absence is not evidence of removal', () {
     test('a partial run does not sweep another generator territory', () async {
-      // `taxiway generate flavors` produces no fastlane files. The naive rule
+      // `shipway generate flavors` produces no fastlane files. The naive rule
       // would delete the whole fastlane setup.
       generated('ios/fastlane/Matchfile', 'git_url("x")\n');
       generated('lib/main_dev.dart', 'void main() {}\n');

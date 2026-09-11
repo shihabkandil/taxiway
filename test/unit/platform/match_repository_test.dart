@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:taxiway/src/core/io/process_runner.dart';
-import 'package:taxiway/src/core/io/redactor.dart';
-import 'package:taxiway/src/platform/ios/match_repository.dart';
+import 'package:shipway/src/core/io/process_runner.dart';
+import 'package:shipway/src/core/io/redactor.dart';
+import 'package:shipway/src/platform/ios/match_repository.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -60,7 +60,7 @@ void main() {
     late Directory root;
 
     setUp(() async {
-      root = await Directory.systemTemp.createTemp('taxiway_match_test');
+      root = await Directory.systemTemp.createTemp('shipway_match_test');
       addTearDown(() async {
         if (root.existsSync()) await root.delete(recursive: true);
       });
@@ -115,7 +115,7 @@ void main() {
     });
 
     test('an empty repository is empty, not an error', () async {
-      final bare = await Directory.systemTemp.createTemp('taxiway_match_bare');
+      final bare = await Directory.systemTemp.createTemp('shipway_match_bare');
       addTearDown(() async => bare.delete(recursive: true));
       expect(MatchRepository.readDirectory(bare).isEmpty, isTrue);
     });
@@ -133,7 +133,7 @@ void main() {
     late Directory origin;
 
     setUp(() async {
-      origin = await Directory.systemTemp.createTemp('taxiway_match_origin');
+      origin = await Directory.systemTemp.createTemp('shipway_match_origin');
       addTearDown(() async {
         if (origin.existsSync()) await origin.delete(recursive: true);
       });

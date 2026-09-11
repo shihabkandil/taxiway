@@ -35,7 +35,7 @@ class MutationResult {
   bool get succeeded => failureReason == null;
 }
 
-/// One build configuration taxiway wants to exist.
+/// One build configuration shipway wants to exist.
 class DesiredConfiguration {
   const DesiredConfiguration({
     required this.name,
@@ -59,7 +59,7 @@ class DesiredConfiguration {
   /// The only correct choice for a flavor configuration. `Release-dev` must
   /// read whatever `Release` reads — normally `ios/Flutter/Release.xcconfig`,
   /// which is what includes `Generated.xcconfig` and, in a CocoaPods project,
-  /// the generated `Pods-Runner` config. Pointing it at a taxiway-written
+  /// the generated `Pods-Runner` config. Pointing it at a shipway-written
   /// xcconfig instead displaces all of that: the build loses FLUTTER_TARGET
   /// and compiles `lib/main.dart` whatever `-t` said, loses every
   /// `--dart-define`, and produces an Info.plist with no CFBundleVersion.
@@ -86,7 +86,7 @@ class DesiredConfiguration {
 
 /// Mutates `ios/Runner.xcodeproj/project.pbxproj` through the Ruby bridge.
 ///
-/// The riskiest thing taxiway does. Every mutation is preceded by a byte-exact
+/// The riskiest thing shipway does. Every mutation is preceded by a byte-exact
 /// backup and followed by a re-read that checks the project says what it was
 /// asked to say; anything short of complete success restores the original file.
 ///
@@ -110,13 +110,13 @@ class XcodeProjectMutator {
 
   static const String projectDirectory = 'ios/Runner.xcodeproj';
   static const String pbxprojPath = '$projectDirectory/project.pbxproj';
-  static const String backupDirectory = '.taxiway/backups';
+  static const String backupDirectory = '.shipway/backups';
 
-  /// Name of the run-script phase taxiway owns.
+  /// Name of the run-script phase shipway owns.
   ///
   /// Prefixed so it is obviously ours in Xcode's UI, and matched by name on
   /// every run so re-configuring updates it instead of appending another.
-  static const String firebasePhaseName = 'taxiway: Copy Firebase config';
+  static const String firebasePhaseName = 'shipway: Copy Firebase config';
 
   /// Builds the run script that copies the right `GoogleService-Info.plist`.
   ///
@@ -127,8 +127,8 @@ class XcodeProjectMutator {
     if (plistByConfiguration.isEmpty) return null;
 
     final buffer = StringBuffer()
-      ..writeln('# Managed by taxiway. Edit taxiway.yaml and re-run')
-      ..writeln('# `taxiway generate` instead of changing this script.')
+      ..writeln('# Managed by shipway. Edit shipway.yaml and re-run')
+      ..writeln('# `shipway generate` instead of changing this script.')
       ..writeln('set -e')
       ..writeln()
       ..writeln('case "\$CONFIGURATION" in');
@@ -139,12 +139,12 @@ class XcodeProjectMutator {
     }
     buffer
       ..writeln('  *)')
-      ..writeln('    echo "taxiway: no Firebase config for \$CONFIGURATION" ;;')
+      ..writeln('    echo "shipway: no Firebase config for \$CONFIGURATION" ;;')
       ..writeln('esac')
       ..writeln()
       ..writeln(r'if [ -n "${PLIST:-}" ]; then')
       ..writeln(r'  if [ ! -f "$PLIST" ]; then')
-      ..writeln(r'    echo "error: taxiway: $PLIST is missing" >&2; exit 1')
+      ..writeln(r'    echo "error: shipway: $PLIST is missing" >&2; exit 1')
       ..writeln('  fi')
       ..writeln(
         r'  cp "$PLIST" '
@@ -291,7 +291,7 @@ class XcodeProjectMutator {
         .toList();
   }
 
-  /// Copies the project file to `.taxiway/backups/<timestamp>/`.
+  /// Copies the project file to `.shipway/backups/<timestamp>/`.
   Future<String> _backup(List<int> original) async {
     final stamp = DateTime.now()
         .toUtc()
@@ -339,7 +339,7 @@ class XcodeProjectMutator {
         DesiredConfiguration(
           name: '$buildType-$flavor',
           basedOn: buildType,
-          // Never a taxiway-written xcconfig: see [inheritBaseConfiguration].
+          // Never a shipway-written xcconfig: see [inheritBaseConfiguration].
           inheritBaseConfiguration: true,
           // Everything per-flavor lives here, on the configuration itself.
           // That is both what a target's own settings winning over its base

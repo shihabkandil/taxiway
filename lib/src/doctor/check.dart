@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/env/host_platform.dart';
 import '../core/io/process_runner.dart';
 import 'tool_version.dart';
@@ -90,7 +90,7 @@ class DoctorContext {
   /// Null when doctor runs outside a configured project — `doctor` must work
   /// before `init` does, because its whole job is telling you why nothing else
   /// will.
-  final TaxiwayConfig? config;
+  final ShipwayConfig? config;
 
   final DateTime now;
 

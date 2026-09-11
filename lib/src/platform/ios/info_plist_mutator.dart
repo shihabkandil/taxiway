@@ -55,15 +55,15 @@ class InfoPlistMutator {
   /// The build setting the plist is pointed at.
   static const String displayNameSetting = 'APP_DISPLAY_NAME';
 
-  /// What the plist should contain once taxiway is done.
+  /// What the plist should contain once shipway is done.
   static const String displayNameReference = '\$($displayNameSetting)';
 
-  static const String backupDirectory = '.taxiway/backups';
+  static const String backupDirectory = '.shipway/backups';
 
   /// Reads the current `CFBundleDisplayName`.
   ///
   /// Returns null when the key is absent, and the reference string itself when
-  /// taxiway has already been here.
+  /// shipway has already been here.
   Future<String?> readDisplayName() async {
     final file = File(p.join(root, plistPath));
     if (!file.existsSync()) return null;

@@ -1,6 +1,6 @@
-import 'package:taxiway/src/core/env/host_platform.dart';
-import 'package:taxiway/src/core/io/redactor.dart';
-import 'package:taxiway/src/secrets/secret_store.dart';
+import 'package:shipway/src/core/env/host_platform.dart';
+import 'package:shipway/src/core/io/redactor.dart';
+import 'package:shipway/src/secrets/secret_store.dart';
 import 'package:test/test.dart';
 
 import '../../support/recording_process_runner.dart';

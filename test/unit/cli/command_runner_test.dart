@@ -1,8 +1,8 @@
 import 'package:mason_logger/mason_logger.dart';
-import 'package:taxiway/src/cli/exit_codes.dart';
-import 'package:taxiway/src/cli/taxiway_command_runner.dart';
-import 'package:taxiway/src/core/env/host_platform.dart';
-import 'package:taxiway/src/version.dart';
+import 'package:shipway/src/cli/exit_codes.dart';
+import 'package:shipway/src/cli/shipway_command_runner.dart';
+import 'package:shipway/src/core/env/host_platform.dart';
+import 'package:shipway/src/version.dart';
 import 'package:test/test.dart';
 
 import '../../support/recording_process_runner.dart';
@@ -34,8 +34,8 @@ void main() {
   late _CapturingLogger logger;
   late RecordingProcessRunner runner;
 
-  TaxiwayCommandRunner build({String? cwd, HostPlatform? host}) =>
-      TaxiwayCommandRunner(
+  ShipwayCommandRunner build({String? cwd, HostPlatform? host}) =>
+      ShipwayCommandRunner(
         logger: logger,
         runner: runner,
         workingDirectory: cwd ?? '.',
@@ -49,18 +49,18 @@ void main() {
 
   group('global flags', () {
     test('--version prints the package version', () async {
-      expect(await build().run(['--version']), TaxiwayExit.success);
+      expect(await build().run(['--version']), ShipwayExit.success);
       expect(logger.output, contains(packageVersion));
     });
 
     test('an unknown command is a user error with usage', () async {
-      expect(await build().run(['nonsense']), TaxiwayExit.userError);
+      expect(await build().run(['nonsense']), ShipwayExit.userError);
       expect(logger.output, contains('nonsense'));
       expect(logger.output, contains('Available commands'));
     });
 
     test('an unknown flag is a user error', () async {
-      expect(await build().run(['doctor', '--nope']), TaxiwayExit.userError);
+      expect(await build().run(['doctor', '--nope']), ShipwayExit.userError);
     });
   });
 
@@ -80,14 +80,14 @@ void main() {
 
     test('returns 0 when nothing blocks shipping', () async {
       stubPassingTools();
-      expect(await build().run(['doctor']), TaxiwayExit.success);
+      expect(await build().run(['doctor']), ShipwayExit.success);
     });
 
     test('returns 2 — an environment failure — when a check fails', () async {
       runner.stub('ruby --version', stdout: 'ruby 2.6.0p0');
       expect(
         await build().run(['doctor', '--only', 'ruby']),
-        TaxiwayExit.environmentError,
+        ShipwayExit.environmentError,
       );
       expect(logger.output, contains('2.6.0 found'));
     });
@@ -97,7 +97,7 @@ void main() {
       () async {
         expect(
           await build().run(['doctor', '--only', 'banana']),
-          TaxiwayExit.userError,
+          ShipwayExit.userError,
         );
         expect(logger.output, contains('Available:'));
         expect(logger.output, contains('fastlane'));
@@ -135,7 +135,7 @@ void main() {
       () async {
         runner.stub('ruby --version', stdout: 'ruby 3.4.1p18');
         final exit =
-            await TaxiwayCommandRunner(
+            await ShipwayCommandRunner(
               logger: logger,
               runner: runner,
               workingDirectory: 'test/fixtures/config/invalid',
@@ -146,8 +146,8 @@ void main() {
               '--config',
               'test/fixtures/config/invalid/bad_version.yaml',
             ]);
-        expect(exit, TaxiwayExit.success);
-        expect(logger.output, contains('Could not read taxiway.yaml'));
+        expect(exit, ShipwayExit.success);
+        expect(logger.output, contains('Could not read shipway.yaml'));
         expect(logger.output, contains('Ruby'));
       },
     );
@@ -157,14 +157,14 @@ void main() {
     test('refuses `build ios` and names what it can build', () async {
       // The refusal has to arrive before anything slow, and it has to say
       // where to go next: "needs macOS" alone leaves someone on a Linux
-      // builder wondering whether taxiway is any use to them.
+      // builder wondering whether shipway is any use to them.
       final code = await build(
         host: HostPlatform.linux,
       ).run(<String>['build', 'ios']);
 
-      expect(code, TaxiwayExit.environmentError);
+      expect(code, ShipwayExit.environmentError);
       expect(logger.output, contains('Linux'));
-      expect(logger.output, contains('taxiway build android'));
+      expect(logger.output, contains('shipway build android'));
     });
   });
 }

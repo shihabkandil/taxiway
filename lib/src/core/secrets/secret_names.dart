@@ -1,14 +1,14 @@
 /// Environment-variable names the generated lanes read.
 ///
 /// Defined once because two things have to agree exactly: the Fastfile that
-/// reads a variable, and `taxiway secrets check` that verifies it is set. A
+/// reads a variable, and `shipway secrets check` that verifies it is set. A
 /// pre-flight that checks `MATCH_PASSWORD` while the lane reads
 /// `MATCH_PASSPHRASE` is worse than no pre-flight at all — it reports green and
 /// the build still fails. A shared constant makes them the same string by
 /// construction, and a test asserts every name here appears in the rendered
 /// output.
 ///
-/// Names taken from a `*_ref` field in `taxiway.yaml` are *not* here: those are
+/// Names taken from a `*_ref` field in `shipway.yaml` are *not* here: those are
 /// chosen by the user and read from the config.
 abstract final class SecretNames {
   /// The passphrase the match repository is encrypted with.
@@ -68,10 +68,10 @@ abstract final class SecretNames {
         _ => null,
       };
 
-  /// Password for the dedicated keychain taxiway creates off-workstation.
-  static const String keychainPassword = 'TAXIWAY_KEYCHAIN_PASSWORD';
+  /// Password for the dedicated keychain shipway creates off-workstation.
+  static const String keychainPassword = 'SHIPWAY_KEYCHAIN_PASSWORD';
 
-  /// Every name taxiway itself defines, for tests and documentation.
+  /// Every name shipway itself defines, for tests and documentation.
   static const List<String> all = <String>[
     matchPassword,
     matchGitUrl,

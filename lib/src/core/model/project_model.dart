@@ -10,10 +10,10 @@ import 'uncertainty.dart';
 const List<String> flutterBuildTypes = <String>['Debug', 'Release', 'Profile'];
 
 /// A faithful description of what a Flutter project's build configuration
-/// actually is, independent of taxiway.
+/// actually is, independent of shipway.
 ///
 /// Both directions meet here: readers produce one from disk, `projectFromConfig`
-/// produces one from `taxiway.yaml`, and `compare` diffs them. That is what
+/// produces one from `shipway.yaml`, and `compare` diffs them. That is what
 /// makes conflict detection semantic rather than textual.
 class ProjectModel {
   const ProjectModel({

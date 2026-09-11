@@ -21,14 +21,14 @@ enum BuildArtifact {
   final String platform;
 }
 
-/// `taxiway build ios|android --flavor <f>`.
+/// `shipway build ios|android --flavor <f>`.
 ///
 /// The command exists because the invocation is easy to get subtly wrong and
 /// the consequences are silent. Forgetting `--target` builds `lib/main.dart`
 /// under the right bundle id — the wrong app, shipped successfully. Forgetting
 /// `--dart-define-from-file` builds against the wrong backend. Neither fails.
 ///
-/// So taxiway constructs the command from the same resolved config the
+/// So shipway constructs the command from the same resolved config the
 /// generators used, and a developer never assembles it by hand.
 class BuildCommand extends Command<int> {
   BuildCommand(this._contextProvider) {
@@ -75,7 +75,7 @@ class BuildCommand extends Command<int> {
   String get description => 'Build a flavor for one platform.';
 
   @override
-  String get invocation => 'taxiway build ios|android --flavor <flavor>';
+  String get invocation => 'shipway build ios|android --flavor <flavor>';
 
   @override
   Future<int> run() async {
@@ -87,19 +87,19 @@ class BuildCommand extends Command<int> {
     if (platform != 'ios' && platform != 'android') {
       logger.err(
         platform == null
-            ? 'Say which platform to build: `taxiway build ios` or '
-                  '`taxiway build android`.'
+            ? 'Say which platform to build: `shipway build ios` or '
+                  '`shipway build android`.'
             : 'Unknown platform "$platform". Expected ios or android.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     if (platform == 'ios' && !context.host.canBuildIos) {
       logger.err(
         'An iOS build needs macOS; this is ${context.host.label}. '
-        '`taxiway build android` works here.',
+        '`shipway build android` works here.',
       );
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     }
 
     final config = await context.requireConfig();
@@ -112,7 +112,7 @@ class BuildCommand extends Command<int> {
     final flavor = _resolveFlavor(app, results['flavor'] as String?);
     if (flavor is String) {
       logger.err(flavor);
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
     final resolved = flavor as ResolvedFlavor?;
 
@@ -135,7 +135,7 @@ class BuildCommand extends Command<int> {
       logger
         ..info('Would run, from ${context.projectRoot}:')
         ..info('  $commandLine');
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     logger.detail('Running: $commandLine');
@@ -159,22 +159,22 @@ class BuildCommand extends Command<int> {
       // so a clean exit code is not on its own proof of a shippable artifact.
       _reportDiagnoses(result.output, asWarning: true);
       _reportArtifact(artifact, resolved);
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     progress.fail('Build failed');
     if (result.notFound) {
       logger
         ..err('flutter is not on PATH.')
-        ..info('Install Flutter, then run `taxiway doctor`.');
-      return TaxiwayExit.environmentError;
+        ..info('Install Flutter, then run `shipway doctor`.');
+      return ShipwayExit.environmentError;
     }
 
     // The raw output first — a developer should never have to re-run a build
-    // to see what it said — then what taxiway makes of it.
+    // to see what it said — then what shipway makes of it.
     logger.info(result.output);
     _reportDiagnoses(result.output);
-    return TaxiwayExit.environmentError;
+    return ShipwayExit.environmentError;
   }
 
   /// Returns the flavor to build, a `String` error message, or null when the
@@ -184,7 +184,7 @@ class BuildCommand extends Command<int> {
       return requested == null
           ? null
           : 'This config declares no flavors, so --flavor $requested cannot '
-                'be built. Add one to taxiway.yaml and run `taxiway generate`.';
+                'be built. Add one to shipway.yaml and run `shipway generate`.';
     }
     if (requested == null) {
       return 'Pass --flavor. This config declares: '

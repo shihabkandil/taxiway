@@ -32,7 +32,7 @@ enum SecretSource {
 
 /// What became of one secret. Deliberately carries no value.
 ///
-/// The type is the guarantee: `taxiway secrets list` cannot print a credential
+/// The type is the guarantee: `shipway secrets list` cannot print a credential
 /// because it is never handed one. Anything wanting the value asks
 /// [SecretResolver.read] and gets it registered with the redactor first.
 class SecretStatus {
@@ -73,8 +73,8 @@ class SecretResolver {
   }) : host = host ?? HostPlatform.current,
        _processEnvironment = processEnvironment ?? Platform.environment;
 
-  /// The generic-password service taxiway stores secrets under.
-  static const String defaultKeychainService = 'taxiway';
+  /// The generic-password service shipway stores secrets under.
+  static const String defaultKeychainService = 'shipway';
 
   final RunEnvironment environment;
   final String projectRoot;

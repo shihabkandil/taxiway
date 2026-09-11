@@ -22,7 +22,7 @@ class FastlaneLane {
 
 /// What an existing fastlane setup says.
 ///
-/// Read statically — taxiway never executes a Fastfile. A Fastfile is arbitrary
+/// Read statically — shipway never executes a Fastfile. A Fastfile is arbitrary
 /// Ruby, so fidelity here is explicitly partial: whatever is not a literal
 /// becomes an [Uncertainty] rather than a guess.
 class FastlaneModel {

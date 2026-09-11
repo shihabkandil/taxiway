@@ -1,4 +1,4 @@
-import 'package:taxiway/src/core/errors/classifier.dart';
+import 'package:shipway/src/core/errors/classifier.dart';
 import 'package:test/test.dart';
 
 void main() {

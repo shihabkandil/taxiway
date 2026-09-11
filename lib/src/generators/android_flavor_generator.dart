@@ -5,7 +5,7 @@ import 'generated_file.dart';
 /// Gradle build file.
 ///
 /// Block-managed: the build file belongs to the user and almost always contains
-/// signing, dependencies and plugin configuration taxiway must not touch. Only
+/// signing, dependencies and plugin configuration shipway must not touch. Only
 /// the marked region is ours.
 class AndroidFlavorGenerator extends Generator {
   const AndroidFlavorGenerator();

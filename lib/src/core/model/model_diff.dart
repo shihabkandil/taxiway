@@ -13,7 +13,7 @@ enum ChangeKind {
 /// One semantic difference.
 ///
 /// Semantic, not textual: "your `dev` flavor sets `versionNameSuffix`,
-/// taxiway's would not" is actionable in a way a hash mismatch never is, and it
+/// shipway's would not" is actionable in a way a hash mismatch never is, and it
 /// is the only basis on which `adopt` can be safe.
 class ModelChange {
   const ModelChange({
@@ -40,13 +40,13 @@ class ModelChange {
 
   String describe() => switch (kind) {
     ChangeKind.onlyInProject =>
-      '$path exists in the project but not in taxiway.yaml'
+      '$path exists in the project but not in shipway.yaml'
           '${actual == null ? '' : ' ($actual)'}',
     ChangeKind.onlyInConfig =>
-      '$path is in taxiway.yaml but not in the project'
+      '$path is in shipway.yaml but not in the project'
           '${expected == null ? '' : ' ($expected)'}',
     ChangeKind.different =>
-      '$path: taxiway.yaml says ${_show(expected)}, project has '
+      '$path: shipway.yaml says ${_show(expected)}, project has '
           '${_show(actual)}',
   };
 

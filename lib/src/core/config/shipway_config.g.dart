@@ -1,14 +1,14 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'taxiway_config.dart';
+part of 'shipway_config.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-TaxiwayConfig _$TaxiwayConfigFromJson(
+ShipwayConfig _$ShipwayConfigFromJson(
   Map json,
-) => $checkedCreate('TaxiwayConfig', json, ($checkedConvert) {
+) => $checkedCreate('ShipwayConfig', json, ($checkedConvert) {
   $checkKeys(
     json,
     allowedKeys: const [
@@ -21,7 +21,7 @@ TaxiwayConfig _$TaxiwayConfigFromJson(
       'pipelines',
     ],
   );
-  final val = TaxiwayConfig(
+  final val = ShipwayConfig(
     version: $checkedConvert('version', (v) => (v as num).toInt()),
     project: $checkedConvert(
       'project',
@@ -49,7 +49,7 @@ TaxiwayConfig _$TaxiwayConfigFromJson(
   return val;
 });
 
-Map<String, dynamic> _$TaxiwayConfigToJson(TaxiwayConfig instance) =>
+Map<String, dynamic> _$ShipwayConfigToJson(ShipwayConfig instance) =>
     <String, dynamic>{
       'version': instance.version,
       'project': instance.project.toJson(),

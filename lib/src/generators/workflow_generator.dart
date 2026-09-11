@@ -10,11 +10,11 @@ import 'generated_file.dart';
 /// secrets to set, how signing material reaches a runner that has none, and in
 /// what order to call things. It is generated rather than copied from a README
 /// because the `env:` block comes from the same `*_ref` fields the pre-flight
-/// checks, so the workflow and `taxiway secrets check` cannot disagree.
+/// checks, so the workflow and `shipway secrets check` cannot disagree.
 ///
 /// Targets GitHub-hosted runners. A self-hosted runner is a different machine
 /// shape — persistent, shared, with a keychain that may not be unlocked after a
-/// reboot — and taxiway does not yet claim to support one.
+/// reboot — and shipway does not yet claim to support one.
 class WorkflowGenerator extends Generator {
   const WorkflowGenerator();
 
@@ -56,12 +56,12 @@ class WorkflowGenerator extends Generator {
     final options = flavors.map((f) => '          - $f').join('\n');
 
     return '''
-# Created once by taxiway, then never touched again — this file is yours.
+# Created once by shipway, then never touched again — this file is yours.
 #
 # It calls the same lanes you run locally, so green here and green on your
 # machine mean the same thing.
 #
-# Before the first run:  taxiway secrets list --env ci
+# Before the first run:  shipway secrets list --env ci
 name: Release
 
 on:
@@ -91,7 +91,7 @@ ${app.shipsIos ? _iosJob(app) : _noIosJobNote()}${_androidJob(app)}''';
   String _noIosJobNote() =>
       '  # No iOS job: this config arranges no iOS signing and no Apple\n'
       '  # destination. Add signing.ios or targets.testflight and re-run\n'
-      '  # `taxiway generate ci` in a fresh checkout to get one.\n';
+      '  # `shipway generate ci` in a fresh checkout to get one.\n';
 
   String _iosJob(ResolvedApp app) =>
       '''
@@ -110,7 +110,7 @@ ${_indent(_iosEnv(app), 6)}
 
       - uses: ruby/setup-ruby@v1
         with:
-          # Reads ios/Gemfile, so the fastlane taxiway pinned is the one that
+          # Reads ios/Gemfile, so the fastlane shipway pinned is the one that
           # runs — not whatever the runner image ships.
           ruby-version: '${FastlanePins.rubyFloor}'
           bundler-cache: true
@@ -121,7 +121,7 @@ ${_installStep()}
       # Fails in seconds naming the missing variable, rather than twenty
       # minutes later at the upload.
       - name: Check credentials
-        run: taxiway secrets check --env ci
+        run: shipway secrets check --env ci
 
 ${_matchAccessStep(app)}
       # The `certificates` lane runs `setup_ci` — which gives the runner a
@@ -169,7 +169,7 @@ ${_matchAccessStep(app)}
 ''';
   }
 
-  /// How a runner gets the same taxiway that generated this file.
+  /// How a runner gets the same shipway that generated this file.
   ///
   /// Pinned to the tag matching the generating version, because a workflow that
   /// installs whatever the default branch holds today can start failing on a
@@ -182,12 +182,12 @@ ${_matchAccessStep(app)}
     final ref = packageGitRef;
     final pin = ref == null ? '' : ' --git-ref $ref';
     final note = ref == null
-        ? '      # taxiway $packageVersion is a pre-release with no tag, so this\n'
+        ? '      # shipway $packageVersion is a pre-release with no tag, so this\n'
               '      # tracks the default branch. Add `--git-ref v<version>` once you\n'
               '      # are on a released one.\n'
         : '      # Pinned to the version that generated this workflow.\n';
     return '$note'
-        '      - name: Install taxiway\n'
+        '      - name: Install shipway\n'
         '        run: dart pub global activate --source git '
         '$packageRepository$pin';
   }
@@ -222,7 +222,7 @@ ${_installStep()}
 
 ${_androidSigningStep(app)}${_playKeyStep(app)}${_firebaseKeyStep(app)}
       - name: Check credentials
-        run: taxiway secrets check --env ci
+        run: shipway secrets check --env ci
 
       - name: Build and upload
         working-directory: android

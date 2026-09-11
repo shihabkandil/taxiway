@@ -1,4 +1,4 @@
-import 'package:taxiway/src/core/gradle/gradle_scanner.dart';
+import 'package:shipway/src/core/gradle/gradle_scanner.dart';
 import 'package:test/test.dart';
 
 void main() {

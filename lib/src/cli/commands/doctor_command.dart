@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 
-import '../../core/config/taxiway_config.dart';
+import '../../core/config/shipway_config.dart';
 import '../../doctor/check.dart';
 import '../../doctor/doctor.dart';
 import '../../doctor/platform_deadlines.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// `taxiway doctor` — can this machine ship an app?
+/// `shipway doctor` — can this machine ship an app?
 ///
 /// A product in its own right, not a warm-up: it is the first thing a user runs
 /// and the thing they come back to when a build breaks for reasons that have
@@ -51,7 +51,7 @@ class DoctorCommand extends Command<int> {
           'No checks match ${only.join(', ')}. Available: '
           '${Doctor.defaultChecks().map((c) => c.id).join(', ')}',
         );
-        return TaxiwayExit.userError;
+        return ShipwayExit.userError;
       }
     }
 
@@ -75,16 +75,16 @@ class DoctorCommand extends Command<int> {
 
     // A failing check means this machine cannot ship, which is an environment
     // problem rather than a mistake the user made in their arguments.
-    return report.passed ? TaxiwayExit.success : TaxiwayExit.environmentError;
+    return report.passed ? ShipwayExit.success : ShipwayExit.environmentError;
   }
 
   /// A broken config must not stop `doctor` from reporting on the environment —
   /// that is exactly when a user needs it most.
-  Future<TaxiwayConfig?> _configOrNull() async {
+  Future<ShipwayConfig?> _configOrNull() async {
     try {
       return await _context.configOrNull();
     } catch (error) {
-      _context.logger.warn('Could not read taxiway.yaml: $error');
+      _context.logger.warn('Could not read shipway.yaml: $error');
       return null;
     }
   }

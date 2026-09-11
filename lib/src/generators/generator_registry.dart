@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/gradle/gradle_layout.dart';
 import 'android_flavor_generator.dart';
 import 'android_fastfile_generator.dart';
@@ -14,7 +14,7 @@ import 'ios_generators.dart';
 import 'resolve_app.dart';
 import 'workflow_generator.dart';
 
-/// The generators taxiway ships, and how to build the input they need.
+/// The generators shipway ships, and how to build the input they need.
 abstract final class GeneratorRegistry {
   /// Ordered so a `--dry-run` plan reads platform by platform.
   static const List<Generator> all = <Generator>[
@@ -33,7 +33,7 @@ abstract final class GeneratorRegistry {
     GitignoreGenerator(),
   ];
 
-  /// Named groups accepted by `taxiway generate <group>`.
+  /// Named groups accepted by `shipway generate <group>`.
   static const Map<String, List<String>> groups = <String, List<String>>{
     'flavors': <String>[
       'android-flavors',
@@ -89,10 +89,10 @@ abstract final class GeneratorRegistry {
   /// Builds the generator input for [config] against the project at [root].
   ///
   /// Two things must come from the project rather than the config: which Gradle
-  /// dialect to emit, and the existing scheme to base new ones on. taxiway has
+  /// dialect to emit, and the existing scheme to base new ones on. shipway has
   /// no opinion about either — it must match what is already there.
   static ResolvedApp resolveFor(
-    TaxiwayConfig config,
+    ShipwayConfig config,
     String root, {
     String? appId,
   }) => ResolveApp.resolve(

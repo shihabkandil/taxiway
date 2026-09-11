@@ -1,4 +1,4 @@
-# `taxiway.yaml` reference
+# `shipway.yaml` reference
 
 Schema `version: 1`.
 
@@ -8,7 +8,7 @@ name (contains `-----BEGIN`, exceeds 100 characters, decodes as base64 of more
 than 64 bytes, or matches a known credential prefix), because this file is
 committed and a pasted key in it is a disclosed key.
 
-`taxiway import` derives this file from a project. Anything the readers could
+`shipway import` derives this file from a project. Anything the readers could
 not determine is **left out** rather than guessed.
 
 ## Full example
@@ -96,7 +96,7 @@ notify:
 ci:
   environment: persistent      # workstation | ci | persistent
 
-pipelines:                     # named sequences, run with `taxiway run <name>`
+pipelines:                     # named sequences, run with `shipway run <name>`
   beta:
     - analyze
     - test
@@ -133,7 +133,7 @@ These are semantic and cannot be expressed as a shape:
 - `rollout` must be in `(0, 1]`, mirroring `supply`'s own check. It does **not**
   require `release_status: inProgress`: supply derives the status from the user
   fraction on both the upload and the promote path, setting `inProgress` below 1
-  and `completed` at 1. `taxiway release --dry-run` shows the status that will
+  and `completed` at 1. `shipway release --dry-run` shows the status that will
   actually be used.
 - `targets.testflight.distribute_external` requires at least one entry in
   `groups`. Without one the build uploads and then fails at distribution, which
@@ -143,7 +143,7 @@ These are semantic and cannot be expressed as a shape:
 ## Fields added beyond the original plan
 
 Each of these exists because a real project could not otherwise be described
-faithfully, and `taxiway status` reported drift immediately after a clean
+faithfully, and `shipway status` reported drift immediately after a clean
 import. Import fidelity is a correctness gate, so a value the readers can find
 must have somewhere to live.
 
@@ -152,7 +152,7 @@ must have somewhere to live.
 | `apps.<id>.android.application_id` and `apps.<id>.ios.bundle_id` | The plan assumed one base id with a per-flavor suffix. The two platforms genuinely disagree: an Android `applicationId` may not contain a hyphen, so a project whose bundle id does (`com.acme-co.app` on iOS, `com.acme_co.app` on Android) needs two base ids. |
 | `flavors.<name>.entrypoint` | Flavors named `development`/`production` very often have `main_dev.dart`/`main_prod.dart`. Assuming `main_<flavor>.dart` would build the wrong app under the right bundle id — a failure that looks like success. |
 | `flavors.<name>.version_name_suffix` | Read from Gradle's `versionNameSuffix`. Without it the round trip loses the value and `status` reports drift on a freshly imported project. |
-| `flavors.<name>.dimension` | Recorded only when it is not `environment`, the dimension taxiway generates. Projects using another name would otherwise drift forever. |
+| `flavors.<name>.dimension` | Recorded only when it is not `environment`, the dimension shipway generates. Projects using another name would otherwise drift forever. |
 
 ## `ios.export` — who exports the `.ipa`
 
@@ -166,7 +166,7 @@ cannot go stale, and gym also writes a dSYM zip.
 
 `flutter` has `flutter build ipa --export-options-plist=<generated>` do both
 legs in one command, with no gym in the build lane. It needs the profile name
-written into `ios/ExportOptions-<flavor>.plist` ahead of time, which taxiway
+written into `ios/ExportOptions-<flavor>.plist` ahead of time, which shipway
 generates only under this setting — a stale plist sitting beside a gym export
 would be a trap.
 
@@ -192,7 +192,7 @@ that varies the home-screen name per configuration.
 
 That plist rewrite has a trap worth knowing about: once the literal is replaced,
 any configuration that does **not** define `APP_DISPLAY_NAME` produces an app
-with an empty name. taxiway therefore seeds the unflavored `Debug`, `Release`
+with an empty name. shipway therefore seeds the unflavored `Debug`, `Release`
 and `Profile` configurations with whatever the plist said before — once, as a
 migration. It does not re-derive that value on later runs, both because the
 package name is not the display name and because you may have changed it since.

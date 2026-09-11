@@ -1,10 +1,10 @@
-import 'package:taxiway/src/core/config/config_loader.dart';
-import 'package:taxiway/src/core/config/taxiway_config.dart';
-import 'package:taxiway/src/core/model/android_model.dart';
-import 'package:taxiway/src/generators/resolve_app.dart';
-import 'package:taxiway/src/generators/workflow_generator.dart';
-import 'package:taxiway/src/secrets/repository_secrets.dart';
-import 'package:taxiway/src/secrets/secret_export.dart';
+import 'package:shipway/src/core/config/config_loader.dart';
+import 'package:shipway/src/core/config/shipway_config.dart';
+import 'package:shipway/src/core/model/android_model.dart';
+import 'package:shipway/src/generators/resolve_app.dart';
+import 'package:shipway/src/generators/workflow_generator.dart';
+import 'package:shipway/src/secrets/repository_secrets.dart';
+import 'package:shipway/src/secrets/secret_export.dart';
 import 'package:test/test.dart';
 
 const String _config = '''
@@ -37,7 +37,7 @@ apps:
 ''';
 
 /// The repository secrets the generated workflow actually references.
-Set<String> workflowSecrets(TaxiwayConfig config) {
+Set<String> workflowSecrets(ShipwayConfig config) {
   final app = ResolveApp.resolve(config, gradleDsl: GradleDsl.kotlin);
   final rendered = const WorkflowGenerator().render(app).single.contents;
   return <String>{

@@ -6,7 +6,7 @@ import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as p;
 
-import '../../core/config/taxiway_config.dart';
+import '../../core/config/shipway_config.dart';
 import '../../secrets/repository_secrets.dart';
 import '../../secrets/secret_export.dart';
 import '../../secrets/secret_requirements.dart';
@@ -15,7 +15,7 @@ import '../../secrets/secret_store.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// `taxiway secrets list|check|set|import|export`.
+/// `shipway secrets list|check|set|import|export`.
 ///
 /// `list` and `check` answer the same question — what does this project need,
 /// and is it here? — and neither ever prints a value. That is a property of the
@@ -26,7 +26,7 @@ import '../run_context.dart';
 /// build that dies at the upload into a five-second failure naming
 /// `ASC_KEY_P8_BASE64`.
 ///
-/// `set` and `import` are the only things in taxiway that hold a credential,
+/// `set` and `import` are the only things in shipway that hold a credential,
 /// and they hold it exactly long enough to hand it to the keychain. `export`
 /// holds none at all: it emits the *names* a CI repository needs, which is the
 /// half of the loop a generated workflow cannot close for you.
@@ -86,7 +86,7 @@ class SecretsCommand extends Command<int> {
       'Show which credentials this project needs, and whether they are set.';
 
   @override
-  String get invocation => 'taxiway secrets list|check|set|import|export';
+  String get invocation => 'shipway secrets list|check|set|import|export';
 
   static const List<String> _actions = <String>[
     'list',
@@ -107,7 +107,7 @@ class SecretsCommand extends Command<int> {
       logger.err(
         'Unknown action "$action". Expected one of: ${_actions.join(', ')}.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final config = await context.requireConfig();
@@ -129,9 +129,9 @@ class SecretsCommand extends Command<int> {
     if (requirements.isEmpty) {
       logger.info(
         'This config declares no credentials. Add signing or targets to '
-        'taxiway.yaml and they will be listed here.',
+        'shipway.yaml and they will be listed here.',
       );
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     final resolver = SecretResolver(
@@ -152,15 +152,15 @@ class SecretsCommand extends Command<int> {
 
     final blocking = statuses.where((s) => s.blocks).toList();
     if (action == 'check' && blocking.isNotEmpty) {
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     }
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 
-  /// `taxiway secrets export` — the names a CI repository needs.
+  /// `shipway secrets export` — the names a CI repository needs.
   ///
   /// No value is read, so none can be written. What comes out is a checklist.
-  int _export(TaxiwayConfig config) {
+  int _export(ShipwayConfig config) {
     final context = _context;
     final secrets = RepositorySecrets.of(config, appId: context.appId);
     context.logger.write(
@@ -169,10 +169,10 @@ class SecretsCommand extends Command<int> {
         format: ExportFormat.parse(argResults!['format'] as String)!,
       ),
     );
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 
-  /// `taxiway secrets set <NAME>` — put one value in the login keychain.
+  /// `shipway secrets set <NAME>` — put one value in the login keychain.
   Future<int> _set(
     ArgResults results,
     List<SecretRequirement> requirements,
@@ -181,19 +181,19 @@ class SecretsCommand extends Command<int> {
     final logger = context.logger;
 
     if (results.rest.length < 2) {
-      logger.err('Say which credential to set: `taxiway secrets set <NAME>`.');
+      logger.err('Say which credential to set: `shipway secrets set <NAME>`.');
       if (requirements.isNotEmpty) {
         logger.info(
           'This config asks for: '
           '${requirements.map((r) => r.name).join(', ')}.',
         );
       }
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
     final name = results.rest[1];
 
     final value = await _valueFor(name, results);
-    if (value == null) return TaxiwayExit.userError;
+    if (value == null) return ShipwayExit.userError;
 
     final store = SecretStore(
       runner: context.runner,
@@ -207,8 +207,8 @@ class SecretsCommand extends Command<int> {
       final hint = failure.fixHint;
       if (hint != null) logger.info(hint);
       return context.host.hasSecurityKeychain
-          ? TaxiwayExit.userError
-          : TaxiwayExit.environmentError;
+          ? ShipwayExit.userError
+          : ShipwayExit.environmentError;
     }
 
     logger.info('Stored $name in the login keychain.');
@@ -218,10 +218,10 @@ class SecretsCommand extends Command<int> {
       // it is worth one line now rather than a puzzled `check` later.
       logger.warn(
         '$name is not one this config asks for. '
-        '`taxiway secrets list` shows the names it wants.',
+        '`shipway secrets list` shows the names it wants.',
       );
     }
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 
   /// Where a value comes from, in the order the flags allow.
@@ -251,7 +251,7 @@ class SecretsCommand extends Command<int> {
       // Encoded from the bytes rather than from text, so a key file survives
       // whatever it happens to contain. `base64` on Linux wraps at 76 columns
       // by default and the wrapped form is not what a lane can decode, which
-      // is the reason taxiway does this rather than telling you the command.
+      // is the reason shipway does this rather than telling you the command.
       return encode
           ? base64.encode(file.readAsBytesSync())
           : file.readAsStringSync().trim();
@@ -278,7 +278,7 @@ class SecretsCommand extends Command<int> {
     return encode ? base64.encode(utf8.encode(typed)) : typed;
   }
 
-  /// `taxiway secrets import` — move a .env file into the login keychain.
+  /// `shipway secrets import` — move a .env file into the login keychain.
   ///
   /// Nothing already stored is replaced without `--force`: the point of moving
   /// values off disk is not to lose the ones already moved.
@@ -298,7 +298,7 @@ class SecretsCommand extends Command<int> {
     );
     if (!file.existsSync()) {
       logger.err('No such file: $relative');
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final values = SecretResolver.parseDotenv(file.readAsStringSync());
@@ -306,7 +306,7 @@ class SecretsCommand extends Command<int> {
       logger.info(
         '$relative holds no assignments, so there was nothing to do.',
       );
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     final store = SecretStore(
@@ -354,10 +354,10 @@ class SecretsCommand extends Command<int> {
     // credential moved and a credential copied.
     logger.info(
       '$relative is unchanged. Delete it once you are satisfied the values '
-      'resolve — `taxiway secrets check` will say.',
+      'resolve — `shipway secrets check` will say.',
     );
 
-    return failed.isEmpty ? TaxiwayExit.success : TaxiwayExit.userError;
+    return failed.isEmpty ? ShipwayExit.success : ShipwayExit.userError;
   }
 
   void _report(

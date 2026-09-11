@@ -1,11 +1,11 @@
-import 'package:taxiway/src/core/config/config_loader.dart';
-import 'package:taxiway/src/core/managed/lock_file.dart';
-import 'package:taxiway/src/core/model/project_model.dart';
-import 'package:taxiway/src/core/model/uncertainty.dart';
-import 'package:taxiway/src/inspect/config_from_project.dart';
-import 'package:taxiway/src/inspect/config_writer.dart';
-import 'package:taxiway/src/inspect/project_inspector.dart';
-import 'package:taxiway/src/version.dart';
+import 'package:shipway/src/core/config/config_loader.dart';
+import 'package:shipway/src/core/managed/lock_file.dart';
+import 'package:shipway/src/core/model/project_model.dart';
+import 'package:shipway/src/core/model/uncertainty.dart';
+import 'package:shipway/src/inspect/config_from_project.dart';
+import 'package:shipway/src/inspect/config_writer.dart';
+import 'package:shipway/src/inspect/project_inspector.dart';
+import 'package:shipway/src/version.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -265,7 +265,7 @@ android {
       expect(config.apps['main']!.android!.applicationId, 'com.acme.plain');
       expect(config.apps['main']!.ios!.bundleId, 'com.acme.plain');
 
-      // Must still be a config taxiway will accept.
+      // Must still be a config shipway will accept.
       final yaml = ConfigWriter.render(
         config,
         generatedBy: packageVersion,
@@ -346,7 +346,7 @@ type "appstore"
       final signing = ConfigFromProject.build(model).apps['main']!.signing;
       expect(signing.ios!.teamId, 'TEAM123456');
       expect(signing.ios!.matchGitUrl, 'git@github.com:acme/certs.git');
-      // The names the user already chose, not names taxiway made up.
+      // The names the user already chose, not names shipway made up.
       expect(signing.ios!.apiKey!.keyIdRef, 'MY_ASC_KEY_ID');
       expect(signing.ios!.apiKey!.issuerIdRef, 'MY_ASC_ISSUER_ID');
       expect(signing.ios!.apiKey!.p8Ref, 'MY_ASC_P8_BASE64');

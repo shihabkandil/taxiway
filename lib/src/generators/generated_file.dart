@@ -1,9 +1,9 @@
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/managed/comment_style.dart';
 import '../core/model/android_model.dart';
 import '../core/managed/lock_file.dart';
 
-/// Where to put a managed block in a file taxiway does not own outright.
+/// Where to put a managed block in a file shipway does not own outright.
 ///
 /// Declarative rather than a callback so a generator stays a pure function and
 /// its output can be compared in a golden test.
@@ -30,7 +30,7 @@ class GeneratedFile {
     this.createOnly = false,
   }) : _commentStyle = commentStyle;
 
-  /// Fully-managed file: taxiway owns the whole thing.
+  /// Fully-managed file: shipway owns the whole thing.
   const GeneratedFile.full({
     required String path,
     required String contents,
@@ -45,7 +45,7 @@ class GeneratedFile {
   /// Written once if missing, then never touched again.
   ///
   /// For scaffolding a user is meant to fill in — a shared bootstrap, a
-  /// starting point. taxiway must create it so the generated entrypoints
+  /// starting point. shipway must create it so the generated entrypoints
   /// compile, and must never overwrite it, because by the second run it
   /// contains their code.
   const GeneratedFile.scaffold({
@@ -60,7 +60,7 @@ class GeneratedFile {
          createOnly: true,
        );
 
-  /// Block-managed file: taxiway owns only the marked region.
+  /// Block-managed file: shipway owns only the marked region.
   const GeneratedFile.block({
     required String path,
     required String contents,
@@ -105,12 +105,12 @@ class GeneratedFile {
 ///
 /// Pure: no I/O, no processes, no clock. That is what makes golden testing
 /// trivial and what keeps the decision of *what* to write separate from the far
-/// more delicate question of *whether* taxiway is allowed to write it.
+/// more delicate question of *whether* shipway is allowed to write it.
 abstract class Generator {
   /// Subclasses are const singletons, so the base needs a const constructor.
   const Generator();
 
-  /// Stable identifier, used by `taxiway generate <name>`.
+  /// Stable identifier, used by `shipway generate <name>`.
   String get name;
 
   /// One line describing what this generator produces.
@@ -122,7 +122,7 @@ abstract class Generator {
   ///
   /// A predicate rather than a list, because the point is to recognise files
   /// belonging to flavors that are *no longer in the config* — whose names
-  /// cannot be enumerated from it. Used only to decide whether a file taxiway
+  /// cannot be enumerated from it. Used only to decide whether a file shipway
   /// once generated and no longer produces is this generator's to clean up.
   ///
   /// Defaults to owning nothing: a generator opts in to having its leftovers

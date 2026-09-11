@@ -1,8 +1,8 @@
-import 'package:taxiway/src/core/env/host_platform.dart';
-import 'package:taxiway/src/core/env/run_environment.dart';
-import 'package:taxiway/src/core/io/redactor.dart';
-import 'package:taxiway/src/secrets/secret_requirements.dart';
-import 'package:taxiway/src/secrets/secret_resolver.dart';
+import 'package:shipway/src/core/env/host_platform.dart';
+import 'package:shipway/src/core/env/run_environment.dart';
+import 'package:shipway/src/core/io/redactor.dart';
+import 'package:shipway/src/secrets/secret_requirements.dart';
+import 'package:shipway/src/secrets/secret_resolver.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';

@@ -1,7 +1,7 @@
 import 'package:mason_logger/mason_logger.dart';
-import 'package:taxiway/src/cli/exit_codes.dart';
-import 'package:taxiway/src/cli/taxiway_command_runner.dart';
-import 'package:taxiway/src/core/env/host_platform.dart';
+import 'package:shipway/src/cli/exit_codes.dart';
+import 'package:shipway/src/cli/shipway_command_runner.dart';
+import 'package:shipway/src/core/env/host_platform.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -74,18 +74,18 @@ void main() {
   setUp(() async {
     project = await FixtureProject.create();
     addTearDown(project.dispose);
-    project.write('taxiway.yaml', _config);
+    project.write('shipway.yaml', _config);
     logger = _CapturingLogger();
     runner = RecordingProcessRunner();
   });
 
   Future<int> run(List<String> args, {HostPlatform? host}) =>
-      TaxiwayCommandRunner(
+      ShipwayCommandRunner(
         logger: logger,
         runner: runner,
         workingDirectory: project.path,
         host: host ?? HostPlatform.macos,
-      ).run(<String>['--config=${project.path}/taxiway.yaml', ...args]);
+      ).run(<String>['--config=${project.path}/shipway.yaml', ...args]);
 
   group('set', () {
     test('takes the value from a file without it reaching a log', () async {
@@ -98,7 +98,7 @@ void main() {
         '--from-file=key.txt',
       ]);
 
-      expect(code, TaxiwayExit.success);
+      expect(code, ShipwayExit.success);
       expect(logger.output, contains('Stored ASC_KEY_ID'));
       // The whole point: what was stored is never shown.
       expect(logger.output, isNot(contains('a-secret-value')));
@@ -131,7 +131,7 @@ void main() {
     test('says which credential when given none', () async {
       final code = await run(<String>['secrets', 'set']);
 
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       expect(logger.output, contains('ASC_KEY_ID'));
       expect(runner.invocations, isEmpty);
     });
@@ -146,7 +146,7 @@ void main() {
         'ASC_KEY_ID',
       ]);
 
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       expect(logger.output, contains('--stdin'));
       expect(runner.invocations, isEmpty);
     });
@@ -163,7 +163,7 @@ void main() {
           '--from-file=key.txt',
         ], host: HostPlatform.linux);
 
-        expect(code, TaxiwayExit.environmentError);
+        expect(code, ShipwayExit.environmentError);
         expect(logger.output, contains('.env'));
       },
     );
@@ -180,11 +180,11 @@ export ASC_ISSUER_ID="issuer id"
 
       final code = await run(<String>['secrets', 'import']);
 
-      expect(code, TaxiwayExit.success);
+      expect(code, ShipwayExit.success);
       expect(logger.output, contains('2 stored'));
       expect(project.exists('.env'), isTrue);
       // Copied, not moved — and the report has to say so, or somebody deletes
-      // a file believing taxiway already did.
+      // a file believing shipway already did.
       expect(logger.output, contains('unchanged'));
     });
 
@@ -201,7 +201,7 @@ export ASC_ISSUER_ID="issuer id"
     test('a missing file is a user error, not a silent success', () async {
       final code = await run(<String>['secrets', 'import', '--from=.env.nope']);
 
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       expect(logger.output, contains('.env.nope'));
     });
   });
@@ -210,7 +210,7 @@ export ASC_ISSUER_ID="issuer id"
     test('emits names and never touches the keychain', () async {
       final code = await run(<String>['secrets', 'export']);
 
-      expect(code, TaxiwayExit.success);
+      expect(code, ShipwayExit.success);
       expect(logger.output, contains('gh secret set ASC_KEY_ID'));
       expect(runner.invocations, isEmpty);
     });
@@ -228,7 +228,7 @@ export ASC_ISSUER_ID="issuer id"
   test('an unknown action names the ones that exist', () async {
     final code = await run(<String>['secrets', 'nonsense']);
 
-    expect(code, TaxiwayExit.userError);
+    expect(code, ShipwayExit.userError);
     expect(logger.output, contains('export'));
   });
 }

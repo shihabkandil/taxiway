@@ -20,7 +20,7 @@ class SecretStoreFailure implements Exception {
 ///
 /// Deliberately a separate type from [SecretResolver]. That one's guarantee is
 /// structural — it is never handed a value, so it cannot leak one — and adding
-/// a write would end it. This is the one place in taxiway that holds a
+/// a write would end it. This is the one place in shipway that holds a
 /// credential, and everything it holds is registered with the [Redactor] before
 /// it goes anywhere near a subprocess.
 ///
@@ -44,7 +44,7 @@ class SecretStore {
   final ProcessRunner runner;
   final Redactor redactor;
 
-  /// The generic-password service every taxiway item is filed under, so the
+  /// The generic-password service every shipway item is filed under, so the
   /// whole set can be found — and removed — as a group.
   final String service;
 
@@ -59,7 +59,7 @@ class SecretStore {
       throw SecretStoreFailure(
         'There is no login keychain on ${host.label}.',
         fixHint:
-            'Put the value in .env instead, which taxiway reads on every '
+            'Put the value in .env instead, which shipway reads on every '
             'platform, and keep that file out of git.',
       );
     }
@@ -73,7 +73,7 @@ class SecretStore {
       throw const SecretStoreFailure(
         'The login keychain cannot hold a multi-line value.',
         fixHint:
-            'Store it encoded — `taxiway secrets set <NAME> --from-file '
+            'Store it encoded — `shipway secrets set <NAME> --from-file '
             '<path> --base64` — or, if a lane needs it raw, set it as a CI '
             'repository secret, where multi-line values are fine.',
       );
@@ -111,7 +111,7 @@ class SecretStore {
       throw SecretStoreFailure(
         'The keychain did not accept $name, and nothing was stored.',
         fixHint: refused
-            ? 'That is a taxiway bug — the value and its confirmation were '
+            ? 'That is a shipway bug — the value and its confirmation were '
                   'sent identically. Please report it.'
             : 'Check that the login keychain is unlocked.',
       );

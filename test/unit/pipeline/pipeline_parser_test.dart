@@ -1,5 +1,5 @@
-import 'package:taxiway/src/pipeline/pipeline.dart';
-import 'package:taxiway/src/pipeline/pipeline_parser.dart';
+import 'package:shipway/src/pipeline/pipeline.dart';
+import 'package:shipway/src/pipeline/pipeline_parser.dart';
 import 'package:test/test.dart';
 import 'package:yaml/yaml.dart';
 
@@ -159,7 +159,7 @@ void main() {
         ).repeatable,
         isFalse,
       );
-      // Unknown, not false: taxiway has no idea what the command does.
+      // Unknown, not false: shipway has no idea what the command does.
       expect(const PipelineRun(command: 'make').repeatable, isNull);
     });
   });

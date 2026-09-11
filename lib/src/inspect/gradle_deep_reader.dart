@@ -44,21 +44,21 @@ class GradleDeepReader {
   /// Absolute path to the shipped init script.
   final String scriptPath;
 
-  static const String beginMarker = '<<<TAXIWAY_JSON_BEGIN>>>';
-  static const String endMarker = '<<<TAXIWAY_JSON_END>>>';
+  static const String beginMarker = '<<<SHIPWAY_JSON_BEGIN>>>';
+  static const String endMarker = '<<<SHIPWAY_JSON_END>>>';
 
-  /// Gradle configuration is slow, and a hung daemon must not hang taxiway.
+  /// Gradle configuration is slow, and a hung daemon must not hang shipway.
   static const Duration timeout = Duration(minutes: 3);
 
   /// Locates the init script the same way the Ruby bridge is located.
   static String? locateScript({String? packageRoot}) {
     final candidates = <String>[
       if (packageRoot != null)
-        p.join(packageRoot, 'tool/gradle/taxiway_dump.gradle'),
-      p.join(Directory.current.path, 'tool/gradle/taxiway_dump.gradle'),
+        p.join(packageRoot, 'tool/gradle/shipway_dump.gradle'),
+      p.join(Directory.current.path, 'tool/gradle/shipway_dump.gradle'),
       p.join(
         p.dirname(p.dirname(Platform.script.toFilePath())),
-        'tool/gradle/taxiway_dump.gradle',
+        'tool/gradle/shipway_dump.gradle',
       ),
     ];
     for (final candidate in candidates) {
@@ -85,7 +85,7 @@ class GradleDeepReader {
         .run(wrapper, <String>[
           '--init-script',
           scriptPath,
-          ':app:taxiwayDumpVariants',
+          ':app:shipwayDumpVariants',
           '--quiet',
           // A deep read must not leave a daemon running against a project it
           // only meant to look at.

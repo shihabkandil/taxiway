@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'package:mason_logger/mason_logger.dart';
-import 'package:taxiway/src/cli/exit_codes.dart';
-import 'package:taxiway/src/cli/taxiway_command_runner.dart';
-import 'package:taxiway/src/core/config/config_loader.dart';
-import 'package:taxiway/src/core/env/host_platform.dart';
+import 'package:shipway/src/cli/exit_codes.dart';
+import 'package:shipway/src/cli/shipway_command_runner.dart';
+import 'package:shipway/src/core/config/config_loader.dart';
+import 'package:shipway/src/core/env/host_platform.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -70,7 +70,7 @@ void main() {
   setUp(() async {
     project = await FixtureProject.create();
     addTearDown(project.dispose);
-    project.write('taxiway.yaml', _config);
+    project.write('shipway.yaml', _config);
     project.write('android/app/build.gradle.kts', 'android { }\n');
     logger = _CapturingLogger();
     runner = RecordingProcessRunner();
@@ -78,12 +78,12 @@ void main() {
   });
 
   Future<int> run(List<String> args, {HostPlatform? host}) =>
-      TaxiwayCommandRunner(
+      ShipwayCommandRunner(
         logger: logger,
         runner: runner,
         workingDirectory: project.path,
         host: host ?? HostPlatform.macos,
-      ).run(<String>['--config=${project.path}/taxiway.yaml', ...args]);
+      ).run(<String>['--config=${project.path}/shipway.yaml', ...args]);
 
   group('ios-signing', () {
     /// A match repository, cloned by the double into wherever git was told to
@@ -104,7 +104,7 @@ void main() {
     }
 
     setUp(() {
-      project.write('taxiway.yaml', '''
+      project.write('shipway.yaml', '''
 version: 1
 project:
   name: acme_app
@@ -134,7 +134,7 @@ apps:
         'git@github.com:acme/certs.git',
       ]);
 
-      expect(code, TaxiwayExit.success);
+      expect(code, ShipwayExit.success);
       expect(logger.output, contains('com.acme.app.dev'));
     });
 
@@ -152,7 +152,7 @@ apps:
         'git@github.com:acme/certs.git',
       ]);
 
-      expect(code, TaxiwayExit.environmentError);
+      expect(code, ShipwayExit.environmentError);
       expect(logger.output, contains('com.acme.app.dev'));
       expect(logger.output, contains('no appstore profile'));
     });
@@ -170,7 +170,7 @@ apps:
         'git@github.com:acme/certs.git',
       ]);
 
-      expect(code, TaxiwayExit.environmentError);
+      expect(code, ShipwayExit.environmentError);
     });
 
     test('it never decrypts, and never asks for the passphrase', () async {
@@ -194,7 +194,7 @@ apps:
     });
 
     test(
-      'the repository is recorded in taxiway.yaml, and no value is',
+      'the repository is recorded in shipway.yaml, and no value is',
       () async {
         matchRepoWith(<String>[
           'profiles/appstore/AppStore_com.acme.app.mobileprovision',
@@ -208,7 +208,7 @@ apps:
           'git@github.com:acme/certs.git',
         ]);
 
-        final written = project.read('taxiway.yaml');
+        final written = project.read('shipway.yaml');
         expect(
           written,
           contains('match_git_url: git@github.com:acme/certs.git'),
@@ -228,14 +228,14 @@ apps:
           'git@github.com:acme/certs.git',
         ]);
 
-        expect(code, TaxiwayExit.environmentError);
+        expect(code, ShipwayExit.environmentError);
         expect(logger.output, contains('empty'));
       },
     );
 
     test('--create changes the advice, not the safety', () async {
       // Creating a certificate spends one of a team's limited allowance, so
-      // taxiway says what to run rather than running it.
+      // shipway says what to run rather than running it.
       matchRepoWith(<String>[
         'profiles/appstore/AppStore_com.acme.app.mobileprovision',
       ]);
@@ -258,14 +258,14 @@ apps:
 
     test('without a url anywhere, it says where to put one', () async {
       final code = await run(<String>['setup', 'ios-signing']);
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       expect(logger.output, contains('match_git_url'));
     });
   });
 
   group('firebase', () {
     void firebaseConfig() {
-      project.write('taxiway.yaml', '''
+      project.write('shipway.yaml', '''
 version: 1
 project:
   name: acme_app
@@ -309,7 +309,7 @@ apps:
 
     test('says what to download when there is nothing to find', () async {
       final code = await run(<String>['setup', 'firebase']);
-      expect(code, TaxiwayExit.environmentError);
+      expect(code, ShipwayExit.environmentError);
       // The paths matter more than the advice: this is the one thing a reader
       // cannot guess.
       expect(logger.output, contains('android/app/src/<flavor>'));
@@ -322,7 +322,7 @@ apps:
 
       final code = await run(<String>['setup', 'firebase']);
 
-      expect(code, TaxiwayExit.success);
+      expect(code, ShipwayExit.success);
       expect(logger.output, contains('1:111:android:aaa'));
       expect(logger.output, contains('1:111:ios:bbb'));
     });
@@ -338,13 +338,13 @@ apps:
       expect(logger.output, contains('google-services.json'));
     });
 
-    test('records the paths in taxiway.yaml', () async {
+    test('records the paths in shipway.yaml', () async {
       placeAndroid('dev', '1:111:android:aaa');
       placeIos('dev', '1:111:ios:bbb');
 
       await run(<String>['setup', 'firebase']);
 
-      final written = project.read('taxiway.yaml');
+      final written = project.read('shipway.yaml');
       expect(
         written,
         contains('android: android/app/src/dev/google-services.json'),
@@ -355,7 +355,7 @@ apps:
     test('a path the config already records is left alone', () async {
       // A team that put these somewhere unusual and wrote it down keeps their
       // answer.
-      project.write('taxiway.yaml', '''
+      project.write('shipway.yaml', '''
 version: 1
 project:
   name: acme_app
@@ -373,7 +373,7 @@ apps:
       await run(<String>['setup', 'firebase']);
 
       expect(
-        project.read('taxiway.yaml'),
+        project.read('shipway.yaml'),
         contains('somewhere/else/google-services.json'),
       );
     });
@@ -419,7 +419,7 @@ apps:
         // is slow enough to read one off comfortably.
         final code = await run(<String>['setup', 'android-signing']);
 
-        expect(code, TaxiwayExit.success);
+        expect(code, ShipwayExit.success);
         final keytool = runner.invocation('-genkeypair');
         expect(keytool.arguments, isNot(contains('-storepass')));
         expect(keytool.arguments, isNot(contains('-keypass')));
@@ -454,10 +454,10 @@ apps:
       expect(properties, contains('keyAlias=upload'));
     });
 
-    test('taxiway.yaml gains the names and no value', () async {
+    test('shipway.yaml gains the names and no value', () async {
       await run(<String>['setup', 'android-signing']);
 
-      final patched = project.read('taxiway.yaml');
+      final patched = project.read('shipway.yaml');
       final android = ConfigLoader.parse(
         patched,
       ).apps['main']!.signing.android!;
@@ -499,14 +499,14 @@ apps:
 
       final code = await run(<String>['setup', 'android-signing']);
 
-      expect(code, TaxiwayExit.userError);
+      expect(code, ShipwayExit.userError);
       expect(project.read('android/upload-keystore.jks'), 'the real one');
       expect(runner.ran('-genkeypair'), isFalse);
       expect(logger.output, contains('cannot be updated without it'));
     });
 
     test('names a team already uses rather than renaming them', () async {
-      project.write('taxiway.yaml', '''
+      project.write('shipway.yaml', '''
 $_config    signing:
       android:
         keystore_ref: OUR_KEYSTORE
@@ -518,7 +518,7 @@ $_config    signing:
       await run(<String>['setup', 'android-signing']);
 
       final android = ConfigLoader.parse(
-        project.read('taxiway.yaml'),
+        project.read('shipway.yaml'),
       ).apps['main']!.signing.android!;
       expect(android.keystoreRef, 'OUR_KEYSTORE');
       expect(android.keyProperties!.storePasswordRef, 'OUR_STORE_PASSWORD');
@@ -549,7 +549,7 @@ $_config    signing:
         'android-signing',
       ], host: HostPlatform.linux);
 
-      expect(code, TaxiwayExit.environmentError);
+      expect(code, ShipwayExit.environmentError);
       expect(runner.invocations, isEmpty);
       expect(project.exists('android/upload-keystore.jks'), isFalse);
     });
@@ -558,14 +558,14 @@ $_config    signing:
   test('an unknown action names the ones that exist', () async {
     final code = await run(<String>['setup', 'nonsense']);
 
-    expect(code, TaxiwayExit.userError);
+    expect(code, ShipwayExit.userError);
     expect(logger.output, contains('android-signing'));
   });
 
   test('no action at all says what to pick', () async {
     final code = await run(<String>['setup']);
 
-    expect(code, TaxiwayExit.userError);
+    expect(code, ShipwayExit.userError);
     expect(logger.output, contains('android-signing'));
   });
 }

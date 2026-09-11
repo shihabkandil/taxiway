@@ -4,7 +4,7 @@ import 'run_manifest.dart';
 /// Runs one step and reports how it went.
 ///
 /// A function rather than a dependency so this layer never reaches the CLI:
-/// `build` and `release` are taxiway's own commands, and the CLI is what knows
+/// `build` and `release` are shipway's own commands, and the CLI is what knows
 /// how to invoke them.
 typedef StepInvoker = Future<int> Function(PipelineStep step);
 

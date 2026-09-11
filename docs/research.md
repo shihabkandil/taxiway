@@ -1,7 +1,10 @@
 # Research: A Local-First Flutter CI/CD File Generator & Runner
 
-> Source research document for **Taxiway** (written under the working name "shipyard";
-> the project was renamed on 2026-09-08 because `shipyard` is taken on pub.dev).
+> Source research document for **Shipway**. Written under the working name
+> "shipyard"; renamed to "taxiway" on 2026-09-08 because `shipyard` is taken on
+> pub.dev, then to "shipway" on 2026-09-11. Both `shipway` and `taxiway` were
+> free on pub.dev at that point — the second rename was a preference, not a
+> forced move.
 > Phases 0–3 are planned in detail elsewhere and supersede the phase numbering below.
 > This document remains the reference for **Phases 4–6**, the competitive analysis,
 > and the error-classifier catalog.
@@ -79,7 +82,7 @@
 - **Dart CLI with `args` + `mason`/`mason_logger`.** very_good_cli itself depends on
   `args`, `mason`, `mason_logger`, `cli_completion`, `pub_updater`, `checked_yaml`, and
   `pubspec_parse` — nearly the exact proposed toolset. This is the proven mainstream
-  pattern. *(Taxiway later diverged: plain Dart templates, no mason bricks.)*
+  pattern. *(Shipway later diverged: plain Dart templates, no mason bricks.)*
 - **Fastlane as an internal implementation detail** behind generated lanes referencing
   `ENV[...]` only. Sound and safe given active maintenance.
 - **Secrets never in generated files.** Strongly validated; fastlane idioms (`ENV`, dotenv
@@ -179,14 +182,14 @@ class PipelineStep {
 **Step/runner model:** A pipeline is a DAG of `PipelineStep`s. The runner topologically
 sorts, runs independent branches in parallel (iOS + Android), streams process output
 through the `Redactor`, records each step's status/duration/artifacts to
-`.taxiway/runs/<timestamp>.json`, and supports `--dry-run` (print plan) and `--resume`
+`.shipway/runs/<timestamp>.json`, and supports `--dry-run` (print plan) and `--resume`
 (skip prior-success steps with unchanged inputs).
 
 **Generator model & idempotency:** Fully-managed files (Fastfile, Matchfile) are rewritten
-wholesale when their hash in `.taxiway/lock.json` matches the last generated hash; if a
+wholesale when their hash in `.shipway/lock.json` matches the last generated hash; if a
 user edited them (mismatch), the tool prints a diff and requires `--force`. Partially-owned
 files (build.gradle.kts, .gitignore, Podfile) use
-`# BEGIN taxiway (managed) — do not edit` / `# END taxiway` marker blocks; only the block
+`# BEGIN shipway (managed) — do not edit` / `# END shipway` marker blocks; only the block
 is replaced.
 
 **Process execution:** Use `dart:io` `Process.start` with streamed stdout/stderr piped
@@ -194,7 +197,7 @@ through the `Redactor` (rather than `process_run` convenience wrappers) for cont
 interleaving, exit codes, and cancellation. All fastlane invocations run via
 `bundle exec fastlane <lane>` so a pinned Gemfile controls versions.
 
-### Configuration Schema (`taxiway.yaml`)
+### Configuration Schema (`shipway.yaml`)
 
 ```yaml
 version: 1                         # schema version, drives migrations
@@ -274,7 +277,7 @@ rollout requires `inProgress` + fractional `user_fraction`).
 > **Phases 4–6 below are still the live plan.**
 
 **Phase 0 — Skeleton + `doctor`.** *Goal:* installable CLI, config parsing, environment
-validator. *In:* command runner, `taxiway.yaml` load/validate (`checked_yaml`+`json_schema`),
+validator. *In:* command runner, `shipway.yaml` load/validate (`checked_yaml`+`json_schema`),
 `doctor`. *Out:* file generation. *Approach:* `doctor` shells out to version-check Xcode
 (and enforce that App Store Connect uploads must be built with Xcode 26 or later using an
 iOS 26 SDK — per Apple's Upcoming Requirements, "Begins April 28, 2026"), CocoaPods +
@@ -303,7 +306,7 @@ before write, and an e2e that actually builds.
 
 **Phase 2 — fastlane generation + local builds.** *Goal:* generate the fastlane project
 and drive local builds. *In:* Fastfile, Appfile, Gymfile, Matchfile, Pluginfile, Gemfile
-(pinned fastlane + `firebase_app_distribution` plugin); `taxiway build ios|android --flavor X`.
+(pinned fastlane + `firebase_app_distribution` plugin); `shipway build ios|android --flavor X`.
 *Approach:* lanes reference `ENV[...]` only. **iOS:**
 `flutter build ipa --flavor prod --export-options-plist=<generated>` produces the archive;
 fastlane runs `match` (readonly) + upload. **Android:** `flutter build appbundle --flavor prod`
@@ -311,9 +314,9 @@ then `supply`. Pin Gemfile; always `bundle exec fastlane`. *Effort:* L. *Risk:* 
 drift on hand-edited Fastfiles — managed-whole-file + hash lock + `--force` diff.
 
 **Phase 3 — Secrets & signing wizard.** *Goal:* guided `match` setup and secret
-provisioning. *In:* `taxiway setup ios-signing` (match repo init + storage choice; App Store
+provisioning. *In:* `shipway setup ios-signing` (match repo init + storage choice; App Store
 Connect API key capture: issuer ID, key ID, `.p8` → base64; bundle-ID registration),
-`taxiway setup android-signing` (keystore via `keytool`; key.properties), Play
+`shipway setup android-signing` (keystore via `keytool`; key.properties), Play
 service-account JSON guidance + required permissions, Firebase service-account JSON, secret
 redaction. *Approach:* resolution chain flag → env → `.env.<flavor>` → OS keychain →
 prompt. Keychain via `security` (macOS), `secret-tool`/libsecret (Linux), Credential
@@ -355,7 +358,7 @@ migrations driven by `version:`. *Effort:* M.
 ### Command Surface
 
 ```
-taxiway
+shipway
   doctor [--json]
   init [--flavors dev,prod]
   generate [flavors|fastlane|firebase|all] [--force] [--dry-run]
@@ -374,9 +377,9 @@ Global flags: `--config`, `--app <id>` (monorepo), `--verbose`, `--no-color`, `-
 
 ### Generated-Artifact Inventory
 
-- `taxiway.yaml` (init) — the config.
-- `.taxiway/lock.json` — content hashes for idempotency.
-- `.taxiway/runs/*.json` — run manifests / audit logs.
+- `shipway.yaml` (init) — the config.
+- `.shipway/lock.json` — content hashes for idempotency.
+- `.shipway/runs/*.json` — run manifests / audit logs.
 - `android/app/build.gradle.kts` — managed flavor block.
 - `android/key.properties` (git-ignored) + keystore reference.
 - `ios/Runner.xcodeproj/project.pbxproj` — configurations (via xcodeproj gem).
@@ -394,7 +397,7 @@ Global flags: `--config`, `--app <id>` (monorepo), `--verbose`, `--no-color`, `-
 
 | Signature (substring/pattern) | Diagnosis | Suggested one-line fix |
 |---|---|---|
-| `No profiles for 'com.x.y' were found` / `No profile for team ... matching` | Missing/mismatched provisioning profile | Run `taxiway setup ios-signing` or `match <type>`; verify bundle id + team. |
+| `No profiles for 'com.x.y' were found` / `No profile for team ... matching` | Missing/mismatched provisioning profile | Run `shipway setup ios-signing` or `match <type>`; verify bundle id + team. |
 | `wrong final block length` / `Couldn't decrypt` | Wrong `MATCH_PASSWORD` | Re-enter match passphrase; check `.env`/keychain entry. |
 | `Could not find a matching code signing identity for type 'AdHoc'` | Cert not in active keychain / needs write mode | Unlock keychain; run match without readonly to create; check `set-key-partition-list`. |
 | `Version code has already been used` (Play) | versionCode not strictly increasing | Bump versionCode; use `remote` versioning strategy. |
@@ -428,18 +431,18 @@ Running on a developer laptop rather than a hosted runner changes several defaul
 - **Keychain hygiene.** `setup_ci` creates a temporary keychain and switches match to
   readonly — but it makes that keychain the *default* and doesn't reliably clean up, and on
   persistent machines this pollutes the login keychain and can leave a lingering default.
-  Recommendation: create a **dedicated named keychain** (e.g. `taxiway.keychain`) via
+  Recommendation: create a **dedicated named keychain** (e.g. `shipway.keychain`) via
   `create_keychain`, add it to the search list, run match against it in readonly mode, and
   **explicitly delete/reset it after each run** rather than relying on `setup_ci` defaults.
   Set `set-key-partition-list` to avoid the macOS Sierra+ "always allow" prompt.
 - **Avoid polluting the login keychain** with match certificates by scoping to the
   dedicated keychain and using `MATCH_KEYCHAIN_NAME`/`MATCH_KEYCHAIN_PASSWORD`.
-- **Concurrency:** guard against two simultaneous builds with a lockfile in `.taxiway/`;
+- **Concurrency:** guard against two simultaneous builds with a lockfile in `.shipway/`;
   keychains and build dirs are not safe to share.
 - **Resilience:** wrap uploads with retry/backoff for network flakiness; use
   `skip_waiting_for_build_processing` to avoid long TestFlight blocking; make steps
   resumable.
-- **Auditability:** every run writes a manifest (`.taxiway/runs/*.json`) with step statuses,
+- **Auditability:** every run writes a manifest (`.shipway/runs/*.json`) with step statuses,
   durations, artifact paths/hashes, and the resolved (redacted) environment.
 
 ### Distribution & Versioning of the Tool Itself
@@ -447,9 +450,9 @@ Running on a developer laptop rather than a hosted runner changes several defaul
 - Primary: **`dart compile exe`** native binaries per OS (Linux cross-compile supported via
   `--target-os`), published on **GitHub Releases** + a **Homebrew tap** + a `curl | bash`
   installer.
-- Secondary: `dart pub global activate taxiway` (legacy) / `dart install` (Dart 3.10+, AOT,
+- Secondary: `dart pub global activate shipway` (legacy) / `dart install` (Dart 3.10+, AOT,
   self-contained).
-- Self-update: `taxiway upgrade` uses `pub_updater` for pub installs and a release-manifest
+- Self-update: `shipway upgrade` uses `pub_updater` for pub installs and a release-manifest
   check for binaries. Shell completion via `cli_completion`.
 - SemVer; `version: 1` in config drives schema migrations (Phase 6).
 

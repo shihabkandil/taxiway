@@ -18,7 +18,7 @@ import '../../inspect/project_inspector.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// `taxiway adopt` — hand a file taxiway does not own over to it.
+/// `shipway adopt` — hand a file shipway does not own over to it.
 ///
 /// The bridge between the two directions, and the only way an `unmanaged` file
 /// becomes writable. It shows a semantic diff first, because the config was
@@ -42,10 +42,10 @@ class AdoptCommand extends Command<int> {
 
   @override
   String get description =>
-      'Let taxiway write to a file that was here before it.';
+      'Let shipway write to a file that was here before it.';
 
   @override
-  String get invocation => 'taxiway adopt <path|all>';
+  String get invocation => 'shipway adopt <path|all>';
 
   @override
   Future<int> run() async {
@@ -56,9 +56,9 @@ class AdoptCommand extends Command<int> {
     if (argResults!.rest.isEmpty) {
       logger.err(
         'Say what to adopt: a path, or `all`.\n'
-        'Run `taxiway generate --dry-run` to see which files are blocked.',
+        'Run `shipway generate --dry-run` to see which files are blocked.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
     final target = argResults!.rest.first;
 
@@ -79,10 +79,10 @@ class AdoptCommand extends Command<int> {
 
     if (wanted.isEmpty) {
       logger.err(
-        'taxiway does not generate "$target", so there is nothing to adopt.\n'
+        'shipway does not generate "$target", so there is nothing to adopt.\n'
         'It manages: ${candidates.map((f) => f.path).join(', ')}',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final lock = await context.loadLockFile();
@@ -96,11 +96,11 @@ class AdoptCommand extends Command<int> {
     if (adoptable.isEmpty) {
       logger.info(
         target == 'all'
-            ? 'Nothing to adopt: taxiway already owns every file it manages '
+            ? 'Nothing to adopt: shipway already owns every file it manages '
                   'that exists here.'
-            : '$target is already owned by taxiway, or does not exist yet.',
+            : '$target is already owned by shipway, or does not exist yet.',
       );
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     await _showSemanticDiff();
@@ -121,11 +121,11 @@ class AdoptCommand extends Command<int> {
         ..info(
           adopted == 0
               ? 'Nothing changed.'
-              : 'taxiway may now write to '
-                    '${adopted == 1 ? 'it' : 'them'}. Run `taxiway generate`.',
+              : 'shipway may now write to '
+                    '${adopted == 1 ? 'it' : 'them'}. Run `shipway generate`.',
         );
     }
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 
   /// Shows how the config and the project disagree, before any file changes.
@@ -151,14 +151,14 @@ class AdoptCommand extends Command<int> {
     logger.info('');
     if (diff.isEmpty) {
       logger.info(
-        '${green.wrap('taxiway.yaml already describes this project exactly.')} '
+        '${green.wrap('shipway.yaml already describes this project exactly.')} '
         'Adopting changes no file content.',
       );
       return;
     }
 
     final headline =
-        'taxiway.yaml and this project disagree in ${diff.length} '
+        'shipway.yaml and this project disagree in ${diff.length} '
         'place${diff.length == 1 ? '' : 's'}:';
     logger.info(yellow.wrap(headline) ?? headline);
     for (final change in diff.changes) {
@@ -168,9 +168,9 @@ class AdoptCommand extends Command<int> {
       ..info('')
       ..info(
         darkGray.wrap(
-              'taxiway.yaml was derived from this project, so a difference '
+              'shipway.yaml was derived from this project, so a difference '
               'here usually means a reader got something wrong rather than '
-              'that your project is wrong. Prefer editing taxiway.yaml to '
+              'that your project is wrong. Prefer editing shipway.yaml to '
               'match reality over letting `generate` change your build.',
             ) ??
             '',
@@ -180,7 +180,7 @@ class AdoptCommand extends Command<int> {
   /// Wraps the existing region in markers and records ownership.
   ///
   /// Adoption is a no-op on file content in the common case: if what is there
-  /// already matches what taxiway would write, only the markers appear.
+  /// already matches what shipway would write, only the markers appear.
   Future<bool> _adoptOne(
     GeneratedFile file,
     LockFile lock, {
@@ -211,9 +211,9 @@ class AdoptCommand extends Command<int> {
     logger.info(cyan.wrap(file.path) ?? file.path);
 
     if (planned.outcome == WriteOutcome.unchanged) {
-      logger.info('  Already matches what taxiway would write.');
+      logger.info('  Already matches what shipway would write.');
     } else if (planned.diff.isNotEmpty) {
-      logger.info('  `taxiway generate` would change it:');
+      logger.info('  `shipway generate` would change it:');
       for (final line in planned.diff.trimRight().split('\n')) {
         logger.info('    ${darkGray.wrap(line) ?? line}');
       }
@@ -221,7 +221,7 @@ class AdoptCommand extends Command<int> {
 
     if (!context.assumeYes && !dryRun) {
       final ok = logger.confirm(
-        '  Let taxiway write to it?',
+        '  Let shipway write to it?',
         defaultValue: true,
       );
       if (!ok) {

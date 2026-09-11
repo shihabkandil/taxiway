@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:taxiway/src/platform/ios/xcode_project_mutator.dart';
+import 'package:shipway/src/platform/ios/xcode_project_mutator.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -151,7 +151,7 @@ void main() {
       expect(script, contains('"Release-prod")'));
       // Shipping an app pointed at the wrong Firebase project is worse than a
       // failed build, so a missing plist is an error, not a warning.
-      expect(script, contains('error: taxiway:'));
+      expect(script, contains('error: shipway:'));
       expect(script, contains('exit 1'));
     });
   });
@@ -164,7 +164,7 @@ void main() {
 
       expect(result.succeeded, isTrue);
       expect(result.backupPath, isNotNull);
-      expect(result.backupPath, startsWith('.taxiway/backups/'));
+      expect(result.backupPath, startsWith('.shipway/backups/'));
       expect(project.read(result.backupPath!), _originalPbxproj);
     });
   });
@@ -263,7 +263,7 @@ void main() {
       expect(result.backupPath, isNull);
       expect(runner.invocations, isEmpty);
       expect(
-        Directory('${project.path}/.taxiway/backups').existsSync(),
+        Directory('${project.path}/.shipway/backups').existsSync(),
         isFalse,
       );
     });

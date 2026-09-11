@@ -1,7 +1,7 @@
 import 'package:yaml/yaml.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
-/// Sets values in an existing `taxiway.yaml` without rewriting it.
+/// Sets values in an existing `shipway.yaml` without rewriting it.
 ///
 /// `ConfigWriter` renders a whole file, which is right for `import` and wrong
 /// for everything else: a config a team has edited carries comments, ordering

@@ -1,10 +1,10 @@
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/model/android_model.dart';
 import '../core/model/fastlane_model.dart';
 import '../core/model/project_model.dart';
 import '../version.dart';
 
-/// Derives a `taxiway.yaml` from what a project actually is.
+/// Derives a `shipway.yaml` from what a project actually is.
 ///
 /// The `configFromProject` half of the two-directional contract. It writes down
 /// only what the readers established: a field the readers could not resolve is
@@ -13,13 +13,13 @@ abstract final class ConfigFromProject {
   /// Conventional id for the single app in a non-monorepo project.
   static const String defaultAppId = 'main';
 
-  /// The flavor dimension taxiway generates.
+  /// The flavor dimension shipway generates.
   static const String _defaultDimension = 'environment';
 
-  static TaxiwayConfig build(ProjectModel model) {
+  static ShipwayConfig build(ProjectModel model) {
     final flavors = _flavors(model);
 
-    return TaxiwayConfig(
+    return ShipwayConfig(
       version: ConfigLoaderVersion.supported,
       project: ProjectConfig(
         name: model.dart.packageName ?? 'app',
@@ -68,7 +68,7 @@ abstract final class ConfigFromProject {
       result[name] = FlavorConfig(
         suffix: _suffix(model, name),
         versionNameSuffix: androidFlavor?.versionNameSuffix,
-        // Left implicit when it is the one taxiway would generate anyway.
+        // Left implicit when it is the one shipway would generate anyway.
         dimension: androidFlavor?.dimension == _defaultDimension
             ? null
             : androidFlavor?.dimension,

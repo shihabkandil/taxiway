@@ -1,13 +1,13 @@
-name: taxiway
+name: shipway
 description: A local-first Flutter CI/CD file generator and runner. Scaffolds flavors, generates and invokes fastlane, and ships to TestFlight, the App Store, Play tracks and Firebase from your laptop.
 version: 0.1.0-dev
-repository: https://github.com/shihabkandil/taxiway
+repository: https://github.com/shihabkandil/shipway
 
 environment:
   sdk: ^3.8.0
 
 executables:
-  taxiway: taxiway
+  shipway: shipway
 
 dependencies:
   args: ^2.7.0

@@ -1,4 +1,4 @@
-import 'package:taxiway/src/platform/ios/info_plist_mutator.dart';
+import 'package:shipway/src/platform/ios/info_plist_mutator.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -83,7 +83,7 @@ void main() {
 
       final result = await mutator().pointDisplayNameAtBuildSetting();
 
-      expect(result.backupPath, startsWith('.taxiway/backups/'));
+      expect(result.backupPath, startsWith('.shipway/backups/'));
       expect(project.read(result.backupPath!), contains('Demo App'));
     });
 

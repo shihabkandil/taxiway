@@ -17,7 +17,7 @@ class FastlaneInspectResult {
 
 /// Reads an existing fastlane setup statically.
 ///
-/// taxiway never executes a Fastfile. A Fastfile is arbitrary Ruby, so fidelity
+/// shipway never executes a Fastfile. A Fastfile is arbitrary Ruby, so fidelity
 /// here is explicitly partial: only literal declarations are read, and the rest
 /// is reported as unknown rather than approximated.
 class FastlaneInspector {
@@ -71,7 +71,7 @@ class FastlaneInspector {
         field: 'fastlane.$relative.lanes',
         reason:
             'this Fastfile builds lanes dynamically or imports another '
-            'file, so the lane list taxiway read may be incomplete.',
+            'file, so the lane list shipway read may be incomplete.',
         remedy:
             'Run `bundle exec fastlane lanes` in $relative to see the '
             'full list.',

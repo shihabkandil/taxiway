@@ -1,4 +1,4 @@
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/env/run_environment.dart';
 import '../core/secrets/secret_names.dart';
 import 'secret_requirements.dart';
@@ -16,7 +16,7 @@ class RepositorySecret {
 
 /// The repository secrets a CI run of this config needs.
 ///
-/// Derived for [RunEnvironment.ephemeralCi] whatever machine taxiway is running
+/// Derived for [RunEnvironment.ephemeralCi] whatever machine shipway is running
 /// on, because the thing being wired up is the runner rather than this laptop.
 /// The workstation's list would name an interactive Apple ID nobody should set
 /// on CI and omit the match credential the clone cannot work without.
@@ -27,7 +27,7 @@ class RepositorySecret {
 /// *content*. That mapping lives with the names, beside the workflow that
 /// relies on it.
 abstract final class RepositorySecrets {
-  static List<RepositorySecret> of(TaxiwayConfig config, {String? appId}) {
+  static List<RepositorySecret> of(ShipwayConfig config, {String? appId}) {
     final byName = <String, RepositorySecret>{};
     for (final requirement in SecretRequirements.of(
       config,

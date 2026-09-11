@@ -1,6 +1,6 @@
 import 'dart:io';
 
-/// The operating system taxiway is running on.
+/// The operating system shipway is running on.
 ///
 /// Distinct from `RunEnvironment`, which says what *kind* of machine this is —
 /// a laptop, a disposable runner, a Mac mini. This says what the machine can
@@ -31,7 +31,7 @@ enum HostPlatform {
   /// Whether iOS work is possible here at all.
   ///
   /// Everything Apple is gated on this: the Xcode and CocoaPods checks, the
-  /// login keychain, `taxiway build ios`. On a machine where it is false those
+  /// login keychain, `shipway build ios`. On a machine where it is false those
   /// are not failures — they are questions that do not apply, and reporting
   /// them as failures tells a user their machine cannot ship an app it can in
   /// fact ship.

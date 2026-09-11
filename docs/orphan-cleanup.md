@@ -1,10 +1,10 @@
-# Design: cleaning up files taxiway no longer produces
+# Design: cleaning up files shipway no longer produces
 
 ## The problem
 
-`taxiway generate` writes files derived from `taxiway.yaml`. When the config
+`shipway generate` writes files derived from `shipway.yaml`. When the config
 changes so that a file is no longer derived, nothing removes it. It stays on
-disk, and stays in `.taxiway/lock.json` marked as taxiway's own.
+disk, and stays in `.shipway/lock.json` marked as shipway's own.
 
 Renaming one flavor from `dev` to `development` currently leaves behind:
 
@@ -34,7 +34,7 @@ Each of these is not merely stale, it is *loaded*:
   gym export shape nothing reads it, so it sits there looking authoritative
   while being unreferenced — exactly the trap the export-shape decision was
   written to avoid.
-- **The lock entry** claims taxiway owns a file no generator produces, so
+- **The lock entry** claims shipway owns a file no generator produces, so
   `status` and everything built on it reason about a phantom.
 
 ## Why the obvious rule is wrong
@@ -45,8 +45,8 @@ destroys real work.
 
 | Case | What the naive rule does |
 |---|---|
-| `taxiway generate flavors` | Produces no fastlane files, so deletes the entire fastlane setup. |
-| `taxiway generate entrypoints` | Deletes everything except the entrypoints. |
+| `shipway generate flavors` | Produces no fastlane files, so deletes the entire fastlane setup. |
+| `shipway generate entrypoints` | Deletes everything except the entrypoints. |
 | `--app b` in a monorepo | Deletes app `a`'s files. |
 | `Runner.xcscheme` temporarily unreadable | `IosSchemeGenerator` produces nothing, so every generated scheme is deleted — because the *template* was missing, not because the config changed. |
 | `lib/main_common.dart` | Declared by the generator but skipped by the writer, since it is create-once scaffolding. Looks unproduced. |
@@ -96,7 +96,7 @@ produced nothing, but not because the config said so.
 
 A path is an orphan when **all** of these hold:
 
-1. the lock records it as `Ownership.generated` — taxiway created it, so it is
+1. the lock records it as `Ownership.generated` — shipway created it, so it is
    not adopted and not somebody else's file;
 2. some generator that **ran in this invocation** `owns()` it;
 3. that generator returned `canDetermineOwnership() == true`;
@@ -113,7 +113,7 @@ Deletion is irreversible in a way that writing is not, so the decision turns on
 one question: **does this file contain any information the user would lose?**
 
 ```
-             on-disk content == what taxiway last wrote?
+             on-disk content == what shipway last wrote?
                     │                        │
                    yes                       no
                     │                        │
@@ -128,7 +128,7 @@ one question: **does this file contain any information the user would lose?**
   next `generate` would recreate it if the config changed back. Delete it and
   drop the lock entry.
 - **Edited** — leave the file exactly as it is, and downgrade its lock entry to
-  `Ownership.unmanaged`. taxiway will never write it again; it is now the user's
+  `Ownership.unmanaged`. shipway will never write it again; it is now the user's
   file. Reported once, then never nagged about again, because a tool that
   reports the same thing on every run is a tool people stop reading.
 
@@ -151,7 +151,7 @@ is debugging.
 The layer is right: `generators` may import `core` (for the lock) and does file
 I/O already — `GeneratedFileWriter` is its neighbour. The "generators are pure"
 rule applies to `Generator` implementations, which decide *what* to write, not
-to the machinery that decides *whether* taxiway may write it.
+to the machinery that decides *whether* shipway may write it.
 
 The sweep runs after the write loop and before the Xcode mutation, so its
 results appear in the same report.
@@ -159,9 +159,9 @@ results appear in the same report.
 ## What this does not solve
 
 - **Monorepos**, as above, until paths are app-scoped.
-- **Files whose generator was removed from taxiway itself.** No generator runs,
+- **Files whose generator was removed from shipway itself.** No generator runs,
   so no territory matches. That is what the one-off `LegacyXcconfigCleanup`
   migration exists for, and a future removal would need the same treatment.
 - **Orphans outside any territory**, such as an `android/app/src/<flavor>/`
-  source set left by a removed flavor. Those are directories of files taxiway
+  source set left by a removed flavor. Those are directories of files shipway
   never wrote, and deleting them is not its business.

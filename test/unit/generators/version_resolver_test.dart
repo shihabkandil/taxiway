@@ -1,5 +1,5 @@
-import 'package:taxiway/src/core/config/taxiway_config.dart';
-import 'package:taxiway/src/generators/version_resolver.dart';
+import 'package:shipway/src/core/config/shipway_config.dart';
+import 'package:shipway/src/generators/version_resolver.dart';
 import 'package:test/test.dart';
 
 String render(

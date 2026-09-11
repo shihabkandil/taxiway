@@ -1,7 +1,7 @@
 /// What a failed command meant, and the one thing to do about it.
 ///
 /// The point of this file is that a developer should never have to search for
-/// an error message taxiway has already seen. Every entry names a real failure,
+/// an error message shipway has already seen. Every entry names a real failure,
 /// says what actually caused it, and gives a single next action.
 class Diagnosis {
   const Diagnosis({
@@ -61,7 +61,7 @@ class ErrorSignature {
       Diagnosis(id: id, summary: summary, fix: fix, docsUrl: docsUrl);
 }
 
-/// Recognises failures taxiway has seen before.
+/// Recognises failures shipway has seen before.
 ///
 /// Ordered most specific first: [classify] returns the first match, so a
 /// signature that names an exact cause must precede a broader one that would
@@ -87,7 +87,7 @@ abstract final class ErrorClassifier {
           'looks like this.',
       fix:
           'Pass a team to the export — set signing.ios.team_id in '
-          'taxiway.yaml, or DEVELOPER_PORTAL_TEAM_ID in the environment.',
+          'shipway.yaml, or DEVELOPER_PORTAL_TEAM_ID in the environment.',
     ),
 
     // verified 2026-09-09
@@ -120,7 +120,7 @@ abstract final class ErrorClassifier {
           'when fastlane archives a Flutter app itself instead of exporting '
           'the archive `flutter build ipa` produced.',
       fix:
-          'Let Flutter build the archive: run `taxiway build ios --flavor '
+          'Let Flutter build the archive: run `shipway build ios --flavor '
           '<f>`, or add `skip_build_archive: true` to build_app.',
     ),
 
@@ -136,7 +136,7 @@ abstract final class ErrorClassifier {
           'no readable Info.plist. fastlane `gym` archiving a Flutter app is '
           'the usual cause.',
       fix:
-          'Let Flutter build the archive: run `taxiway build ios --flavor '
+          'Let Flutter build the archive: run `shipway build ios --flavor '
           '<f>`, or add `skip_build_archive: true` to build_app.',
     ),
 
@@ -172,7 +172,7 @@ abstract final class ErrorClassifier {
       summary: 'No provisioning profile matches this bundle id and team.',
       fix:
           'Run the `certificates` lane to sync profiles, and check the bundle '
-          'id and team_id in taxiway.yaml.',
+          'id and team_id in shipway.yaml.',
     ),
 
     // catalog
@@ -193,7 +193,7 @@ abstract final class ErrorClassifier {
       patterns: <Pattern>['requires a development team'],
       summary: 'The Xcode target has no development team set.',
       fix:
-          'Set signing.ios.team_id in taxiway.yaml and re-run `taxiway '
+          'Set signing.ios.team_id in shipway.yaml and re-run `shipway '
           'generate`.',
     ),
 
@@ -318,7 +318,7 @@ abstract final class ErrorClassifier {
           'App Store Connect refused the API key — wrong, expired, or without '
           'the role this operation needs.',
       fix:
-          'Check signing.ios.api_key refs resolve (`taxiway secrets check`), '
+          'Check signing.ios.api_key refs resolve (`shipway secrets check`), '
           'and that the key has App Manager access in App Store Connect.',
     ),
 
@@ -330,7 +330,7 @@ abstract final class ErrorClassifier {
           'to.',
       fix:
           'Add targets.testflight.groups, or set distribute_external to '
-          'false. `taxiway release` checks this before building.',
+          'false. `shipway release` checks this before building.',
     ),
 
     // --- toolchain -------------------------------------------------------
@@ -379,7 +379,7 @@ abstract final class ErrorClassifier {
       patterns: <Pattern>['Unsupported class file major version'],
       summary: 'The JDK in use is newer than this Gradle version understands.',
       fix:
-          'Align the JDK with the Gradle version; `taxiway doctor` names both.',
+          'Align the JDK with the Gradle version; `shipway doctor` names both.',
     ),
 
     // --- Flutter flavor wiring -------------------------------------------
@@ -398,7 +398,7 @@ abstract final class ErrorClassifier {
           'ios/Flutter/Generated.xcconfig loses them, and App Store Connect '
           'rejects the upload.',
       fix:
-          'Run `taxiway generate`, which points each flavor configuration back '
+          'Run `shipway generate`, which points each flavor configuration back '
           "at its build type's xcconfig.",
     ),
   ];

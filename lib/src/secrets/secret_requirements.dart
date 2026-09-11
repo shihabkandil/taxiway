@@ -1,4 +1,4 @@
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/env/run_environment.dart';
 import '../core/secrets/secret_names.dart';
 
@@ -56,7 +56,7 @@ class SecretRequirement {
 
 /// Works out which secrets a config implies.
 ///
-/// This is the payoff of the `*_ref` convention: because `taxiway.yaml` names
+/// This is the payoff of the `*_ref` convention: because `shipway.yaml` names
 /// every credential rather than holding one, the complete list of what a
 /// project needs can be derived from it. One derivation then drives the
 /// pre-flight check, the listing, and — later — the generated CI `env:` block.
@@ -64,10 +64,10 @@ abstract final class SecretRequirements {
   /// Everything [config] implies, for [environment].
   ///
   /// The environment matters because some entries are only meaningful in one:
-  /// a keychain password is needed exactly where taxiway creates a keychain,
+  /// a keychain password is needed exactly where shipway creates a keychain,
   /// and an Apple ID is an interactive-login fallback a runner must never take.
   static List<SecretRequirement> of(
-    TaxiwayConfig config, {
+    ShipwayConfig config, {
     required RunEnvironment environment,
     String? appId,
   }) {
@@ -246,12 +246,12 @@ abstract final class SecretRequirements {
     final slack = config.notify.slackWebhookRef;
     if (slack != null) add(slack, Need.optional, 'notify.slack_webhook_ref');
 
-    // taxiway creates a keychain exactly where it may not use the login one.
+    // shipway creates a keychain exactly where it may not use the login one.
     if (!environment.mayUseLoginKeychain && shipsIos) {
       add(
         SecretNames.keychainPassword,
         Need.optional,
-        'the keychain taxiway creates off-workstation; generated when unset',
+        'the keychain shipway creates off-workstation; generated when unset',
       );
     }
 

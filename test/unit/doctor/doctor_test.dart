@@ -1,13 +1,13 @@
 import 'dart:io';
 
-import 'package:taxiway/src/core/config/config_loader.dart';
-import 'package:taxiway/src/core/env/host_platform.dart';
-import 'package:taxiway/src/doctor/check.dart';
-import 'package:taxiway/src/doctor/checks/fastlane_checks.dart';
-import 'package:taxiway/src/doctor/checks/project_checks.dart';
-import 'package:taxiway/src/doctor/checks/tool_checks.dart';
-import 'package:taxiway/src/doctor/doctor.dart';
-import 'package:taxiway/src/doctor/platform_deadlines.dart';
+import 'package:shipway/src/core/config/config_loader.dart';
+import 'package:shipway/src/core/env/host_platform.dart';
+import 'package:shipway/src/doctor/check.dart';
+import 'package:shipway/src/doctor/checks/fastlane_checks.dart';
+import 'package:shipway/src/doctor/checks/project_checks.dart';
+import 'package:shipway/src/doctor/checks/tool_checks.dart';
+import 'package:shipway/src/doctor/doctor.dart';
+import 'package:shipway/src/doctor/platform_deadlines.dart';
 import 'package:test/test.dart';
 
 import '../../support/recording_process_runner.dart';
@@ -54,7 +54,7 @@ Future<Directory> makeProject({
   int objectVersion = 60,
   String gradleWrapper = '8.14',
 }) async {
-  final dir = await Directory.systemTemp.createTemp('taxiway_doctor');
+  final dir = await Directory.systemTemp.createTemp('shipway_doctor');
   File('${dir.path}/pubspec.yaml').writeAsStringSync('name: demo\n');
   Directory('${dir.path}/android/app').createSync(recursive: true);
   final gradleName = gradleDsl == 'kts' ? 'build.gradle.kts' : 'build.gradle';
@@ -252,7 +252,7 @@ void main() {
 
       expect(result.status, CheckStatus.warn);
       expect(result.detail, contains('synchronized folders'));
-      expect(result.fixHint, contains('.taxiway/backups/'));
+      expect(result.fixHint, contains('.shipway/backups/'));
     });
 
     test('accepts objectVersion 60', () async {
@@ -347,13 +347,13 @@ void main() {
       );
     });
 
-    test('reports a leftover taxiway keychain', () async {
+    test('reports a leftover shipway keychain', () async {
       final runner = RecordingProcessRunner()
         ..stub(
           'security list-keychains',
           stdout:
               '    "/Users/x/Library/Keychains/login.keychain-db"\n'
-              '    "/Users/x/Library/Keychains/taxiway.keychain-db"',
+              '    "/Users/x/Library/Keychains/shipway.keychain-db"',
         );
       final project = await makeProject();
       addTearDown(() => project.delete(recursive: true));

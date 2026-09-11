@@ -12,9 +12,9 @@ import '../../version.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// `taxiway init` — a thin front door.
+/// `shipway init` — a thin front door.
 ///
-/// Almost every project that needs taxiway already has flavors, schemes and
+/// Almost every project that needs shipway already has flavors, schemes and
 /// often fastlane. Asking such a user to answer greenfield prompts would
 /// produce a config that contradicts their working build, so `init` looks first
 /// and hands off to `import` whenever there is anything to read.
@@ -23,7 +23,7 @@ class InitCommand extends Command<int> {
     argParser.addFlag(
       'force',
       negatable: false,
-      help: 'Overwrite an existing taxiway.yaml.',
+      help: 'Overwrite an existing shipway.yaml.',
     );
   }
 
@@ -35,7 +35,7 @@ class InitCommand extends Command<int> {
   String get name => 'init';
 
   @override
-  String get description => 'Set up taxiway in this project.';
+  String get description => 'Set up shipway in this project.';
 
   @override
   Future<int> run() async {
@@ -46,9 +46,9 @@ class InitCommand extends Command<int> {
     if (!File(p.join(context.projectRoot, 'pubspec.yaml')).existsSync()) {
       logger.err(
         'No pubspec.yaml in ${context.projectRoot}.\n'
-        'Run taxiway from the root of a Flutter project.',
+        'Run shipway from the root of a Flutter project.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final existing = ConfigLoader.locate(context.projectRoot);
@@ -56,9 +56,9 @@ class InitCommand extends Command<int> {
       logger
         ..info('${p.basename(existing.path)} already exists.')
         ..info('')
-        ..info('  taxiway status   see how it differs from this project')
-        ..info('  taxiway import --force   derive it again from scratch');
-      return TaxiwayExit.success;
+        ..info('  shipway status   see how it differs from this project')
+        ..info('  shipway import --force   derive it again from scratch');
+      return ShipwayExit.success;
     }
 
     final progress = logger.progress('Looking at this project');
@@ -82,15 +82,15 @@ class InitCommand extends Command<int> {
           'application id yet.',
         )
         ..info(
-          'There is nothing for taxiway to describe, so there is nothing to '
+          'There is nothing for shipway to describe, so there is nothing to '
           'write.',
         )
         ..info('')
         ..info(
           'Run `flutter create .` to generate the platform folders, then '
-          '`taxiway init` again.',
+          '`shipway init` again.',
         );
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     // There is a real project here, so describing it beats interrogating the
@@ -98,7 +98,7 @@ class InitCommand extends Command<int> {
     logger.info('');
     if (flavors.isEmpty) {
       logger.info(
-        'Found a Flutter project with no flavors. taxiway can describe it as a '
+        'Found a Flutter project with no flavors. shipway can describe it as a '
         'single-flavor config.',
       );
     } else {
@@ -112,17 +112,17 @@ class InitCommand extends Command<int> {
     final proceed =
         context.assumeYes ||
         logger.confirm(
-          'Write a taxiway.yaml describing it? (nothing else is modified)',
+          'Write a shipway.yaml describing it? (nothing else is modified)',
           defaultValue: true,
         );
     if (!proceed) {
       logger
         ..info('')
         ..info(
-          'Nothing was written. Run `taxiway import --dry-run` to see '
+          'Nothing was written. Run `shipway import --dry-run` to see '
           'what it would produce.',
         );
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     final config = ConfigFromProject.build(model);
@@ -141,16 +141,16 @@ class InitCommand extends Command<int> {
       ..info('No project files were modified.')
       ..info('')
       ..info('Next:')
-      ..info('  taxiway status   check it matches your project')
-      ..info('  taxiway doctor   check this machine can ship it');
+      ..info('  shipway status   check it matches your project')
+      ..info('  shipway doctor   check this machine can ship it');
 
     if (model.uncertainties.isNotEmpty) {
       logger.info(
-        '  taxiway import   see the ${model.uncertainties.length} '
+        '  shipway import   see the ${model.uncertainties.length} '
         'finding${model.uncertainties.length == 1 ? '' : 's'} from reading '
         'this project',
       );
     }
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 }

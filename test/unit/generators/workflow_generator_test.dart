@@ -1,13 +1,13 @@
 import 'dart:io';
 
-import 'package:taxiway/src/core/config/taxiway_config.dart';
-import 'package:taxiway/src/core/env/run_environment.dart';
-import 'package:taxiway/src/core/model/android_model.dart';
-import 'package:taxiway/src/core/secrets/secret_names.dart';
-import 'package:taxiway/src/generators/generated_file.dart';
-import 'package:taxiway/src/generators/workflow_generator.dart';
-import 'package:taxiway/src/secrets/secret_requirements.dart';
-import 'package:taxiway/src/version.dart';
+import 'package:shipway/src/core/config/shipway_config.dart';
+import 'package:shipway/src/core/env/run_environment.dart';
+import 'package:shipway/src/core/model/android_model.dart';
+import 'package:shipway/src/core/secrets/secret_names.dart';
+import 'package:shipway/src/generators/generated_file.dart';
+import 'package:shipway/src/generators/workflow_generator.dart';
+import 'package:shipway/src/secrets/secret_requirements.dart';
+import 'package:shipway/src/version.dart';
 import 'package:test/test.dart';
 import 'package:yaml/yaml.dart';
 
@@ -179,7 +179,7 @@ void main() {
     final resolved = app();
     final rendered = render(resolved);
 
-    final config = TaxiwayConfig.fromJson(<String, dynamic>{
+    final config = ShipwayConfig.fromJson(<String, dynamic>{
       'version': 1,
       'project': <String, dynamic>{'name': 'acme_app'},
       'apps': <String, dynamic>{
@@ -228,13 +228,13 @@ void main() {
     }
   });
 
-  group('installing taxiway on the runner', () {
+  group('installing shipway on the runner', () {
     test('both jobs install it from the package own repository', () {
       final commands = activateCommands(render(app()));
       expect(
         commands,
         hasLength(2),
-        reason: 'both jobs run taxiway, so both have to install it',
+        reason: 'both jobs run shipway, so both have to install it',
       );
       expect(commands, everyElement(contains(packageRepository)));
     });

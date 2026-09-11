@@ -1,4 +1,4 @@
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/model/android_model.dart';
 import '../core/model/dart_model.dart';
 import '../core/model/firebase_model.dart';
@@ -8,11 +8,11 @@ import '../core/model/project_model.dart';
 /// Builds the [ProjectModel] a config describes.
 ///
 /// The `projectFromConfig` half of the two-directional contract: what the
-/// project *would* look like if it matched `taxiway.yaml`. Comparing this
+/// project *would* look like if it matched `shipway.yaml`. Comparing this
 /// against `readFromDisk` is what makes drift detection semantic.
 abstract final class ProjectFromConfig {
   static ProjectModel build(
-    TaxiwayConfig config, {
+    ShipwayConfig config, {
     required String root,
     String? appId,
     GradleDsl gradleDsl = GradleDsl.kotlin,
@@ -38,7 +38,7 @@ abstract final class ProjectFromConfig {
   }
 
   static AndroidModel _android(
-    TaxiwayConfig config,
+    ShipwayConfig config,
     AppConfig app,
     GradleDsl dsl,
   ) {
@@ -47,8 +47,8 @@ abstract final class ProjectFromConfig {
       gradleDsl: dsl,
       buildFilePath: 'android/app/${dsl.buildFileName}',
       applicationId: applicationId,
-      // A single dimension is what taxiway generates; a project using more is
-      // describing something taxiway did not write.
+      // A single dimension is what shipway generates; a project using more is
+      // describing something shipway did not write.
       flavorDimensions: app.flavors.isEmpty
           ? const <String>[]
           : const <String>['environment'],
@@ -97,7 +97,7 @@ abstract final class ProjectFromConfig {
           displayName: entry.value.displayName,
         );
       }
-      // taxiway always writes schemes shared, never to xcuserdata.
+      // shipway always writes schemes shared, never to xcuserdata.
       schemes[entry.key] = IosScheme(
         name: entry.key,
         shared: true,
@@ -122,7 +122,7 @@ abstract final class ProjectFromConfig {
     );
   }
 
-  static DartModel _dart(TaxiwayConfig config, AppConfig app) {
+  static DartModel _dart(ShipwayConfig config, AppConfig app) {
     final entrypoints = <String, DartEntrypoint>{};
     for (final entry in app.flavors.entries) {
       final path = entry.value.entrypoint ?? 'lib/main_${entry.key}.dart';

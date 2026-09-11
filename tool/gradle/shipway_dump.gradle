@@ -1,4 +1,4 @@
-// taxiway's deep-read init script.
+// shipway's deep-read init script.
 //
 // The fast structural parser reads the build file as text and is honest about
 // what it cannot resolve: a value built from an `ext` property, a flavor
@@ -12,7 +12,7 @@
 // compile-time types it cannot have here.
 //
 // Invoked as:
-//   ./gradlew -I <this file> :app:taxiwayDumpVariants --quiet
+//   ./gradlew -I <this file> :app:shipwayDumpVariants --quiet
 //
 // It reads and prints. It configures nothing and writes nothing to the project.
 
@@ -20,8 +20,8 @@ import groovy.json.JsonOutput
 
 // Delimited so the JSON can be recovered from Gradle's output, which carries
 // daemon notices and warnings that no amount of --quiet reliably suppresses.
-def BEGIN = '<<<TAXIWAY_JSON_BEGIN>>>'
-def END = '<<<TAXIWAY_JSON_END>>>'
+def BEGIN = '<<<SHIPWAY_JSON_BEGIN>>>'
+def END = '<<<SHIPWAY_JSON_END>>>'
 
 static def readProperty(obj, String name) {
     try {
@@ -78,8 +78,8 @@ gradle.projectsEvaluated {
         def android = proj.extensions.findByName('android')
         if (android == null) return
 
-        proj.tasks.register('taxiwayDumpVariants') {
-            it.group = 'taxiway'
+        proj.tasks.register('shipwayDumpVariants') {
+            it.group = 'shipway'
             it.description = 'Print the resolved Android build model as JSON.'
             it.doLast {
                 def defaultConfig = readProperty(android, 'defaultConfig')

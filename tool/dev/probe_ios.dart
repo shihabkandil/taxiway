@@ -1,7 +1,7 @@
-import 'package:taxiway/src/core/io/process_runner.dart';
-import 'package:taxiway/src/core/io/redactor.dart';
-import 'package:taxiway/src/inspect/ios_inspector.dart';
-import 'package:taxiway/src/inspect/xcodeproj_bridge.dart';
+import 'package:shipway/src/core/io/process_runner.dart';
+import 'package:shipway/src/core/io/redactor.dart';
+import 'package:shipway/src/inspect/ios_inspector.dart';
+import 'package:shipway/src/inspect/xcodeproj_bridge.dart';
 
 Future<void> main(List<String> args) async {
   final runner = SystemProcessRunner(redactor: Redactor());

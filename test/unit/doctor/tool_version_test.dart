@@ -1,4 +1,4 @@
-import 'package:taxiway/src/doctor/tool_version.dart';
+import 'package:shipway/src/doctor/tool_version.dart';
 import 'package:test/test.dart';
 
 /// Every string below is real output captured from a working machine on

@@ -1,7 +1,7 @@
 /// Something a reader could not determine, recorded rather than guessed.
 ///
 /// A reader that silently guesses wrong is worse than one that admits
-/// ignorance, because the guess lands in `taxiway.yaml` and is then written
+/// ignorance, because the guess lands in `shipway.yaml` and is then written
 /// back to disk as if it were fact. Uncertainty is therefore part of the model,
 /// not an error: import surfaces every one of these, and `--deep` may resolve
 /// some of them.
@@ -29,7 +29,7 @@ class Uncertainty implements Comparable<Uncertainty> {
 
   final UncertaintySeverity severity;
 
-  /// True when `taxiway import --deep` is likely to resolve this.
+  /// True when `shipway import --deep` is likely to resolve this.
   bool get deepMayResolve => remedy.contains('--deep');
 
   @override
@@ -52,10 +52,10 @@ class Uncertainty implements Comparable<Uncertainty> {
 }
 
 enum UncertaintySeverity {
-  /// Worth knowing, but taxiway can proceed.
+  /// Worth knowing, but shipway can proceed.
   informational,
 
-  /// A value is missing and taxiway will not invent one.
+  /// A value is missing and shipway will not invent one.
   unresolved,
 
   /// What is on disk contradicts what the platform requires.
@@ -87,12 +87,12 @@ class UncertaintyLog {
       reason: 'is set from `$expression`, which is not a literal value.',
       remedy:
           'Re-run with `--deep` to ask Gradle for the resolved value, '
-          'or set this field manually in taxiway.yaml.',
+          'or set this field manually in shipway.yaml.',
       source: source,
     ),
   );
 
-  /// Records a project that violates a platform convention taxiway relies on.
+  /// Records a project that violates a platform convention shipway relies on.
   void defect({
     required String field,
     required String reason,

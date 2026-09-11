@@ -1,6 +1,6 @@
-import 'package:taxiway/src/core/managed/content_hash.dart';
-import 'package:taxiway/src/core/managed/lock_file.dart';
-import 'package:taxiway/src/platform/ios/legacy_xcconfig_cleanup.dart';
+import 'package:shipway/src/core/managed/content_hash.dart';
+import 'package:shipway/src/core/managed/lock_file.dart';
+import 'package:shipway/src/platform/ios/legacy_xcconfig_cleanup.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -15,7 +15,7 @@ void main() {
     lock = LockFile(version: LockFile.currentVersion, generatedBy: 'test');
   });
 
-  /// Writes a legacy xcconfig and records it as taxiway's own.
+  /// Writes a legacy xcconfig and records it as shipway's own.
   void writeGenerated(String flavor, String contents) {
     final path = LegacyXcconfigCleanup.pathFor(flavor);
     project.write(path, contents);
@@ -36,7 +36,7 @@ void main() {
         flavors: flavors,
       );
 
-  test('removes an xcconfig taxiway wrote and nobody changed', () async {
+  test('removes an xcconfig shipway wrote and nobody changed', () async {
     writeGenerated('dev', 'APP_DISPLAY_NAME = Acme Dev\n');
 
     final result = await run(<String>['dev']);
@@ -44,7 +44,7 @@ void main() {
     expect(result.removed, <String>['ios/Flutter/dev.xcconfig']);
     expect(result.kept, isEmpty);
     expect(project.exists('ios/Flutter/dev.xcconfig'), isFalse);
-    // Left in the lockfile it would read as a file taxiway still owns.
+    // Left in the lockfile it would read as a file shipway still owns.
     expect(lock['ios/Flutter/dev.xcconfig'], isNull);
   });
 
@@ -64,7 +64,7 @@ void main() {
     expect(project.exists('ios/Flutter/dev.xcconfig'), isTrue);
   });
 
-  test('keeps one that was never taxiway\'s to begin with', () async {
+  test('keeps one that was never shipway\'s to begin with', () async {
     project.write('ios/Flutter/dev.xcconfig', '#include "Release.xcconfig"\n');
 
     final result = await run(<String>['dev']);

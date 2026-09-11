@@ -1,6 +1,6 @@
 /// A minimal unified diff.
 ///
-/// Enough to show a user what taxiway would change before it changes it. Not a
+/// Enough to show a user what shipway would change before it changes it. Not a
 /// general diff library: it exists so a refusal ("you edited this file") can be
 /// specific instead of asking the user to guess what moved.
 abstract final class TextDiff {
@@ -13,7 +13,7 @@ abstract final class TextDiff {
     String before,
     String after, {
     String beforeLabel = 'on disk',
-    String afterLabel = 'taxiway would write',
+    String afterLabel = 'shipway would write',
   }) {
     if (before == after) return '';
 

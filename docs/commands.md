@@ -1,29 +1,29 @@
-# taxiway command reference
+# shipway command reference
 
-Every command taxiway currently ships. Phases 0, 1A, 1B and the first half of
+Every command shipway currently ships. Phases 0, 1A, 1B and the first half of
 Phase 2 are implemented; commands the plan describes but which do not exist yet
 are listed under [Not built yet](#not-built-yet) rather than documented as if
 they worked.
 
 ```
-taxiway <command> [arguments]
+shipway <command> [arguments]
 ```
 
 ## The shape of the thing
 
-taxiway reads a project as readily as it writes one, and the two directions are
+shipway reads a project as readily as it writes one, and the two directions are
 deliberately separate:
 
 ```
   read                                   write
   ────                                   ─────
-  import  ──▶ taxiway.yaml ──▶ generate ──▶ project files
+  import  ──▶ shipway.yaml ──▶ generate ──▶ project files
   status  ──▶ what differs      adopt   ──▶ permission to write
   doctor  ──▶ can this machine ship it?
   build   ──▶ the artifact
 ```
 
-`import` never modifies your project. `generate` never writes a file taxiway
+`import` never modifies your project. `generate` never writes a file shipway
 does not own — `adopt` is the only way to hand one over, and it shows you the
 diff first.
 
@@ -33,14 +33,14 @@ Accepted before any command.
 
 | Option | Meaning |
 |---|---|
-| `-h, --help` | Usage for taxiway or for one command. |
+| `-h, --help` | Usage for shipway or for one command. |
 | `--version` | Print the version and exit. |
-| `-v, --verbose` | Show every command taxiway runs and its full output. |
+| `-v, --verbose` | Show every command shipway runs and its full output. |
 | `--no-color` | Disable coloured output. |
 | `-y, --yes` | Assume yes for every prompt. Implies non-interactive. |
-| `--config=<path>` | Use this `taxiway.yaml` instead of searching for one. |
+| `--config=<path>` | Use this `shipway.yaml` instead of searching for one. |
 | `--app=<id>` | Which app in a monorepo to act on. |
-| `--env=<name>` | `workstation`, `ci` or `persistent`. Decides which sources secrets may come from and whether taxiway may prompt. Detected when omitted; also settable as `TAXIWAY_ENV` or `ci.environment`. |
+| `--env=<name>` | `workstation`, `ci` or `persistent`. Decides which sources secrets may come from and whether shipway may prompt. Detected when omitted; also settable as `SHIPWAY_ENV` or `ci.environment`. |
 
 ## Exit codes
 
@@ -52,21 +52,21 @@ without parsing output.
 | `0` | Success. |
 | `1` | You asked for something invalid — bad flags, bad config, a conflict needing a decision. |
 | `2` | This machine cannot do it — a missing or too-old tool, a failing check, a failed build. |
-| `70` | A bug in taxiway. Worth reporting. |
+| `70` | A bug in shipway. Worth reporting. |
 
 ---
 
-## `taxiway doctor`
+## `shipway doctor`
 
 > Check whether this machine can build and ship this app.
 
 ```
-taxiway doctor [--json] [--only <id>]
+shipway doctor [--json] [--only <id>]
 ```
 
 Runs every environment check and prints a checklist with a fix hint for
 anything wrong. Works **before** `init` does — its whole job is telling you why
-nothing else will, so it never requires a `taxiway.yaml`.
+nothing else will, so it never requires a `shipway.yaml`.
 
 | Option | Meaning |
 |---|---|
@@ -102,32 +102,32 @@ Two checks are worth knowing about because their symptoms are misleading:
   solved on your Ruby. `bundle install` does not degrade when they cannot; it
   installs nothing.
 
-## `taxiway init`
+## `shipway init`
 
-> Set up taxiway in this project.
+> Set up shipway in this project.
 
 ```
-taxiway init [--force]
+shipway init [--force]
 ```
 
-The front door. Looks at the project, then writes a `taxiway.yaml` describing
+The front door. Looks at the project, then writes a `shipway.yaml` describing
 what is already there. **No project file is modified.**
 
 | Option | Meaning |
 |---|---|
-| `--force` | Overwrite an existing `taxiway.yaml`. |
+| `--force` | Overwrite an existing `shipway.yaml`. |
 
-## `taxiway import`
+## `shipway import`
 
-> Read this project and write a taxiway.yaml describing it.
+> Read this project and write a shipway.yaml describing it.
 
 ```
-taxiway import [--deep] [--dry-run] [--out <path>] [--force]
+shipway import [--deep] [--dry-run] [--out <path>] [--force]
 ```
 
 The read direction, in full. Derives a config from the Gradle files, the Xcode
 project, the Dart entrypoints, the Firebase config and any existing fastlane
-setup. Writes exactly two things — `taxiway.yaml` and `.taxiway/lock.json` —
+setup. Writes exactly two things — `shipway.yaml` and `.shipway/lock.json` —
 and nothing else.
 
 Anything the readers could not determine is **left out** rather than guessed.
@@ -136,19 +136,19 @@ Anything the readers could not determine is **left out** rather than guessed.
 |---|---|
 | `--deep` | Ask Gradle for the resolved build model. Slower, but reads values the fast parser cannot — computed application ids, values from `ext` blocks. |
 | `--dry-run` | Print the derived config without writing. |
-| `--out=<path>` | Where to write it. Defaults to `taxiway.yaml`. |
+| `--out=<path>` | Where to write it. Defaults to `shipway.yaml`. |
 | `--force` | Overwrite an existing config. |
 
 `--deep` runs a real Gradle build model, so it needs a project whose wrapper
 Gradle version satisfies Flutter's floor. `doctor`'s `gradle_wrapper` check
 tells you if it does not.
 
-## `taxiway status`
+## `shipway status`
 
-> Show how this project differs from taxiway.yaml.
+> Show how this project differs from shipway.yaml.
 
 ```
-taxiway status [--json]
+shipway status [--json]
 ```
 
 Re-reads the project and compares it to the config. On a freshly imported
@@ -159,12 +159,12 @@ nicety.
 |---|---|
 | `--json` | Emit the drift report as JSON. |
 
-## `taxiway generate`
+## `shipway generate`
 
-> Write the files taxiway.yaml describes.
+> Write the files shipway.yaml describes.
 
 ```
-taxiway generate [flavors|fastlane|all] [--dry-run] [--force] [--no-prune]
+shipway generate [flavors|fastlane|all] [--dry-run] [--force] [--no-prune]
 ```
 
 The write direction. Defaults to `all`.
@@ -172,8 +172,8 @@ The write direction. Defaults to `all`.
 | Option | Meaning |
 |---|---|
 | `--dry-run` | Show what would change, write nothing. |
-| `--force` | Overwrite content you have edited *inside a taxiway block*. Never overrides an unadopted file. |
-| `--no-prune` | Keep files taxiway generated that the config no longer describes. |
+| `--force` | Overwrite content you have edited *inside a shipway block*. Never overrides an unadopted file. |
+| `--no-prune` | Keep files shipway generated that the config no longer describes. |
 
 **Groups**
 
@@ -188,10 +188,10 @@ Individual generators can also be named: `android-flavors`, `ios-schemes`,
 `entrypoints`, `dart-defines`, `gemfiles`, `pluginfiles`, `appfiles`,
 `matchfile`, `export-options`, `ios-fastfile`, `gitignore`.
 
-**What it refuses to do.** A file that existed before taxiway is reported as
+**What it refuses to do.** A file that existed before shipway is reported as
 `conflict` and left alone. That refusal is the feature: on a real project the
 Gradle build file and the Xcode project were there first, and generating over
-them would replace a working build. Run `taxiway adopt` to hand one over.
+them would replace a working build. Run `shipway adopt` to hand one over.
 
 Re-running is a byte-identical no-op.
 
@@ -200,17 +200,17 @@ and the files derived from the old name are removed:
 
 ```
   removed  lib/main_dev.dart
-           no longer described by taxiway.yaml
+           no longer described by shipway.yaml
   release  dart_defines/dev.json
-           no longer described by taxiway.yaml, but you have edited it —
+           no longer described by shipway.yaml, but you have edited it —
            left in place and no longer managed
 ```
 
-A file is only deleted when taxiway wrote it *and* its content is still exactly
-what taxiway wrote, so nothing you authored is ever removed. One you have edited
+A file is only deleted when shipway wrote it *and* its content is still exactly
+what shipway wrote, so nothing you authored is ever removed. One you have edited
 is left alone and handed back to you — reported once, then never again.
 
-Cleanup is scoped to the generators that ran, so `taxiway generate flavors`
+Cleanup is scoped to the generators that ran, so `shipway generate flavors`
 cannot touch the fastlane files, and a generator that could not run (no readable
 `Runner.xcscheme` to derive schemes from) sweeps nothing, because producing
 nothing is not the same as no longer being asked to. See
@@ -223,16 +223,16 @@ Besides files, `generate` also mutates `ios/Runner.xcodeproj/project.pbxproj`
 and `ios/Runner/Info.plist` through adapters that back up, verify and restore on
 failure.
 
-## `taxiway adopt`
+## `shipway adopt`
 
-> Let taxiway write to a file that was here before it.
+> Let shipway write to a file that was here before it.
 
 ```
-taxiway adopt <path|all> [--dry-run]
+shipway adopt <path|all> [--dry-run]
 ```
 
-Shows the difference adopting would make, then records the file as taxiway's to
-write. Ownership lives in `.taxiway/lock.json`, which is committed on purpose —
+Shows the difference adopting would make, then records the file as shipway's to
+write. Ownership lives in `.shipway/lock.json`, which is committed on purpose —
 it is a team-wide fact, and a teammate who pulls the repo inherits the same
 permissions.
 
@@ -244,10 +244,10 @@ permissions.
 
 Adopts a certificates repository rather than initialising one. It clones the
 repo, lists which bundle ids have an App Store profile, compares that against
-the flavors in your config, and records the repository in `taxiway.yaml`.
+the flavors in your config, and records the repository in `shipway.yaml`.
 
 ```
-$ taxiway setup ios-signing
+$ shipway setup ios-signing
 
   appstore     com.acme.app
   appstore     com.acme.app.dev
@@ -261,7 +261,7 @@ Exits `2` when a bundle id is uncovered, so it works as a pre-flight.
 
 **It never decrypts anything.** match encrypts each file in place and leaves the
 *name* alone, so which bundle ids are covered is answerable from the layout —
-no `MATCH_PASSWORD`, no Apple credentials, and taxiway never handles a
+no `MATCH_PASSWORD`, no Apple credentials, and shipway never handles a
 certificate, only the question of whether one exists. The only command it runs
 is `git clone`.
 
@@ -273,11 +273,11 @@ limited Apple allowance. `--create` changes the *advice* — it tells you the
 ### `firebase`
 
 Correlates the config files already in the project with your flavors, reads the
-app id out of each, records the paths in `taxiway.yaml`, and puts the app ids
+app id out of each, records the paths in `shipway.yaml`, and puts the app ids
 where the resolver looks.
 
 ```
-$ taxiway setup firebase
+$ shipway setup firebase
 
   android  dev
            android/app/src/dev/google-services.json
@@ -299,12 +299,12 @@ the wrong Firebase project.
 specific Firebase app; a tool that fetched one would have to guess which, and
 guessing wrong surfaces as an app reporting to somebody else's analytics.
 
-## `taxiway build`
+## `shipway build`
 
 > Build a flavor for one platform.
 
 ```
-taxiway build ios|android --flavor <flavor> [options]
+shipway build ios|android --flavor <flavor> [options]
 ```
 
 Constructs the `flutter build` invocation from the same resolved config the
@@ -315,7 +315,7 @@ that **do not fail**:
   id — the wrong app, built successfully;
 - omit `--dart-define-from-file` and it builds against the wrong backend.
 
-Neither produces an error, so taxiway assembles the command rather than leaving
+Neither produces an error, so shipway assembles the command rather than leaving
 it to memory.
 
 | Option | Meaning |
@@ -326,8 +326,8 @@ it to memory.
 | `--no-codesign` | iOS only: archive without signing, which is what the generated fastlane lane uses because gym signs on export. |
 | `--dry-run` | Print the command that would run, and stop. |
 
-`taxiway build ios` off macOS exits `2` immediately, naming the host and
-pointing at `taxiway build android`. `taxiway build android` works anywhere
+`shipway build ios` off macOS exits `2` immediately, naming the host and
+pointing at `shipway build android`. `shipway build android` works anywhere
 Flutter and a JDK do.
 
 **It reads successful builds too.** `flutter build` exits `0` on an archive
@@ -339,17 +339,17 @@ reported as a warning with its remedy.
 For iOS the reported artifact is the `.xcarchive`, not an `.ipa`: the export
 names the `.ipa` after `CFBundleName` under Flutter and after the product target
 under gym, so it can only be found by globbing `build/ios/ipa/*.ipa`. Since
-taxiway varies only `CFBundleDisplayName` per flavor, every flavor exports to
+shipway varies only `CFBundleDisplayName` per flavor, every flavor exports to
 the same filename — which is why the generated lanes accept only an `.ipa`
 written after their own build began.
 
-## `taxiway secrets`
+## `shipway secrets`
 
 > Show which credentials this project needs, put them somewhere, and say what
 > a CI repository has to be given.
 
 ```
-taxiway secrets list|check|set|import|export
+shipway secrets list|check|set|import|export
 ```
 
 `list` reports; `check` exits `2` when a required credential is missing. Run
@@ -361,7 +361,7 @@ care: the resolver returns a status carrying a *source*, and is never handed a
 secret to leak.
 
 ```
-$ taxiway secrets check --env ci
+$ shipway secrets check --env ci
 
 Environment: ci (from --env). Looking in: environment.
 
@@ -379,7 +379,7 @@ Environment: ci (from --env). Looking in: environment.
 A variable naming a file that is not there is reported as missing, because it
 is the same failure as being unset — only found twenty minutes later.
 
-The list is derived from `taxiway.yaml`: every `*_ref` field names a credential,
+The list is derived from `shipway.yaml`: every `*_ref` field names a credential,
 so the config is the single source of truth for what a project needs. A test
 asserts the names checked here are the ones the generated lanes actually read —
 a pre-flight that checks a different name than the lane reads is worse than
@@ -405,12 +405,12 @@ ever read it.
 
 See [`execution-environments.md`](execution-environments.md).
 
-### `taxiway secrets set <NAME>`
+### `shipway secrets set <NAME>`
 
 > Put one credential in the login keychain.
 
 ```
-taxiway secrets set <NAME> [--from-file <path>] [--stdin] [--base64]
+shipway secrets set <NAME> [--from-file <path>] [--stdin] [--base64]
 ```
 
 Prompts, hidden, when given neither `--from-file` nor `--stdin` — and refuses
@@ -424,7 +424,7 @@ rather than prompting anywhere a prompt would hang.
 
 `--base64` exists rather than a line in a README because the obvious command is
 wrong on half of the machines that run it: GNU `base64` wraps at 76 columns by
-default and the wrapped form does not decode. taxiway encodes the bytes itself.
+default and the wrapped form does not decode. shipway encodes the bytes itself.
 
 **The value never reaches a command line.** `security add-generic-password -w`
 with no argument reads it from stdin, so it is not in `ps` and not in your shell
@@ -435,19 +435,19 @@ That check matters: given a value and a confirmation that differ, `security`
 prints `passwords don't match`, stores nothing, and **exits 0**. A zero exit
 code is not evidence anything was written.
 
-The login keychain cannot hold a multi-line value, and taxiway says so instead
+The login keychain cannot hold a multi-line value, and shipway says so instead
 of storing the first line. Encode it, or — for `MATCH_GIT_PRIVATE_KEY`, which
 only a runner reads — set it as a repository secret, where multi-line values are
 fine.
 
 Off macOS there is no login keychain, and `set` fails saying to use `.env`.
 
-### `taxiway secrets import`
+### `shipway secrets import`
 
 > Move a `.env` file into the login keychain.
 
 ```
-taxiway secrets import [--from <path>] [--force] [--flavor <f>]
+shipway secrets import [--from <path>] [--force] [--flavor <f>]
 ```
 
 Reads every assignment and stores it. Names already in the keychain are **kept**
@@ -455,14 +455,14 @@ and reported, not overwritten — the point of moving values off disk is not to
 lose the ones already moved. `--force` replaces them.
 
 The file is left exactly as it was, and the report says so: this is a copy, not
-a move, and deleting it is your call once `taxiway secrets check` reports green.
+a move, and deleting it is your call once `shipway secrets check` reports green.
 
-### `taxiway secrets export`
+### `shipway secrets export`
 
 > Say what a CI repository has to be given.
 
 ```
-taxiway secrets export [--format gh|actions|env]
+shipway secrets export [--format gh|actions|env]
 ```
 
 Emits the **names** — never a value, because it never reads one.
@@ -470,7 +470,7 @@ Emits the **names** — never a value, because it never reads one.
 | Format | Produces |
 |---|---|
 | `gh` | A `gh secret set` script. Each line prompts, so no value reaches your shell history. |
-| `actions` | An `env:` block, for a workflow taxiway did not write. |
+| `actions` | An `env:` block, for a workflow shipway did not write. |
 | `env` | A `.env` template with empty values. |
 
 The list is derived for the **`ci`** environment whatever machine you run it on,
@@ -485,7 +485,7 @@ it. So what is named is `PLAY_SERVICE_ACCOUNT_JSON` and
 `FIREBASE_SERVICE_ACCOUNT_JSON`, which is not something anybody works out from
 the failure.
 
-A team id already in `taxiway.yaml` is **not** on the list: it appears in every
+A team id already in `shipway.yaml` is **not** on the list: it appears in every
 build log, so the workflow writes it plainly rather than pretending it is a
 secret.
 
@@ -495,15 +495,15 @@ reads is a value someone typed into GitHub for nothing; one the workflow reads
 that is missing here is a build that fails at the step this was supposed to
 cover.
 
-## `taxiway setup`
+## `shipway setup`
 
 > Create the credentials a project needs, once, and record their names.
 
 ```
-taxiway setup android-signing [--alias <name>] [--keystore <path>]
+shipway setup android-signing [--alias <name>] [--keystore <path>]
                               [--password-stdin]
-taxiway setup ios-signing [--match-url <url>] [--branch <name>] [--create]
-taxiway setup firebase
+shipway setup ios-signing [--match-url <url>] [--branch <name>] [--create]
+shipway setup firebase
 ```
 
 Deliberately not part of `generate`. `generate` is idempotent and derivable —
@@ -515,7 +515,7 @@ says what it did, and stops.
 
 Generates an upload keystore with `keytool`, puts its password in the login
 keychain, writes `android/key.properties`, and records the *names* in
-`taxiway.yaml`.
+`shipway.yaml`.
 
 | Option | Meaning |
 |---|---|
@@ -529,7 +529,7 @@ reaches `keytool` on **stdin**, never as `-storepass`, which would put it in
 `ps` for as long as key generation takes.
 
 Modern `keytool` writes **PKCS12**, where the store and the key share one
-password. taxiway uses one for both rather than writing a `key.properties` that
+password. shipway uses one for both rather than writing a `key.properties` that
 only appears to have two.
 
 **An existing keystore is never overwritten**, with or without a flag. An upload
@@ -543,19 +543,19 @@ root fails by silently resolving to a file that is not there, and an absolute on
 works on exactly one machine.
 
 **What it does not do:** wire Gradle up to read `key.properties`. That file is
-the one that decides how your app is signed, and taxiway does not edit it. If
+the one that decides how your app is signed, and shipway does not edit it. If
 your build does not already read it, the command says so — because a release
 signed with the debug key installs, uploads, and is rejected by Play, which is a
 long way to travel to find out.
 
-Names already in `taxiway.yaml` are kept rather than renamed: a team that
+Names already in `shipway.yaml` are kept rather than renamed: a team that
 chose its own variable names keeps them, and the wizard fills the gap.
 
 Off macOS there is no login keychain, so it refuses before creating anything.
 
 ## Generated fastlane lanes
 
-`taxiway generate fastlane` writes lanes you run yourself, always through
+`shipway generate fastlane` writes lanes you run yourself, always through
 bundler:
 
 ```
@@ -590,15 +590,15 @@ that way.
 > **If `bundle exec fastlane` fails with `Could not find <gem>`,** you have a
 > Homebrew fastlane shadowing the bundle. Use a binstub instead:
 > `cd ios && bundle binstubs fastlane`, then `./bin/fastlane ios beta`.
-> `taxiway doctor` warns about this.
+> `shipway doctor` warns about this.
 
-## `taxiway release`
+## `shipway release`
 
 > Build a flavor and send it somewhere.
 
 ```
-taxiway release ios     --flavor <f> --target testflight|appstore [options]
-taxiway release android --flavor <f> --target play|firebase       [options]
+shipway release ios     --flavor <f> --target testflight|appstore [options]
+shipway release android --flavor <f> --target play|firebase       [options]
 ```
 
 A front door, not a second implementation: it validates, prints the plan, then
@@ -620,7 +620,7 @@ set — all are caught in under a second, because finding them after a
 twenty-minute build is what makes releasing feel dangerous.
 
 ```
-$ taxiway release android --flavor dev --target play --rollout 0.1 --dry-run
+$ shipway release android --flavor dev --target play --rollout 0.1 --dry-run
 
   flavor      dev
   identifier  com.acme.app.dev
@@ -666,12 +666,12 @@ You do not pass a release status alongside a rollout: `supply` derives one from
 the fraction — `inProgress` below 1, `completed` at 1 — and passing both only
 lets them disagree.
 
-## `taxiway run`
+## `shipway run`
 
-> Run a named pipeline from taxiway.yaml.
+> Run a named pipeline from shipway.yaml.
 
 ```
-taxiway run <pipeline> [--dry-run] [--resume]
+shipway run <pipeline> [--dry-run] [--resume]
 ```
 
 A pipeline adds no shipping ability — every step can be run by hand. What it
@@ -694,7 +694,7 @@ There are no inferred dependencies — the order in the file is the order of
 execution, always.
 
 ```
-$ taxiway run beta --dry-run
+$ shipway run beta --dry-run
 
 Pipeline beta:
     • analyze
@@ -710,12 +710,12 @@ past a failure is one whose result means nothing. Inside a `parallel` block the
 others are allowed to **finish** rather than being cancelled — killing a
 half-finished upload is worse than waiting for it.
 
-Each run writes `.taxiway/runs/<pipeline>.json` (git-ignored) with every step's
+Each run writes `.shipway/runs/<pipeline>.json` (git-ignored) with every step's
 status, duration and exit code. That is what `--resume` reads, and what answers
 "what actually happened" once the terminal is gone.
 
 ```
-$ taxiway run beta --resume
+$ shipway run beta --resume
 ```
 
 re-runs from the first step that did not succeed. Everything before it is
@@ -723,7 +723,7 @@ skipped.
 
 **`--resume` asks before repeating a step that may not be safe to repeat.** A
 `release` that failed might have failed *after* the upload landed — a dropped
-connection, a cancelled job — and taxiway cannot tell. Re-running risks a
+connection, a cancelled job — and shipway cannot tell. Re-running risks a
 duplicate build number; skipping risks a release everyone believes shipped and
 did not. So it says so, and `--yes` is how you say you have checked.
 
@@ -732,20 +732,20 @@ did not. So it says so, and `--yes` is how you say you have checked.
 | `analyze`, `test` | yes — they only read |
 | `build` | yes — rebuilding overwrites the artifact |
 | `release` | **no** |
-| `run` | **unknown** — taxiway has no idea what your command does |
+| `run` | **unknown** — shipway has no idea what your command does |
 
 See [`pipelines.md`](pipelines.md).
 
 ## Continuous integration
 
-`taxiway generate ci` writes `.github/workflows/release.yml` — created once,
+`shipway generate ci` writes `.github/workflows/release.yml` — created once,
 then yours. It calls the same lanes you run locally, so green there and green
 here mean the same thing.
 
 What it handles that a hand-written workflow usually forgets:
 
 - **Match repository access.** A runner has no SSH agent and no credential
-  helper, so a private certificates repo needs an explicit credential. taxiway
+  helper, so a private certificates repo needs an explicit credential. shipway
   picks `MATCH_GIT_PRIVATE_KEY` or `MATCH_GIT_BASIC_AUTHORIZATION` from the URL
   scheme in your config — match treats them as mutually exclusive and silently
   ignores the wrong one.
@@ -756,7 +756,7 @@ What it handles that a hand-written workflow usually forgets:
 - **Path-valued service accounts.** Play and Firebase want a *file*, so the
   workflow writes one before the lane runs.
 - **`secrets check` as the first step**, so a missing variable fails in seconds.
-- **Installing taxiway itself**, pinned to the tag matching the version that
+- **Installing shipway itself**, pinned to the tag matching the version that
   generated the workflow. A job that installs whatever the default branch holds
   can break on a morning nobody touched the repository, and the failure arrives
   looking like the app's. Generated by a pre-release, it says so and tracks the
@@ -776,7 +776,7 @@ Planned, and deliberately absent rather than half-present:
 
 | Command | Phase |
 |---|---|
-| `taxiway upgrade`, `taxiway completion install` | 6 |
+| `shipway upgrade`, `shipway completion install` | 6 |
 
 The generated lanes stop at TestFlight, the Play internal track and Firebase
 App Distribution. Promotion between tracks, App Store submission and staged
@@ -784,7 +784,7 @@ rollout management are Phase 4.
 
 ## See also
 
-- [`config-schema.md`](config-schema.md) — every `taxiway.yaml` field.
+- [`config-schema.md`](config-schema.md) — every `shipway.yaml` field.
 - [`ios-build-division.md`](ios-build-division.md) — who builds the iOS archive,
   and why gym must not.
 - [`execution-environments.md`](execution-environments.md) — how Phase 3 is

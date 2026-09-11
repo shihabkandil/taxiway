@@ -1,6 +1,6 @@
 # Design: Phase 5, declarative pipelines
 
-A named sequence of steps in `taxiway.yaml`, run with one command.
+A named sequence of steps in `shipway.yaml`, run with one command.
 
 ```yaml
 pipelines:
@@ -13,7 +13,7 @@ pipelines:
 ```
 
 ```
-taxiway run beta
+shipway run beta
 ```
 
 It adds no shipping ability: everything a pipeline does can already be done by
@@ -45,12 +45,12 @@ without changing what is already written.
 |---|---|
 | `analyze` | `flutter analyze` |
 | `test` | `flutter test` |
-| `build` | `taxiway build <platform> --flavor <f>` |
-| `release` | `taxiway release <platform> --flavor <f> --target <t>` |
+| `build` | `shipway build <platform> --flavor <f>` |
+| `release` | `shipway release <platform> --flavor <f> --target <t>` |
 | `run` | an arbitrary command, for whatever this list does not cover |
 
-`build` and `release` invoke taxiway's own commands **in process**, through the
-same command runner the CLI uses. Not by shelling out to `taxiway`: that would
+`build` and `release` invoke shipway's own commands **in process**, through the
+same command runner the CLI uses. Not by shelling out to `shipway`: that would
 require it on `PATH` inside its own pipeline, and would lose the exit codes and
 classified errors those commands already produce.
 
@@ -67,11 +67,11 @@ on Play. Re-running the whole thing re-uploads the iOS build, and App Store
 Connect rejects it as a duplicate build number — the exact error already in the
 classifier.
 
-So a run writes a manifest to `.taxiway/runs/<id>.json` recording each step's
+So a run writes a manifest to `.shipway/runs/<id>.json` recording each step's
 outcome, and:
 
 ```
-taxiway run beta --resume
+shipway run beta --resume
 ```
 
 **re-runs from the first step that did not succeed.** Everything before is
@@ -87,13 +87,13 @@ Each step declares whether running it twice is safe:
 |---|---|---|
 | `analyze`, `test` | yes | They only read. |
 | `build` | yes | Rebuilding overwrites an artifact. |
-| `run` | **unknown** | taxiway has no idea what the command does. |
+| `run` | **unknown** | shipway has no idea what the command does. |
 | `release` | **no** | The upload may have landed before the failure. |
 
 This matters in one specific case: the step being resumed *into* is the one
 that failed, and for a `release` that failure might have come **after** a
 successful upload — a network drop while waiting for a response, a cancelled
-job. taxiway cannot tell the difference, so it does not pretend to: `--resume`
+job. shipway cannot tell the difference, so it does not pretend to: `--resume`
 into a non-repeatable step **says so and asks**, and `--yes` is how you say you
 have checked.
 
@@ -109,11 +109,11 @@ and did not.
   cancelling them. Killing a half-finished upload is worse than waiting for it,
   and a cancelled build leaves a partial artifact that the next run may pick up.
 - The exit code is the first failing step's, so a caller can tell a bad config
-  from a bad machine using the codes taxiway already defines.
+  from a bad machine using the codes shipway already defines.
 
 ## What a run leaves behind
 
-`.taxiway/runs/<id>.json` — already in the generated `.gitignore` — holding each
+`.shipway/runs/<id>.json` — already in the generated `.gitignore` — holding each
 step's status, duration and exit code, plus the resolved environment with
 secrets redacted. It is what `--resume` reads, and what answers "what actually
 happened" after the terminal is gone.

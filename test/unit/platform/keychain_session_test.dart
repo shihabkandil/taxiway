@@ -1,7 +1,7 @@
-import 'package:taxiway/src/core/env/run_environment.dart';
-import 'package:taxiway/src/core/io/redactor.dart';
-import 'package:taxiway/src/core/secrets/secret_names.dart';
-import 'package:taxiway/src/platform/macos/keychain_session.dart';
+import 'package:shipway/src/core/env/run_environment.dart';
+import 'package:shipway/src/core/io/redactor.dart';
+import 'package:shipway/src/core/secrets/secret_names.dart';
+import 'package:shipway/src/platform/macos/keychain_session.dart';
 import 'package:test/test.dart';
 
 import '../../support/recording_process_runner.dart';

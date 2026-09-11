@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:mason_logger/mason_logger.dart';
-import 'package:taxiway/src/cli/exit_codes.dart';
-import 'package:taxiway/src/cli/taxiway_command_runner.dart';
+import 'package:shipway/src/cli/exit_codes.dart';
+import 'package:shipway/src/cli/shipway_command_runner.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';
@@ -64,7 +64,7 @@ void main() {
   late RecordingProcessRunner runner;
   late FixtureProject project;
 
-  /// A project already configured exactly the way taxiway would configure it.
+  /// A project already configured exactly the way shipway would configure it.
   /// This is the round-trip case: import, adopt, generate, expect no change.
   Future<void> makeAgreeingProject({bool kotlin = true}) async {
     final flavors = kotlin
@@ -146,13 +146,13 @@ $flavors
     addTearDown(project.dispose);
   });
 
-  Future<int> run(List<String> args) => TaxiwayCommandRunner(
+  Future<int> run(List<String> args) => ShipwayCommandRunner(
     logger: logger,
     runner: runner,
     workingDirectory: project.path,
   ).run(<String>['--no-color', '--yes', ...args]);
 
-  group('generate refuses to touch what taxiway does not own', () {
+  group('generate refuses to touch what shipway does not own', () {
     setUp(makeAgreeingProject);
 
     test('blocks on the unadopted Gradle file and names adopt', () async {
@@ -161,10 +161,10 @@ $flavors
 
       final exit = await run(<String>['generate', 'android-flavors']);
 
-      expect(exit, TaxiwayExit.userError);
+      expect(exit, ShipwayExit.userError);
       expect(logger.output, contains('conflict'));
-      expect(logger.output, contains('was here before taxiway'));
-      expect(logger.output, contains('taxiway adopt'));
+      expect(logger.output, contains('was here before shipway'));
+      expect(logger.output, contains('shipway adopt'));
     });
 
     test('leaves the file byte-identical when blocked', () async {
@@ -184,9 +184,9 @@ $flavors
       final exit = await run(<String>['generate', '--force']);
 
       // Adoption is a decision, not a flag typed in a hurry.
-      expect(exit, TaxiwayExit.userError);
+      expect(exit, ShipwayExit.userError);
       expect(project.read('android/app/build.gradle.kts'), before);
-      expect(logger.output, contains('taxiway adopt'));
+      expect(logger.output, contains('shipway adopt'));
     });
 
     test('--dry-run writes nothing even for files it could create', () async {
@@ -224,7 +224,7 @@ $flavors
         before,
         reason: 'adopt records ownership; generate is what writes',
       );
-      expect(project.read('.taxiway/lock.json'), contains('"adopted"'));
+      expect(project.read('.shipway/lock.json'), contains('"adopted"'));
     });
 
     test('unblocks generate', () async {
@@ -232,23 +232,23 @@ $flavors
       await run(<String>['adopt', 'all']);
       logger.clear();
 
-      expect(await run(<String>['generate']), TaxiwayExit.success);
+      expect(await run(<String>['generate']), ShipwayExit.success);
     });
 
-    test('rejects a path taxiway does not manage', () async {
+    test('rejects a path shipway does not manage', () async {
       await run(<String>['import']);
       logger.clear();
 
       final exit = await run(<String>['adopt', 'lib/some_widget.dart']);
 
-      expect(exit, TaxiwayExit.userError);
+      expect(exit, ShipwayExit.userError);
       expect(logger.output, contains('does not generate'));
     });
 
     test('needs a target', () async {
       await run(<String>['import']);
       logger.clear();
-      expect(await run(<String>['adopt']), TaxiwayExit.userError);
+      expect(await run(<String>['adopt']), ShipwayExit.userError);
       expect(logger.output, contains('a path, or `all`'));
     });
   });
@@ -260,8 +260,8 @@ $flavors
       setUp(() => makeAgreeingProject(kotlin: kotlin));
 
       /// The single most valuable test in the project: a project already
-      /// configured the way taxiway would configure it must survive
-      /// import -> adopt -> generate untouched, apart from taxiway's markers.
+      /// configured the way shipway would configure it must survive
+      /// import -> adopt -> generate untouched, apart from shipway's markers.
       test('import, adopt, generate changes no build configuration', () async {
         final gradlePath =
             'android/app/${kotlin ? 'build.gradle.kts' : 'build.gradle'}';
@@ -279,8 +279,8 @@ $flavors
         expect(after, contains('Acme Dev'));
         expect(after, contains('dev'));
         expect(after, contains('prod'));
-        expect(after, contains('BEGIN taxiway (managed)'));
-        expect(after, contains('END taxiway'));
+        expect(after, contains('BEGIN shipway (managed)'));
+        expect(after, contains('END shipway'));
         // And nothing outside the block was disturbed.
         expect(after, contains('applicationId'));
         expect(after, contains('com.acme.app'));
@@ -298,7 +298,7 @@ $flavors
 
         final exit = await run(<String>['generate']);
 
-        expect(exit, TaxiwayExit.success);
+        expect(exit, ShipwayExit.success);
         for (final entry in snapshot.entries) {
           expect(
             project.read(entry.key),
@@ -352,7 +352,7 @@ $flavors
       await run(<String>['generate']);
 
       // A flavored build configuration must keep the base configuration of the
-      // build type it derives from. Attaching one of taxiway's own here
+      // build type it derives from. Attaching one of shipway's own here
       // displaces ios/Flutter/Release.xcconfig, and with it the
       // Generated.xcconfig that carries FLUTTER_TARGET, the dart-defines and
       // the version numbers — so the build silently compiles lib/main.dart and
@@ -378,7 +378,7 @@ $flavors
         expect(gitignore, contains(pattern));
       }
       // Ownership is a team-wide fact and must stay committed.
-      expect(gitignore, isNot(contains('.taxiway/lock.json')));
+      expect(gitignore, isNot(contains('.shipway/lock.json')));
       // An example file must stay trackable.
       expect(gitignore, contains('!.env*.example'));
     });
@@ -491,7 +491,7 @@ $flavors
 
       // Refusing to do what was asked is a user error, the same as a conflict
       // on an unadopted file: something needs a decision.
-      expect(exit, TaxiwayExit.userError);
+      expect(exit, ShipwayExit.userError);
       expect(logger.output, contains('edited'));
       expect(logger.output, contains('--force'));
       expect(

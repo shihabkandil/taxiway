@@ -6,14 +6,14 @@ import '../core/managed/content_hash.dart';
 import '../core/managed/lock_file.dart';
 import 'generated_file.dart';
 
-/// What became of one file taxiway used to produce and no longer does.
+/// What became of one file shipway used to produce and no longer does.
 enum OrphanOutcome {
-  /// Deleted. Its content still matched what taxiway wrote, so it held nothing
+  /// Deleted. Its content still matched what shipway wrote, so it held nothing
   /// the user authored.
   removed,
 
   /// Left on disk and released. Somebody edited it, so it holds a decision;
-  /// taxiway stops managing it rather than destroying it.
+  /// shipway stops managing it rather than destroying it.
   released,
 
   /// `--dry-run`: this is what would happen.
@@ -33,9 +33,9 @@ class OrphanResult {
   /// One line for the report.
   String get detail => switch (outcome) {
     OrphanOutcome.removed ||
-    OrphanOutcome.wouldRemove => 'no longer described by taxiway.yaml',
+    OrphanOutcome.wouldRemove => 'no longer described by shipway.yaml',
     OrphanOutcome.released || OrphanOutcome.wouldRelease =>
-      'no longer described by taxiway.yaml, but you have edited it — '
+      'no longer described by shipway.yaml, but you have edited it — '
           'left in place and no longer managed',
   };
 }
@@ -59,11 +59,11 @@ class SweepReport {
   bool get isEmpty => results.isEmpty;
 }
 
-/// Removes files taxiway generated and no longer produces.
+/// Removes files shipway generated and no longer produces.
 ///
 /// The whole difficulty is that "this run did not produce it" has several
 /// causes and only one of them means "the config stopped asking for it". A
-/// partial run (`taxiway generate flavors`) produces no fastlane files; a
+/// partial run (`shipway generate flavors`) produces no fastlane files; a
 /// generator whose template is missing produces nothing at all. Treating either
 /// as a removal would delete working files.
 ///
@@ -107,7 +107,7 @@ abstract final class OrphanSweep {
 
     // Snapshot first: `lock.files` is a view over the map this loop mutates.
     for (final entry in lock.files.values.toList()) {
-      // Only ever taxiway's own work. An adopted file is the user's, handed
+      // Only ever shipway's own work. An adopted file is the user's, handed
       // over on their terms; an unmanaged one was never ours.
       if (entry.ownership != Ownership.generated) continue;
 
@@ -123,7 +123,7 @@ abstract final class OrphanSweep {
       }
 
       // Deletable only when we can prove the file still holds exactly what
-      // taxiway wrote. A missing recorded hash is not proof of anything, so it
+      // shipway wrote. A missing recorded hash is not proof of anything, so it
       // counts as edited: never delete on the strength of not knowing.
       final contents = await file.readAsString();
       final edited = !ContentHash.matches(entry.hash, contents);

@@ -1,5 +1,5 @@
-import 'package:taxiway/src/core/config/config_loader.dart';
-import 'package:taxiway/src/core/config/config_patch.dart';
+import 'package:shipway/src/core/config/config_loader.dart';
+import 'package:shipway/src/core/config/config_patch.dart';
 import 'package:test/test.dart';
 
 const String _config = '''
@@ -78,7 +78,7 @@ void main() {
     expect(android.keyProperties!.keyAlias, 'upload');
   });
 
-  test('the result is still a config taxiway can read', () {
+  test('the result is still a config shipway can read', () {
     // A patcher that produced valid YAML but an invalid config would be worse
     // than one that refused: the failure lands on the next command.
     final patched = ConfigPatch.set(_config, <String>[

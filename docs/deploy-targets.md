@@ -10,9 +10,9 @@ what the plan assumed.
 
 ## What the research changed
 
-### 1. `supply` sets the release status itself — taxiway was wrong to refuse
+### 1. `supply` sets the release status itself — shipway was wrong to refuse
 
-The plan, the config schema and a comment in `taxiway_config.dart` all say a
+The plan, the config schema and a comment in `shipway_config.dart` all say a
 staged `rollout` requires `release_status: inProgress`, and that "supply rejects
 the combination otherwise". **That is false**, and `config_loader.dart` rejects
 a config that would work.
@@ -65,7 +65,7 @@ Two contexts need a build number and they cannot share one implementation:
 
 | Context | Decided by | Why |
 |---|---|---|
-| `taxiway build` | pubspec, or `--build-number` | No credentials, no network, and no store to ask. |
+| `shipway build` | pubspec, or `--build-number` | No credentials, no network, and no store to ask. |
 | a release lane | the generated Ruby | `remote` means asking App Store Connect or Play, which only fastlane can do. |
 
 So `VersionResolver` **renders Ruby** rather than computing a number in Dart.
@@ -87,8 +87,8 @@ once per release rather than once per platform.
 ## Command surface
 
 ```
-taxiway release ios     --flavor <f> --target testflight|appstore [options]
-taxiway release android --flavor <f> --target play|firebase       [options]
+shipway release ios     --flavor <f> --target testflight|appstore [options]
+shipway release android --flavor <f> --target play|firebase       [options]
 ```
 
 It is a *front door*, not a second implementation: it validates, shows the plan,
@@ -98,7 +98,7 @@ unavailable to someone who prefers `bundle exec fastlane`.
 The order matters for the experience:
 
 1. **Resolve** the target from the config, and refuse clearly when it is not
-   configured — naming the `taxiway.yaml` key that would configure it.
+   configured — naming the `shipway.yaml` key that would configure it.
 2. **Pre-flight**: every credential the target needs, plus the target's own
    rules (`distribute_external` without `groups`; `rollout` out of range). All
    before anything slow.
@@ -137,7 +137,7 @@ New signatures, from reading the gems and the stores' documented errors:
   they ask for credentials. That boundary is stated rather than implied, the
   same way `setup ios-signing --create` states it.
 - **No metadata management.** `deliver` can upload screenshots, descriptions and
-  release notes; taxiway sets `skip_metadata` and `skip_screenshots` unless a
+  release notes; shipway sets `skip_metadata` and `skip_screenshots` unless a
   `metadata_path` is configured. Store listings belong to whoever writes them,
   not to a build.
 - **No automatic submission for review.** `submit_for_review` defaults to false

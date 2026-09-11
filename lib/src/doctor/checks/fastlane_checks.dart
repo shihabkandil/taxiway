@@ -92,7 +92,7 @@ class FastlaneShimCheck extends Check {
 
 /// Whether the pinned gems can actually be resolved on this Ruby.
 ///
-/// The three pins taxiway writes — fastlane, the Firebase plugin, and the Ruby
+/// The three pins shipway writes — fastlane, the Firebase plugin, and the Ruby
 /// floor — have to stay mutually satisfiable. When they are not, `bundle
 /// install` does not degrade: it fails version solving outright, before
 /// anything has been installed.
@@ -115,7 +115,7 @@ class GemfileSolvableCheck extends Check {
     final gemfile = File(p.join(context.projectRoot, directory, 'Gemfile'));
     if (!gemfile.existsSync()) {
       return CheckResult.skip(
-        'No $directory/Gemfile yet; run `taxiway generate fastlane`.',
+        'No $directory/Gemfile yet; run `shipway generate fastlane`.',
       );
     }
 

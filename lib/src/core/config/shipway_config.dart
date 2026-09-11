@@ -1,15 +1,15 @@
 import 'package:collection/collection.dart';
 import 'package:json_annotation/json_annotation.dart';
 
-part 'taxiway_config.g.dart';
+part 'shipway_config.g.dart';
 
-/// The root of `taxiway.yaml`.
+/// The root of `shipway.yaml`.
 ///
 /// Every field is immutable and every collection is defaulted, so a minimal
 /// config is genuinely minimal: `version`, `project.name`, one app, one flavor.
 @JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
-class TaxiwayConfig {
-  const TaxiwayConfig({
+class ShipwayConfig {
+  const ShipwayConfig({
     required this.version,
     required this.project,
     required this.apps,
@@ -19,8 +19,8 @@ class TaxiwayConfig {
     this.pipelines = const <String, dynamic>{},
   });
 
-  factory TaxiwayConfig.fromJson(Map<dynamic, dynamic> json) =>
-      _$TaxiwayConfigFromJson(json);
+  factory ShipwayConfig.fromJson(Map<dynamic, dynamic> json) =>
+      _$ShipwayConfigFromJson(json);
 
   /// Schema version. Drives migrations; only 1 exists today.
   final int version;
@@ -44,7 +44,7 @@ class TaxiwayConfig {
   /// A step is a union — a bare name, a single-key map, a `parallel` block —
   /// which a generated decoder reports as a type error naming neither the
   /// pipeline nor the step. `PipelineParser` reads it on use instead, so a
-  /// malformed pipeline fails `taxiway run` rather than every command that
+  /// malformed pipeline fails `shipway run` rather than every command that
   /// happens to load a config.
   @JsonKey(fromJson: _rawMap)
   final Map<String, dynamic> pipelines;
@@ -61,7 +61,7 @@ class TaxiwayConfig {
 
   AppConfig? appOrNull(String? id) => apps[id ?? defaultAppId];
 
-  Map<String, dynamic> toJson() => _$TaxiwayConfigToJson(this);
+  Map<String, dynamic> toJson() => _$ShipwayConfigToJson(this);
 }
 
 @JsonSerializable(anyMap: true, checked: true, disallowUnrecognizedKeys: true)
@@ -212,13 +212,13 @@ class FlavorConfig {
   /// Appended to the version name on Android, e.g. `-dev`.
   ///
   /// Recorded so an imported config describes the project exactly; without it,
-  /// `taxiway status` reports drift the moment it is run.
+  /// `shipway status` reports drift the moment it is run.
   @JsonKey(name: 'version_name_suffix')
   final String? versionNameSuffix;
 
   /// The Gradle flavor dimension this flavor belongs to.
   ///
-  /// Defaults to `environment`, which is what taxiway generates; recorded only
+  /// Defaults to `environment`, which is what shipway generates; recorded only
   /// when a project uses a different one.
   final String? dimension;
 
@@ -553,9 +553,9 @@ class CiConfig {
 
   /// `workstation`, `ci` or `persistent`.
   ///
-  /// A team default for machines whose shape taxiway cannot detect — most
+  /// A team default for machines whose shape shipway cannot detect — most
   /// usefully a self-hosted runner, which looks identical to a hosted one from
-  /// inside. Overridden by `--env` and `TAXIWAY_ENV`, and left unset by
+  /// inside. Overridden by `--env` and `SHIPWAY_ENV`, and left unset by
   /// `import`, which has no way to know.
   final String? environment;
 
@@ -607,7 +607,7 @@ Map<String, T> _entriesFromJson<T>(
 /// Used by the secret-shaped-value validator, by `secrets list`, and by import
 /// when it harvests names from an existing fastlane setup.
 Iterable<({String path, String? value})> secretRefsOf(
-  TaxiwayConfig config,
+  ShipwayConfig config,
 ) sync* {
   yield (
     path: 'notify.slack_webhook_ref',

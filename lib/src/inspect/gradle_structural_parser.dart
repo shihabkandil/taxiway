@@ -106,7 +106,7 @@ class GradleStructuralParser {
         field: 'android',
         reason:
             'this build file applies `${match.group(1)}`, whose contents '
-            'taxiway did not read.',
+            'shipway did not read.',
         remedy:
             'Re-run with `--deep` if flavors or signing are configured '
             'there.',

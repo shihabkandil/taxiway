@@ -20,7 +20,7 @@ const Map<String, Set<String>> _allowedImports = <String, Set<String>>{
   'secrets': <String>{'core'},
   'doctor': <String>{'core'},
   // The runner takes its step invoker as a function, so this layer never
-  // reaches the CLI even though `build` and `release` are taxiway's own
+  // reaches the CLI even though `build` and `release` are shipway's own
   // commands.
   'pipeline': <String>{'core'},
   'cli': <String>{
@@ -57,8 +57,8 @@ String? _layerOf(String path) {
 
 /// The layer an import resolves into, following relative paths.
 String? _importedLayer(String fromPath, String import) {
-  if (import.startsWith('package:taxiway/src/')) {
-    final rest = import.substring('package:taxiway/src/'.length);
+  if (import.startsWith('package:shipway/src/')) {
+    final rest = import.substring('package:shipway/src/'.length);
     final first = rest.split('/').first;
     return _allowedImports.containsKey(first) ? first : null;
   }

@@ -50,10 +50,10 @@ class AndroidInspector {
           const Uncertainty(
             field: 'android',
             reason:
-                'taxiway could not find its own Gradle init script '
-                '(tool/gradle/taxiway_dump.gradle), so `--deep` was skipped.',
+                'shipway could not find its own Gradle init script '
+                '(tool/gradle/shipway_dump.gradle), so `--deep` was skipped.',
             remedy:
-                'Reinstall taxiway. This is a packaging bug, not a problem '
+                'Reinstall shipway. This is a packaging bug, not a problem '
                 'with your project.',
             severity: UncertaintySeverity.defect,
           ),
@@ -105,7 +105,7 @@ class AndroidInspector {
         ..defect(
           field: 'android',
           reason: 'no android/app/build.gradle or build.gradle.kts was found.',
-          remedy: 'Run taxiway from the directory containing pubspec.yaml.',
+          remedy: 'Run shipway from the directory containing pubspec.yaml.',
         );
       return GradleParseResult(
         android: const AndroidModel.absent(),

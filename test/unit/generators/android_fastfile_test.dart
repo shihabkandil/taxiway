@@ -1,7 +1,7 @@
-import 'package:taxiway/src/core/config/taxiway_config.dart';
-import 'package:taxiway/src/core/model/android_model.dart';
-import 'package:taxiway/src/generators/android_fastfile_generator.dart';
-import 'package:taxiway/src/generators/generated_file.dart';
+import 'package:shipway/src/core/config/shipway_config.dart';
+import 'package:shipway/src/core/model/android_model.dart';
+import 'package:shipway/src/generators/android_fastfile_generator.dart';
+import 'package:shipway/src/generators/generated_file.dart';
 import 'package:test/test.dart';
 
 ResolvedApp app({

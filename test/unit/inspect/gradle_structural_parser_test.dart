@@ -1,6 +1,6 @@
-import 'package:taxiway/src/core/model/android_model.dart';
-import 'package:taxiway/src/core/model/uncertainty.dart';
-import 'package:taxiway/src/inspect/gradle_structural_parser.dart';
+import 'package:shipway/src/core/model/android_model.dart';
+import 'package:shipway/src/core/model/uncertainty.dart';
+import 'package:shipway/src/inspect/gradle_structural_parser.dart';
 import 'package:test/test.dart';
 
 GradleParseResult parseKts(String source) =>

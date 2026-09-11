@@ -1,11 +1,11 @@
-/// Where taxiway is running, which decides what it is allowed to do.
+/// Where shipway is running, which decides what it is allowed to do.
 ///
 /// One value, resolved once per run, that the secret chain, the keychain
 /// strategy and every prompt key off. See `docs/execution-environments.md`.
 enum RunEnvironment {
   /// A developer at a machine they are sitting in front of.
   ///
-  /// The login keychain is unlocked, a question can be answered, and taxiway
+  /// The login keychain is unlocked, a question can be answered, and shipway
   /// should leave no build-machine debris behind.
   workstation,
 
@@ -19,7 +19,7 @@ enum RunEnvironment {
   /// A machine that runs builds and keeps running: a self-hosted runner, a
   /// Mac mini in a cupboard.
   ///
-  /// The hardest case. It is shared, so anything taxiway changes globally is a
+  /// The hardest case. It is shared, so anything shipway changes globally is a
   /// change for every other job; it is headless, so after a reboot the login
   /// keychain is not unlocked; and it is long-lived, so leftovers accumulate.
   persistentRunner;
@@ -35,13 +35,13 @@ enum RunEnvironment {
   /// restart in ways that look like signing problems.
   bool get mayUseLoginKeychain => this == RunEnvironment.workstation;
 
-  /// Whether taxiway must remove what it created before exiting.
+  /// Whether shipway must remove what it created before exiting.
   bool get requiresCleanup => this != RunEnvironment.workstation;
 
   /// Whether concurrent runs are plausible and must be guarded against.
   bool get shared => this == RunEnvironment.persistentRunner;
 
-  /// The name accepted by `--env` and `TAXIWAY_ENV`.
+  /// The name accepted by `--env` and `SHIPWAY_ENV`.
   String get flagName => switch (this) {
     RunEnvironment.workstation => 'workstation',
     RunEnvironment.ephemeralCi => 'ci',
@@ -76,8 +76,8 @@ class ResolvedEnvironment {
 
   String get explanation => switch (source) {
     EnvironmentSource.flag => 'from --env',
-    EnvironmentSource.variable => 'from TAXIWAY_ENV',
-    EnvironmentSource.config => 'from ci.environment in taxiway.yaml',
+    EnvironmentSource.variable => 'from SHIPWAY_ENV',
+    EnvironmentSource.config => 'from ci.environment in shipway.yaml',
     EnvironmentSource.detected => 'detected',
     EnvironmentSource.defaulted => 'assumed',
   };
@@ -101,7 +101,7 @@ abstract final class EnvironmentDetector {
   /// the conservative answer rather than being trusted.
   static const String runnerEnvironmentVariable = 'RUNNER_ENVIRONMENT';
 
-  static const String overrideVariable = 'TAXIWAY_ENV';
+  static const String overrideVariable = 'SHIPWAY_ENV';
 
   static ResolvedEnvironment resolve({
     String? flag,

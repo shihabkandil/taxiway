@@ -23,27 +23,27 @@ class BlockLocation {
   final String indent;
 }
 
-/// Reading, writing and removing taxiway's marked regions in files it does not
+/// Reading, writing and removing shipway's marked regions in files it does not
 /// own outright.
 ///
 /// Block-managed files (`build.gradle.kts`, `.gitignore`, `Podfile`,
-/// `project.pbxproj`) belong to the user; taxiway rewrites only what is between
+/// `project.pbxproj`) belong to the user; shipway rewrites only what is between
 /// its markers and must never disturb a byte outside them.
 abstract final class ManagedBlock {
   static const String beginText =
-      'BEGIN taxiway (managed) — do not edit. Regenerate with `taxiway generate`.';
-  static const String endText = 'END taxiway';
+      'BEGIN shipway (managed) — do not edit. Regenerate with `shipway generate`.';
+  static const String endText = 'END shipway';
 
   /// Matched loosely on the leading phrase so a marker written by an older
   /// version — with different trailing advice — is still recognised as ours.
-  static const String beginMarker = 'BEGIN taxiway (managed)';
-  static const String endMarker = 'END taxiway';
+  static const String beginMarker = 'BEGIN shipway (managed)';
+  static const String endMarker = 'END shipway';
 
   static String beginLine(CommentStyle style) => style.wrap(beginText);
 
   static String endLine(CommentStyle style) => style.wrap(endText);
 
-  /// Finds taxiway's block in [content], or null if there is none.
+  /// Finds shipway's block in [content], or null if there is none.
   ///
   /// Throws [ManagedBlockException] on a malformed pair — an unterminated or
   /// duplicated block is a hand-edit we must not paper over by guessing.
@@ -55,8 +55,8 @@ abstract final class ManagedBlock {
       if (lines[i].contains(beginMarker)) {
         if (beginIndex != null) {
           throw ManagedBlockException(
-            'Found more than one taxiway managed block. '
-            'Remove the extra block, or delete both and re-run `taxiway generate`.',
+            'Found more than one shipway managed block. '
+            'Remove the extra block, or delete both and re-run `shipway generate`.',
           );
         }
         beginIndex = i;
@@ -67,7 +67,7 @@ abstract final class ManagedBlock {
     if (beginIndex == null) return null;
     if (endIndex == null) {
       throw ManagedBlockException(
-        'Found a taxiway BEGIN marker with no matching END marker. '
+        'Found a shipway BEGIN marker with no matching END marker. '
         'Restore the END marker or remove the block.',
       );
     }
@@ -129,14 +129,14 @@ abstract final class ManagedBlock {
     return content.replaceRange(insertAt, insertAt, rendered);
   }
 
-  /// Removes taxiway's block entirely, leaving the rest of the file untouched.
+  /// Removes shipway's block entirely, leaving the rest of the file untouched.
   static String remove(String content) {
     final existing = find(content);
     if (existing == null) return content;
     return content.replaceRange(existing.start, existing.end, '');
   }
 
-  /// True when [content] carries a taxiway block.
+  /// True when [content] carries a shipway block.
   static bool isPresent(String content) => find(content) != null;
 
   static String _render(

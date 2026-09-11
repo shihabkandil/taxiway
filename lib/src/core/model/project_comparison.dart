@@ -7,9 +7,9 @@ import 'project_model.dart';
 /// readFromDisk())` is what `status` reports and what `adopt` shows before it
 /// takes ownership of anything.
 ///
-/// [expected] is the model derived from `taxiway.yaml`; [actual] is what is on
+/// [expected] is the model derived from `shipway.yaml`; [actual] is what is on
 /// disk. Only fields the config can express are compared — a build setting
-/// taxiway has no opinion about is not drift, and reporting it as such would
+/// shipway has no opinion about is not drift, and reporting it as such would
 /// bury the differences that matter.
 ModelDiff compare(ProjectModel expected, ProjectModel actual) {
   final diff = DiffBuilder();

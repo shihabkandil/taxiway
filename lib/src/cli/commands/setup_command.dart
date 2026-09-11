@@ -7,7 +7,7 @@ import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as p;
 
 import '../../core/config/config_patch.dart';
-import '../../core/config/taxiway_config.dart';
+import '../../core/config/shipway_config.dart';
 import '../../platform/android/keystore_creator.dart';
 import '../../core/model/firebase_model.dart';
 import '../../core/secrets/secret_names.dart';
@@ -17,8 +17,8 @@ import '../../secrets/secret_store.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// `taxiway setup android-signing` — the parts of getting a project shippable
-/// that are not files taxiway can simply write.
+/// `shipway setup android-signing` — the parts of getting a project shippable
+/// that are not files shipway can simply write.
 ///
 /// Distinct from `generate` on purpose. `generate` is idempotent and
 /// derivable: run it twice and nothing changes, throw the output away and it
@@ -50,7 +50,7 @@ class SetupCommand extends Command<int> {
         'match-url',
         help:
             'ios-signing: the certificates repository. Defaults to the one '
-            'taxiway.yaml already names.',
+            'shipway.yaml already names.',
         valueHelp: 'url',
       )
       ..addOption(
@@ -89,7 +89,7 @@ class SetupCommand extends Command<int> {
       'Create the credentials a project needs, once, and record their names.';
 
   @override
-  String get invocation => 'taxiway setup ${actions.join('|')}';
+  String get invocation => 'shipway setup ${actions.join('|')}';
 
   @override
   Future<int> run() async {
@@ -103,7 +103,7 @@ class SetupCommand extends Command<int> {
             ? 'Say what to set up: ${actions.join(', ')}.'
             : 'Unknown action "$action". Expected: ${actions.join(', ')}.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final config = await _context.requireConfig();
@@ -114,27 +114,27 @@ class SetupCommand extends Command<int> {
     };
   }
 
-  /// `taxiway setup firebase` — correlate the config files with flavors and
+  /// `shipway setup firebase` — correlate the config files with flavors and
   /// record what they say.
   ///
   /// The tedious part of Firebase is not downloading the files, it is knowing
   /// which flavor each belongs to and finding the app id inside one to paste
-  /// somewhere else. Both are already in the files, so taxiway reads them
+  /// somewhere else. Both are already in the files, so shipway reads them
   /// rather than asking.
   ///
   /// It never downloads anything. A `google-services.json` comes from the
   /// Firebase console for a specific app, and a tool that fetched one would
   /// have to pick which — silently choosing the wrong project is a mistake that
   /// surfaces as an app reporting to somebody else's analytics.
-  Future<int> _firebase(TaxiwayConfig config) async {
+  Future<int> _firebase(ShipwayConfig config) async {
     final context = _context;
     final logger = context.logger;
 
     final appId = context.appId ?? config.defaultAppId;
     final app = config.appOrNull(appId);
     if (app == null) {
-      logger.err('No app to set up. Check `apps:` in taxiway.yaml.');
-      return TaxiwayExit.userError;
+      logger.err('No app to set up. Check `apps:` in shipway.yaml.');
+      return ShipwayExit.userError;
     }
 
     final result = await const FirebaseInspector().inspect(
@@ -154,8 +154,8 @@ class SetupCommand extends Command<int> {
         ..info('  android/app/src/<flavor>/google-services.json')
         ..info('  ios/config/<flavor>/GoogleService-Info.plist')
         ..info('')
-        ..info('Re-run this and taxiway will wire them up.');
-      return TaxiwayExit.environmentError;
+        ..info('Re-run this and shipway will wire them up.');
+      return ShipwayExit.environmentError;
     }
 
     logger.info('');
@@ -184,7 +184,7 @@ class SetupCommand extends Command<int> {
     _recordFirebaseInConfig(appId: appId!, app: app, files: files);
     logger
       ..info('')
-      ..info('Recorded the paths in taxiway.yaml.');
+      ..info('Recorded the paths in shipway.yaml.');
 
     // The app ids are not secret — they are compiled into the app — but the
     // lanes read them by name, so putting them where the resolver looks is
@@ -197,9 +197,9 @@ class SetupCommand extends Command<int> {
     logger
       ..info('')
       ..info('Next:')
-      ..info('  taxiway generate          — the run script that copies these')
+      ..info('  shipway generate          — the run script that copies these')
       ..info(
-        '  taxiway secrets check     — the service account is still needed',
+        '  shipway secrets check     — the service account is still needed',
       )
       ..info('')
       ..info(
@@ -207,7 +207,7 @@ class SetupCommand extends Command<int> {
         'deprecated CI token. Create one in the Google Cloud console and '
         'point ${SecretNames.firebaseServiceAccountPath} at it.',
       );
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 
   /// Which flavor a config file belongs to, by the directory it sits in.
@@ -297,12 +297,12 @@ class SetupCommand extends Command<int> {
     return stored;
   }
 
-  /// `taxiway setup ios-signing` — adopt a certificates repository.
+  /// `shipway setup ios-signing` — adopt a certificates repository.
   ///
   /// Read-only by default, and the read is deliberately shallow: match
   /// encrypts each file in place and leaves its *name* alone, so which bundle
   /// ids are covered is answerable from the layout without a passphrase,
-  /// without decrypting anything and without talking to Apple. taxiway
+  /// without decrypting anything and without talking to Apple. shipway
   /// therefore never handles a certificate — only the question of whether one
   /// exists.
   ///
@@ -310,15 +310,15 @@ class SetupCommand extends Command<int> {
   /// reshaping one breaks signing for everyone else using it, and creating a
   /// certificate spends one of a team's limited allowance. Gaps are reported;
   /// filling them needs `--create`.
-  Future<int> _iosSigning(ArgResults results, TaxiwayConfig config) async {
+  Future<int> _iosSigning(ArgResults results, ShipwayConfig config) async {
     final context = _context;
     final logger = context.logger;
 
     final appId = context.appId ?? config.defaultAppId;
     final app = config.appOrNull(appId);
     if (app == null) {
-      logger.err('No app to set up. Check `apps:` in taxiway.yaml.');
-      return TaxiwayExit.userError;
+      logger.err('No app to set up. Check `apps:` in shipway.yaml.');
+      return ShipwayExit.userError;
     }
 
     final url =
@@ -328,10 +328,10 @@ class SetupCommand extends Command<int> {
         ..err('No certificates repository to read.')
         ..info(
           'Pass --match-url, or set signing.ios.match_git_url in '
-          'taxiway.yaml. It is the git repository match keeps your '
+          'shipway.yaml. It is the git repository match keeps your '
           'certificates and profiles in.',
         );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final branch = results['branch'] as String;
@@ -349,7 +349,7 @@ class SetupCommand extends Command<int> {
       logger.err(failure.message);
       final hint = failure.fixHint;
       if (hint != null) logger.info(hint);
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     }
     progress.complete('Read $url');
 
@@ -372,7 +372,7 @@ class SetupCommand extends Command<int> {
   }) {
     final logger = _context.logger;
 
-    // The type taxiway's generated Matchfile syncs. A repository full of
+    // The type shipway's generated Matchfile syncs. A repository full of
     // development profiles does not make an App Store build signable.
     const type = 'appstore';
 
@@ -392,12 +392,12 @@ class SetupCommand extends Command<int> {
         ..info(
           results['create'] as bool
               ? 'Run `bundle exec fastlane match appstore` from ios/ to '
-                    'populate it. taxiway does not create Apple certificates '
+                    'populate it. shipway does not create Apple certificates '
                     'itself: match already does it well, and doing it twice '
                     'is how a team runs out of them.'
               : 'Re-run with --create for what to do about it.',
         );
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     }
 
     logger.info('');
@@ -438,15 +438,15 @@ class SetupCommand extends Command<int> {
     }
 
     _recordMatchInConfig(appId: appId, url: url, existing: app.signing.ios);
-    logger.info('Recorded the repository in taxiway.yaml. No value is in it.');
+    logger.info('Recorded the repository in shipway.yaml. No value is in it.');
 
     logger
       ..info('')
       ..info('Next:')
-      ..info('  taxiway secrets check     — MATCH_PASSWORD and the rest')
-      ..info('  taxiway build ios --flavor <f>');
+      ..info('  shipway secrets check     — MATCH_PASSWORD and the rest')
+      ..info('  shipway build ios --flavor <f>');
 
-    return missing.isEmpty ? TaxiwayExit.success : TaxiwayExit.environmentError;
+    return missing.isEmpty ? ShipwayExit.success : ShipwayExit.environmentError;
   }
 
   /// A flavor's full bundle id, or null when the config does not say.
@@ -473,7 +473,7 @@ class SetupCommand extends Command<int> {
     file.writeAsStringSync(ConfigPatch.setAll(file.readAsStringSync(), values));
   }
 
-  Future<int> _androidSigning(ArgResults results, TaxiwayConfig config) async {
+  Future<int> _androidSigning(ArgResults results, ShipwayConfig config) async {
     final context = _context;
     final logger = context.logger;
 
@@ -484,16 +484,16 @@ class SetupCommand extends Command<int> {
       );
       logger.info(
         'Generate the keystore with keytool and put the passwords in .env, '
-        'which taxiway reads everywhere.',
+        'which shipway reads everywhere.',
       );
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     }
 
     final appId = context.appId ?? config.defaultAppId;
     final app = config.appOrNull(appId);
     if (app == null) {
-      logger.err('No app to set up. Check `apps:` in taxiway.yaml.');
-      return TaxiwayExit.userError;
+      logger.err('No app to set up. Check `apps:` in shipway.yaml.');
+      return ShipwayExit.userError;
     }
 
     final relative = results['keystore'] as String;
@@ -510,7 +510,7 @@ class SetupCommand extends Command<int> {
         existing?.keyProperties?.keyPasswordRef ?? 'ANDROID_KEY_PASSWORD';
 
     final password = await _password(results);
-    if (password == null) return TaxiwayExit.userError;
+    if (password == null) return ShipwayExit.userError;
 
     final creator = KeystoreCreator(
       runner: context.runner,
@@ -527,7 +527,7 @@ class SetupCommand extends Command<int> {
       logger.err(failure.message);
       final hint = failure.fixHint;
       if (hint != null) logger.info(hint);
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
     logger.info('Created $relative (alias $alias).');
 
@@ -547,7 +547,7 @@ class SetupCommand extends Command<int> {
       await store.set(keystoreRef, base64.encode(File(path).readAsBytesSync()));
     } on SecretStoreFailure catch (failure) {
       logger.err(failure.message);
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     }
     logger.info(
       'Stored $storePasswordRef, $keyPasswordRef and $keystoreRef in the '
@@ -570,21 +570,21 @@ class SetupCommand extends Command<int> {
       keyPasswordRef: keyPasswordRef,
       alias: alias,
     );
-    logger.info('Recorded the names in taxiway.yaml. No value is in it.');
+    logger.info('Recorded the names in shipway.yaml. No value is in it.');
 
     _reportGradleWiring(logger);
 
     logger
       ..info('')
       ..info('Next:')
-      ..info('  taxiway secrets check     — everything should resolve now')
-      ..info('  taxiway secrets export    — what to set on the CI repository')
+      ..info('  shipway secrets check     — everything should resolve now')
+      ..info('  shipway secrets export    — what to set on the CI repository')
       ..info('')
       ..warn(
         'Back up $relative somewhere that is not this repository. An app on '
         'Play cannot be updated without it.',
       );
-    return TaxiwayExit.success;
+    return ShipwayExit.success;
   }
 
   /// The keystore password: generated unless one is piped in.
@@ -624,7 +624,7 @@ class SetupCommand extends Command<int> {
     final file = File(p.join(_context.projectRoot, 'android', 'key.properties'))
       ..parent.createSync(recursive: true);
     file.writeAsStringSync('''
-# Written by `taxiway setup android-signing`. Git-ignored, and it holds
+# Written by `shipway setup android-signing`. Git-ignored, and it holds
 # passwords: it must stay that way.
 #
 # The same values live in the login keychain as $storePasswordRef and
@@ -645,7 +645,7 @@ keyAlias=$alias
     required String alias,
   }) {
     final file = File(
-      _context.configPath ?? p.join(_context.projectRoot, 'taxiway.yaml'),
+      _context.configPath ?? p.join(_context.projectRoot, 'shipway.yaml'),
     );
     final base = <String>['apps', appId, 'signing', 'android'];
     file.writeAsStringSync(
@@ -690,7 +690,7 @@ keyAlias=$alias
       )
       ..info(
         'Add a signingConfig that loads it, then point buildTypes.release at '
-        'that config. taxiway does not edit this file for you: it is the one '
+        'that config. shipway does not edit this file for you: it is the one '
         'that decides how your app is signed.',
       );
   }

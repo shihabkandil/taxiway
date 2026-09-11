@@ -37,7 +37,7 @@ class GradleDslCheck extends Check {
     return const CheckResult.fail(
       'No android/app/build.gradle or build.gradle.kts found.',
       fixHint:
-          'Is this a Flutter project root? Run taxiway from the directory '
+          'Is this a Flutter project root? Run shipway from the directory '
           'containing pubspec.yaml.',
     );
   }
@@ -54,7 +54,7 @@ class PbxprojObjectVersionCheck extends Check {
   @override
   String get title => 'Xcode project format';
 
-  /// The format taxiway mutates confidently.
+  /// The format shipway mutates confidently.
   static const int knownGood = 60;
 
   /// Xcode 16+ synchronized folders. Readable, but mutation is riskier.
@@ -70,7 +70,7 @@ class PbxprojObjectVersionCheck extends Check {
       return const CheckResult.warn(
         'ios/Runner.xcodeproj/project.pbxproj not found.',
         fixHint:
-            'taxiway cannot read or write iOS build configurations '
+            'shipway cannot read or write iOS build configurations '
             'without it.',
       );
     }
@@ -91,8 +91,8 @@ class PbxprojObjectVersionCheck extends Check {
         'objectVersion $version — this project uses Xcode 16+ synchronized '
         'folders.',
         fixHint:
-            'taxiway can read it, but writing build configurations is '
-            'more fragile. Every mutation is backed up to .taxiway/backups/ '
+            'shipway can read it, but writing build configurations is '
+            'more fragile. Every mutation is backed up to .shipway/backups/ '
             'first.',
         docsUrl: 'https://rubygems.org/gems/xcodeproj',
       );
@@ -105,7 +105,7 @@ class PbxprojObjectVersionCheck extends Check {
 ///
 /// Flutter refuses to build below its minimum, and the resulting error names a
 /// Gradle version rather than anything a user would search for. It also gates
-/// `taxiway import --deep`, which needs a project that configures.
+/// `shipway import --deep`, which needs a project that configures.
 class GradleWrapperCheck extends Check {
   @override
   String get id => 'gradle_wrapper';
@@ -148,7 +148,7 @@ class GradleWrapperCheck extends Check {
       fixHint:
           'Run `./gradlew wrapper --gradle-version $minimum` in android/, '
           'or edit distributionUrl in $propertiesPath. Until then Flutter will '
-          'refuse to build, and `taxiway import --deep` cannot run.',
+          'refuse to build, and `shipway import --deep` cannot run.',
       docsUrl: floor.sourceUrl,
     );
   }
@@ -260,13 +260,13 @@ class KeychainCheck extends Check {
         '`security list-keychains` failed: ${result.output.split('\n').first}',
       );
     }
-    // An orphaned taxiway keychain means a previous run crashed before its
+    // An orphaned shipway keychain means a previous run crashed before its
     // cleanup block. Harmless, but it accumulates and it is ours to tidy.
-    if (result.output.contains('taxiway.keychain')) {
+    if (result.output.contains('shipway.keychain')) {
       return const CheckResult.warn(
-        'A leftover taxiway.keychain is in the search list.',
+        'A leftover shipway.keychain is in the search list.',
         fixHint:
-            'Run `taxiway setup doctor-keychain` to clean up after a '
+            'Run `shipway setup doctor-keychain` to clean up after a '
             'crashed run.',
       );
     }

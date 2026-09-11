@@ -7,7 +7,7 @@ import '../../core/io/process_runner.dart';
 import '../../core/io/redactor.dart';
 import '../../core/secrets/secret_names.dart';
 
-/// A keychain taxiway created, and undertakes to remove.
+/// A keychain shipway created, and undertakes to remove.
 ///
 /// Exists because `setup_ci` — the usual answer — does three things that are
 /// wrong on a machine that keeps running:
@@ -18,7 +18,7 @@ import '../../core/secrets/secret_names.dart';
 /// - it **never cleans up**, so a shared Mac accumulates keychains pointing at
 ///   directories that no longer exist.
 ///
-/// taxiway therefore owns the lifecycle and hands fastlane the result.
+/// shipway therefore owns the lifecycle and hands fastlane the result.
 /// `setup_ci` skips itself entirely when `MATCH_KEYCHAIN_NAME` is already set,
 /// so this cooperates with fastlane rather than fighting it, and `match`'s own
 /// importer still sets the partition lists on the certificates it installs.
@@ -34,8 +34,8 @@ class KeychainSession {
     required this.originalSearchList,
   }) : _password = password;
 
-  /// Name taxiway gives the keychain it manages.
-  static const String defaultName = 'taxiway.keychain-db';
+  /// Name shipway gives the keychain it manages.
+  static const String defaultName = 'shipway.keychain-db';
 
   final String name;
   final String path;
@@ -79,7 +79,7 @@ class KeychainSession {
         ? variables[SecretNames.keychainPassword]!
         : _generatePassword();
 
-    // The password is passed to `security` on a command line taxiway also
+    // The password is passed to `security` on a command line shipway also
     // logs in verbose mode, so it has to be scrubbed before it is ever used.
     redactor.register(password);
 

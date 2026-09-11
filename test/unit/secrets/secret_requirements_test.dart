@@ -1,22 +1,22 @@
-import 'package:taxiway/src/core/config/taxiway_config.dart';
-import 'package:taxiway/src/core/env/run_environment.dart';
-import 'package:taxiway/src/core/model/android_model.dart';
-import 'package:taxiway/src/core/secrets/secret_names.dart';
-import 'package:taxiway/src/generators/android_fastfile_generator.dart';
-import 'package:taxiway/src/generators/fastfile_generator.dart';
-import 'package:taxiway/src/generators/generated_file.dart';
-import 'package:taxiway/src/secrets/secret_requirements.dart';
+import 'package:shipway/src/core/config/shipway_config.dart';
+import 'package:shipway/src/core/env/run_environment.dart';
+import 'package:shipway/src/core/model/android_model.dart';
+import 'package:shipway/src/core/secrets/secret_names.dart';
+import 'package:shipway/src/generators/android_fastfile_generator.dart';
+import 'package:shipway/src/generators/fastfile_generator.dart';
+import 'package:shipway/src/generators/generated_file.dart';
+import 'package:shipway/src/secrets/secret_requirements.dart';
 import 'package:test/test.dart';
 
-TaxiwayConfig configFrom(Map<String, dynamic> apps) =>
-    TaxiwayConfig.fromJson(<String, dynamic>{
+ShipwayConfig configFrom(Map<String, dynamic> apps) =>
+    ShipwayConfig.fromJson(<String, dynamic>{
       'version': 1,
       'project': <String, dynamic>{'name': 'acme_app'},
       'apps': apps,
     });
 
 /// A config exercising every source of a requirement.
-TaxiwayConfig get full => configFrom(<String, dynamic>{
+ShipwayConfig get full => configFrom(<String, dynamic>{
   'main': <String, dynamic>{
     'ios': <String, dynamic>{'bundle_id': 'com.acme.app'},
     'android': <String, dynamic>{'application_id': 'com.acme.app'},
@@ -46,7 +46,7 @@ TaxiwayConfig get full => configFrom(<String, dynamic>{
 });
 
 List<SecretRequirement> requirementsFor(
-  TaxiwayConfig config, {
+  ShipwayConfig config, {
   RunEnvironment environment = RunEnvironment.workstation,
 }) => SecretRequirements.of(config, environment: environment);
 

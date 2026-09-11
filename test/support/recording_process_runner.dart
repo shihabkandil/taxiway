@@ -1,4 +1,4 @@
-import 'package:taxiway/src/core/io/process_runner.dart';
+import 'package:shipway/src/core/io/process_runner.dart';
 
 /// One captured invocation.
 class RecordedInvocation {
@@ -28,7 +28,7 @@ class RecordedInvocation {
 
 /// A [ProcessRunner] that executes nothing and remembers everything.
 ///
-/// Assertions are about *command construction* — the argv taxiway builds for
+/// Assertions are about *command construction* — the argv shipway builds for
 /// `gradlew`, `ruby`, `bundle exec fastlane`, `security`, `keytool` — which is
 /// the part that is ours to get right. Responses are stubbed by matching on the
 /// command line, so a test states only the commands it cares about.

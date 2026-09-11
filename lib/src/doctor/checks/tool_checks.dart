@@ -76,7 +76,7 @@ class VersionCheck extends Check {
         );
       }
       return CheckResult.warn(
-        'Installed, but taxiway could not read a version from '
+        'Installed, but shipway could not read a version from '
         '`${result.commandLine}`.',
         fixHint: 'Run it yourself and check the output looks normal.',
         docsUrl: docsUrl,
@@ -136,7 +136,7 @@ class FlutterCheck extends Check {
   @override
   String get title => 'Flutter';
 
-  /// Below this, taxiway's generated configuration is not known to work.
+  /// Below this, shipway's generated configuration is not known to work.
   static const ToolVersion absoluteMinimum = ToolVersion(3, 35, 0);
 
   @override
@@ -156,7 +156,7 @@ class FlutterCheck extends Check {
       installHint: declared == null
           ? 'Upgrade with `flutter upgrade`.'
           : 'Upgrade with `flutter upgrade`, or lower `project.flutter_min` '
-                'in taxiway.yaml.',
+                'in shipway.yaml.',
       docsUrl: 'https://docs.flutter.dev/release/upgrade',
     ).run(context);
   }
@@ -188,7 +188,7 @@ class JdkCheck extends Check {
     final version = ToolVersion.extract(result.output, preferLine: 'version');
     if (version == null) {
       return const CheckResult.warn(
-        'Installed, but taxiway could not read a version from `java -version`.',
+        'Installed, but shipway could not read a version from `java -version`.',
       );
     }
     if (supportedMajors.contains(version.major)) {
@@ -200,14 +200,14 @@ class JdkCheck extends Check {
       version: version,
       fixHint:
           'Gradle may fail with "Unsupported class file major version". '
-          'This also degrades `taxiway import --deep`, which needs a Gradle '
+          'This also degrades `shipway import --deep`, which needs a Gradle '
           'build that configures. Point JAVA_HOME at a JDK 17 or 21 install.',
       docsUrl: 'https://developer.android.com/build/jdks',
     );
   }
 }
 
-/// The `xcodeproj` gem, which taxiway's Ruby bridge depends on for every read
+/// The `xcodeproj` gem, which shipway's Ruby bridge depends on for every read
 /// and write of `project.pbxproj`.
 class XcodeprojGemCheck extends Check {
   @override
@@ -234,7 +234,7 @@ class XcodeprojGemCheck extends Check {
     ]);
     if (result.notFound) {
       return const CheckResult.fail(
-        '`gem` is not available, so taxiway cannot check for xcodeproj.',
+        '`gem` is not available, so shipway cannot check for xcodeproj.',
         fixHint: 'Install Ruby, then `gem install xcodeproj`.',
       );
     }

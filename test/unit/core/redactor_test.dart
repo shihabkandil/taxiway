@@ -1,4 +1,4 @@
-import 'package:taxiway/src/core/io/redactor.dart';
+import 'package:shipway/src/core/io/redactor.dart';
 import 'package:test/test.dart';
 
 /// A realistically-shaped private key. Not a real one — the body is filler —

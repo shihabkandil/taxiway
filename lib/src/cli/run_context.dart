@@ -7,7 +7,7 @@ import '../core/config/config_exception.dart';
 import '../core/env/host_platform.dart';
 import '../core/env/run_environment.dart';
 import '../core/config/config_loader.dart';
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/io/process_runner.dart';
 import '../core/io/redactor.dart';
 import '../core/managed/lock_file.dart';
@@ -45,7 +45,7 @@ class RunContext {
   final Redactor redactor;
   final ProcessRunner runner;
 
-  /// Directory taxiway is acting on.
+  /// Directory shipway is acting on.
   final String projectRoot;
 
   /// Explicit `--config` path, if given.
@@ -73,7 +73,7 @@ class RunContext {
 
   final Map<String, String> _processEnvironment;
 
-  /// Where taxiway is running, resolved once.
+  /// Where shipway is running, resolved once.
   ///
   /// Explicit answers win over detection, because being wrong is expensive
   /// both ways: prompting on a runner hangs the job, and creating throwaway
@@ -87,7 +87,7 @@ class RunContext {
       );
   ResolvedEnvironment? _environment;
 
-  TaxiwayConfig? _config;
+  ShipwayConfig? _config;
   bool _configLoaded = false;
 
   /// Whether a config is present, without throwing if it is not.
@@ -106,7 +106,7 @@ class RunContext {
   ///
   /// `doctor` must work before `init` does, so a missing config is a fact to
   /// report rather than an error to throw.
-  Future<TaxiwayConfig?> configOrNull() async {
+  Future<ShipwayConfig?> configOrNull() async {
     if (_configLoaded) return _config;
     _configLoaded = true;
     final file = configFile;
@@ -116,17 +116,17 @@ class RunContext {
   }
 
   /// The config, throwing a [ConfigException] with a next step when absent.
-  Future<TaxiwayConfig> requireConfig() async {
+  Future<ShipwayConfig> requireConfig() async {
     final config = await configOrNull();
     if (config != null) return config;
     final explicit = configPath;
     throw ConfigException(
       explicit != null
           ? 'No config at $explicit.'
-          : 'No taxiway.yaml found in $projectRoot.',
+          : 'No shipway.yaml found in $projectRoot.',
       hint:
-          'Run `taxiway import` to derive one from this project, or '
-          '`taxiway init` to start from scratch.',
+          'Run `shipway import` to derive one from this project, or '
+          '`shipway init` to start from scratch.',
     );
   }
 

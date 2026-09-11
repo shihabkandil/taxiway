@@ -7,22 +7,22 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:taxiway/src/core/io/process_runner.dart';
-import 'package:taxiway/src/core/io/redactor.dart';
-import 'package:taxiway/src/platform/ios/xcode_project_mutator.dart';
+import 'package:shipway/src/core/io/process_runner.dart';
+import 'package:shipway/src/core/io/redactor.dart';
+import 'package:shipway/src/platform/ios/xcode_project_mutator.dart';
 import 'package:test/test.dart';
 
 /// A real Flutter iOS project to mutate.
 ///
-/// Set `TAXIWAY_FIXTURE_APP` to an existing `flutter create` app; the project is
+/// Set `SHIPWAY_FIXTURE_APP` to an existing `flutter create` app; the project is
 /// copied into a temp directory first so the source is never modified.
 Future<Directory?> copyFixture() async {
-  final source = Platform.environment['TAXIWAY_FIXTURE_APP'];
+  final source = Platform.environment['SHIPWAY_FIXTURE_APP'];
   if (source == null) return null;
   final xcodeproj = Directory(p.join(source, 'ios/Runner.xcodeproj'));
   if (!xcodeproj.existsSync()) return null;
 
-  final temp = await Directory.systemTemp.createTemp('taxiway_configure');
+  final temp = await Directory.systemTemp.createTemp('shipway_configure');
   final destination = Directory(p.join(temp.path, 'ios/Runner.xcodeproj'));
   await destination.create(recursive: true);
   for (final entity in xcodeproj.listSync(
@@ -46,7 +46,7 @@ void main() {
     final copied = await copyFixture();
     if (copied == null) {
       throw StateError(
-        'Set TAXIWAY_FIXTURE_APP to a Flutter project with an iOS folder.',
+        'Set SHIPWAY_FIXTURE_APP to a Flutter project with an iOS folder.',
       );
     }
     root = copied;
@@ -105,7 +105,7 @@ void main() {
       after,
       containsAll(<String>['Debug-dev', 'Release-dev', 'Profile-dev']),
     );
-    // The originals must survive: taxiway adds configurations, it does not
+    // The originals must survive: shipway adds configurations, it does not
     // replace the project's own.
     expect(after, containsAll(before));
   });
@@ -137,9 +137,9 @@ void main() {
   });
 
   test(
-    'repairs a project taxiway previously pointed at a flavor xcconfig',
+    'repairs a project shipway previously pointed at a flavor xcconfig',
     () async {
-      // What an earlier taxiway wrote. Reproduced here rather than described,
+      // What an earlier shipway wrote. Reproduced here rather than described,
       // because the migration only matters for projects that already have it.
       await mutator().configure(
         configurations: <DesiredConfiguration>[
@@ -225,7 +225,7 @@ void main() {
 
     expect(second.succeeded, isTrue);
     expect(second.changed, isFalse);
-    // This is what makes `taxiway generate` safe to re-run.
+    // This is what makes `shipway generate` safe to re-run.
     expect(await pbxproj.readAsString(), afterFirst);
   });
 

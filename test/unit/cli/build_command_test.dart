@@ -1,5 +1,5 @@
-import 'package:taxiway/src/cli/commands/build_command.dart';
-import 'package:taxiway/src/generators/generated_file.dart';
+import 'package:shipway/src/cli/commands/build_command.dart';
+import 'package:shipway/src/generators/generated_file.dart';
 import 'package:test/test.dart';
 
 import '../../support/fixture_project.dart';

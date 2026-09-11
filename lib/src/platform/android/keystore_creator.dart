@@ -22,7 +22,7 @@ class KeystoreFailure implements Exception {
 /// confirmation. Verified against the JDK on this machine.
 ///
 /// Modern `keytool` writes **PKCS12**, where the key and the store share one
-/// password. taxiway therefore uses one password for both rather than
+/// password. shipway therefore uses one password for both rather than
 /// generating two and writing a `key.properties` that only appears to have
 /// separate ones.
 class KeystoreCreator {
@@ -56,7 +56,7 @@ class KeystoreCreator {
         'A keystore already exists at $path.',
         fixHint:
             'Keep it — an app already on Play cannot be updated without it. '
-            'To use a different one, point taxiway.yaml at it instead.',
+            'To use a different one, point shipway.yaml at it instead.',
       );
     }
     file.parent.createSync(recursive: true);
@@ -87,7 +87,7 @@ class KeystoreCreator {
     if (result.notFound) {
       throw const KeystoreFailure(
         '`keytool` is not available.',
-        fixHint: 'It ships with the JDK. `taxiway doctor` checks for one.',
+        fixHint: 'It ships with the JDK. `shipway doctor` checks for one.',
       );
     }
 
@@ -104,7 +104,7 @@ class KeystoreCreator {
       throw KeystoreFailure(
         'The keystore at $path cannot be opened with the password it was '
         'made with.',
-        fixHint: 'That is a taxiway bug. Delete the file and please report it.',
+        fixHint: 'That is a shipway bug. Delete the file and please report it.',
       );
     }
   }

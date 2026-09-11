@@ -1,4 +1,4 @@
-import '../core/config/taxiway_config.dart';
+import '../core/config/shipway_config.dart';
 import '../core/model/android_model.dart';
 import 'generated_file.dart';
 
@@ -8,11 +8,11 @@ import 'generated_file.dart';
 /// writer and the iOS writer cannot quietly disagree about what a flavor's id
 /// or entrypoint is.
 abstract final class ResolveApp {
-  /// The dimension taxiway generates when a flavor does not name one.
+  /// The dimension shipway generates when a flavor does not name one.
   static const String defaultDimension = 'environment';
 
   static ResolvedApp resolve(
-    TaxiwayConfig config, {
+    ShipwayConfig config, {
     String? appId,
     GradleDsl gradleDsl = GradleDsl.kotlin,
     String? iosSchemeTemplate,

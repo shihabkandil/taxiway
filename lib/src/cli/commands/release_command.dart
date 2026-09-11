@@ -5,7 +5,7 @@ import 'package:args/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as p;
 
-import '../../core/config/taxiway_config.dart';
+import '../../core/config/shipway_config.dart';
 import '../../core/errors/classifier.dart';
 import '../../generators/generated_file.dart';
 import '../../generators/generator_registry.dart';
@@ -46,7 +46,7 @@ enum ReleaseTarget {
   ];
 }
 
-/// `taxiway release ios|android --flavor <f> --target <t>`.
+/// `shipway release ios|android --flavor <f> --target <t>`.
 ///
 /// A front door, not a second implementation: it validates, prints the plan,
 /// then runs the same generated lane a person could run by hand. Nothing it
@@ -103,7 +103,7 @@ class ReleaseCommand extends Command<int> {
 
   @override
   String get invocation =>
-      'taxiway release ios|android --flavor <flavor> --target <target>';
+      'shipway release ios|android --flavor <flavor> --target <target>';
 
   @override
   Future<int> run() async {
@@ -115,11 +115,11 @@ class ReleaseCommand extends Command<int> {
     if (platform != 'ios' && platform != 'android') {
       logger.err(
         platform == null
-            ? 'Say which platform to release: `taxiway release ios` or '
-                  '`taxiway release android`.'
+            ? 'Say which platform to release: `shipway release ios` or '
+                  '`shipway release android`.'
             : 'Unknown platform "$platform". Expected ios or android.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final target = ReleaseTarget.parse(results['target'] as String?);
@@ -134,20 +134,20 @@ class ReleaseCommand extends Command<int> {
             : 'Unknown target "${results['target']}". For $platform: '
                   '$forPlatform.',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
     if (target.platform != platform) {
       logger
         ..err('--target ${target.id} is ${target.platformLabel} destination.')
         ..info(
-          'Run `taxiway release ${target.platform} --target ${target.id}`.',
+          'Run `shipway release ${target.platform} --target ${target.id}`.',
         );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     if (platform == 'ios' && !Platform.isMacOS) {
       logger.err('An iOS release needs macOS.');
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     }
 
     final config = await context.requireConfig();
@@ -158,7 +158,7 @@ class ReleaseCommand extends Command<int> {
     );
 
     final flavor = _resolveFlavor(app, results['flavor'] as String?);
-    if (flavor == null) return TaxiwayExit.userError;
+    if (flavor == null) return ShipwayExit.userError;
 
     final problems = _validate(config, app, target, results);
     if (problems.isNotEmpty) {
@@ -166,7 +166,7 @@ class ReleaseCommand extends Command<int> {
         logger.err(problem.what);
         logger.info('  ${problem.fix}');
       }
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final missing = await _missingSecrets(config, target);
@@ -176,8 +176,8 @@ class ReleaseCommand extends Command<int> {
         '${missing.length == 1 ? 'credential is' : 'credentials are'} not '
         'set: ${missing.join(', ')}',
       );
-      logger.info('  taxiway secrets list   — where each one is looked for');
-      return TaxiwayExit.environmentError;
+      logger.info('  shipway secrets list   — where each one is looked for');
+      return ShipwayExit.environmentError;
     }
 
     _printPlan(app, flavor, target, results);
@@ -186,7 +186,7 @@ class ReleaseCommand extends Command<int> {
       logger
         ..info('')
         ..info('Nothing was uploaded.');
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     return _runLane(target, flavor, results);
@@ -197,7 +197,7 @@ class ReleaseCommand extends Command<int> {
     if (!app.hasFlavors) {
       logger
         ..err('This config declares no flavors, so there is nothing to ship.')
-        ..info('  Add one to taxiway.yaml and run `taxiway generate`.');
+        ..info('  Add one to shipway.yaml and run `shipway generate`.');
       return null;
     }
     final names = app.flavors.map((f) => f.name).join(', ');
@@ -218,7 +218,7 @@ class ReleaseCommand extends Command<int> {
   /// Each entry names the config key or flag that fixes it, because "invalid
   /// configuration" sends somebody to read a file rather than change a line.
   List<({String what, String fix})> _validate(
-    TaxiwayConfig config,
+    ShipwayConfig config,
     ResolvedApp app,
     ReleaseTarget target,
     ArgResults results,
@@ -235,8 +235,8 @@ class ReleaseCommand extends Command<int> {
       problems.add((
         what: 'This config has no ${target.id} target.',
         fix:
-            'Add targets.${target.id} to taxiway.yaml, then run '
-            '`taxiway generate fastlane`.',
+            'Add targets.${target.id} to shipway.yaml, then run '
+            '`shipway generate fastlane`.',
       ));
     }
 
@@ -284,7 +284,7 @@ class ReleaseCommand extends Command<int> {
 
   /// The credentials this target needs that are not resolvable.
   Future<List<String>> _missingSecrets(
-    TaxiwayConfig config,
+    ShipwayConfig config,
     ReleaseTarget target,
   ) async {
     final context = _context;
@@ -342,7 +342,7 @@ class ReleaseCommand extends Command<int> {
           results['rollout'] as String? ?? app.play?.rollout?.toString();
       if (rollout != null) {
         // Shown because it is derived rather than configured: supply sets the
-        // status from the fraction, and taxiway used to demand the pair match.
+        // status from the fraction, and shipway used to demand the pair match.
         final effective = (double.tryParse(rollout) ?? 0) < 1
             ? 'inProgress'
             : 'completed';
@@ -397,7 +397,7 @@ class ReleaseCommand extends Command<int> {
       // A store upload can succeed and still be rejected in processing, so the
       // output of a success is worth reading too.
       _reportDiagnoses(result.output, asWarning: true);
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     if (result.notFound) {
@@ -406,12 +406,12 @@ class ReleaseCommand extends Command<int> {
         ..info(
           '  Install it, then run `bundle install` in ${target.platform}/.',
         );
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     }
 
     logger.info(result.output);
     _reportDiagnoses(result.output);
-    return TaxiwayExit.environmentError;
+    return ShipwayExit.environmentError;
   }
 
   void _reportDiagnoses(String output, {bool asWarning = false}) {

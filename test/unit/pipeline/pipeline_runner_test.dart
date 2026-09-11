@@ -1,6 +1,6 @@
-import 'package:taxiway/src/pipeline/pipeline.dart';
-import 'package:taxiway/src/pipeline/pipeline_runner.dart';
-import 'package:taxiway/src/pipeline/run_manifest.dart';
+import 'package:shipway/src/pipeline/pipeline.dart';
+import 'package:shipway/src/pipeline/pipeline_runner.dart';
+import 'package:shipway/src/pipeline/run_manifest.dart';
 import 'package:test/test.dart';
 
 /// Records what it was asked to do, and answers with whatever was arranged.
@@ -133,7 +133,7 @@ void main() {
 
     test('the exit code is the first failure, not the last', () async {
       // So a caller can tell a bad config from a bad machine using the codes
-      // taxiway already defines.
+      // shipway already defines.
       final outcome = await run(
         Pipeline(
           name: 'p',

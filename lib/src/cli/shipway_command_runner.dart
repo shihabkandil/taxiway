@@ -30,8 +30,8 @@ import 'run_context.dart';
 /// Owns global flags, builds the one [RunContext] every command shares, and
 /// turns thrown failures into stable exit codes so no individual command has to
 /// think about process semantics.
-class TaxiwayCommandRunner extends CommandRunner<int> {
-  TaxiwayCommandRunner({
+class ShipwayCommandRunner extends CommandRunner<int> {
+  ShipwayCommandRunner({
     Logger? logger,
     ProcessRunner? runner,
     Redactor? redactor,
@@ -42,18 +42,18 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
        _injectedRunner = runner,
        _workingDirectory = workingDirectory ?? Directory.current.path,
        _host = host ?? HostPlatform.current,
-       super('taxiway', 'Local-first CI/CD for Flutter apps.') {
+       super('shipway', 'Local-first CI/CD for Flutter apps.') {
     argParser
       ..addFlag(
         'version',
         negatable: false,
-        help: 'Print the taxiway version and exit.',
+        help: 'Print the shipway version and exit.',
       )
       ..addFlag(
         'verbose',
         abbr: 'v',
         negatable: false,
-        help: 'Show the commands taxiway runs and their full output.',
+        help: 'Show the commands shipway runs and their full output.',
       )
       ..addFlag('no-color', negatable: false, help: 'Disable coloured output.')
       ..addFlag(
@@ -62,7 +62,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
         negatable: false,
         help: 'Assume yes for every prompt. Implies non-interactive.',
       )
-      ..addOption('config', help: 'Path to taxiway.yaml.', valueHelp: 'path')
+      ..addOption('config', help: 'Path to shipway.yaml.', valueHelp: 'path')
       ..addOption(
         'app',
         help: 'Which app in a monorepo to act on.',
@@ -72,7 +72,7 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
         'env',
         help:
             'Where this is running. Decides which sources secrets may come '
-            'from, and whether taxiway may prompt. Detected when omitted.',
+            'from, and whether shipway may prompt. Detected when omitted.',
         allowed: RunEnvironment.flagNames,
         valueHelp: 'name',
       );
@@ -124,37 +124,37 @@ class TaxiwayCommandRunner extends CommandRunner<int> {
       final topLevel = parse(args);
       if (topLevel['version'] as bool) {
         _logger.info(packageVersion);
-        return TaxiwayExit.success;
+        return ShipwayExit.success;
       }
       _applyGlobals(topLevel);
       // `overrideAnsiOutput` sets a zone value, which propagates across awaits,
       // so this covers every colour decision the command makes.
       return await overrideAnsiOutput(
         !(topLevel['no-color'] as bool),
-        () async => await runCommand(topLevel) ?? TaxiwayExit.success,
+        () async => await runCommand(topLevel) ?? ShipwayExit.success,
       );
     } on UsageException catch (e) {
       _logger
         ..err(e.message)
         ..info('')
         ..info(e.usage);
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     } on ConfigException catch (e) {
       // A config problem is the user's to fix and already carries a location
       // and a next step, so print it as-is rather than as a crash.
       _logger.err(e.toString());
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     } on ManagedBlockException catch (e) {
       _logger.err(e.message);
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     } on ProcessExitException catch (e) {
       _logger.err(e.toString());
-      return TaxiwayExit.environmentError;
+      return ShipwayExit.environmentError;
     } catch (error, stackTrace) {
       _logger
         ..err('$error')
         ..detail('$stackTrace');
-      return TaxiwayExit.internalError;
+      return ShipwayExit.internalError;
     }
   }
 

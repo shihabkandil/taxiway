@@ -48,8 +48,8 @@ enum RunEnvironment { workstation, ephemeralCi, persistentRunner }
 Resolution order, most explicit first:
 
 1. `--env` flag
-2. `TAXIWAY_ENV` environment variable
-3. `ci.environment` in `taxiway.yaml`
+2. `SHIPWAY_ENV` environment variable
+3. `ci.environment` in `shipway.yaml`
 4. detection
 
 Detection is a *convenience*, never the only path, because getting it wrong is
@@ -107,23 +107,23 @@ The sequence, which was run against this machine and left `default-keychain` and
 `list-keychains` byte-identical to how it found them:
 
 ```sh
-security create-keychain -p "$PW" taxiway.keychain-db
-security set-keychain-settings -lut 3600 taxiway.keychain-db   # no auto-lock mid-build
-security unlock-keychain -p "$PW" taxiway.keychain-db
+security create-keychain -p "$PW" shipway.keychain-db
+security set-keychain-settings -lut 3600 shipway.keychain-db   # no auto-lock mid-build
+security unlock-keychain -p "$PW" shipway.keychain-db
 
 # Append to the search list. Note the default is NOT changed — this is exactly
 # what `setup_ci` gets wrong, and why it pollutes a shared machine.
-security list-keychains -d user -s $(security list-keychains -d user) taxiway.keychain-db
+security list-keychains -d user -s $(security list-keychains -d user) shipway.keychain-db
 
 # ... import identities ...
 
 # The step that prevents errSecInternalComponent. Without it a headless
 # codesign fails even though the keychain is unlocked and the identity valid.
-security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$PW" taxiway.keychain-db
+security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$PW" shipway.keychain-db
 
 # Teardown restores the search list, then deletes.
 security list-keychains -d user -s <the original list>
-security delete-keychain taxiway.keychain-db
+security delete-keychain shipway.keychain-db
 ```
 
 Three properties this must guarantee:
@@ -131,10 +131,10 @@ Three properties this must guarantee:
 - **The default keychain is never changed.** Verified.
 - **Teardown runs even on failure**, including on `SIGINT`/`SIGTERM`. A build
   cancelled from the GitHub UI must not leave a keychain behind.
-- **Two runs cannot share one.** `.taxiway/run.lock` guards it; keychains and
+- **Two runs cannot share one.** `.shipway/run.lock` guards it; keychains and
   build directories are not safe to share, and a Mac mini will be asked to.
 
-`doctor` already warns about a leftover `taxiway.keychain` in the search list,
+`doctor` already warns about a leftover `shipway.keychain` in the search list,
 which is the symptom of a crashed run. That check becomes load-bearing here.
 
 ## Non-interactivity as a mode, not a flag
@@ -149,28 +149,28 @@ This is what the pre-flight below is for.
 
 ## What makes this easy rather than merely possible
 
-The leverage is that **`taxiway.yaml` already names every secret**. Every
+The leverage is that **`shipway.yaml` already names every secret**. Every
 `*_ref` field is the name of an environment variable, and nothing else in the
 file is a credential. So one source of truth can drive:
 
-### `taxiway secrets check`
+### `shipway secrets check`
 
 The pre-flight. Resolves every `*_ref` the config references and reports which
 are missing, exiting non-zero if any are. Run as the first step of a CI job it
 turns a twenty-minute build that fails at the upload into a five-second failure
 that names `ASC_KEY_P8_BASE64`.
 
-### `taxiway secrets list`
+### `shipway secrets list`
 
 What the config needs, where each one resolves from, and whether it is present.
 **Never prints a value** — presence and source only.
 
-### `taxiway secrets export --format github|env|shell`
+### `shipway secrets export --format github|env|shell`
 
 Emits the *names* — a `gh secret set` script, or an Actions `env:` block — so
 wiring up a repository is mechanical rather than archaeological.
 
-### `taxiway generate ci`
+### `shipway generate ci`
 
 A working `.github/workflows/release.yml` that calls the same lanes, with the
 `env:` block generated from the config's `*_ref` fields, and fastlane invoked
@@ -178,7 +178,7 @@ through a binstub rather than `bundle exec` — because a Homebrew fastlane on a
 self-hosted runner overrides `GEM_HOME` and silently uses the wrong gems, which
 Phase 2 already ran into.
 
-### `taxiway doctor --env <name>`
+### `shipway doctor --env <name>`
 
 Runs the checks that matter for a *target* environment rather than the current
 one, so a Mac mini can be validated as a builder before anything is wired to it.
@@ -206,8 +206,8 @@ the environments make likely:
 |---|---|
 | **Workstation** | Supported. Login keychain, prompts allowed, nothing created. |
 | **Ephemeral CI** (GitHub-hosted) | Supported. Generated workflow, pre-flight, keychain session. |
-| **Persistent runner** | **Not yet.** Detection classifies it correctly and it shares the ephemeral code path, but nothing here has been validated against a real self-hosted machine and taxiway does not claim to support one. |
-| **Linux VPS** | Android only, and it says so. Every Apple check skips with a reason rather than failing, `taxiway build ios` refuses and names `build android`, the keychain is not offered as a place a secret could be, and `doctor` reports "Ready to ship Android" rather than implying more. Not validated against a real Linux builder end to end. |
+| **Persistent runner** | **Not yet.** Detection classifies it correctly and it shares the ephemeral code path, but nothing here has been validated against a real self-hosted machine and shipway does not claim to support one. |
+| **Linux VPS** | Android only, and it says so. Every Apple check skips with a reason rather than failing, `shipway build ios` refuses and names `build android`, the keychain is not offered as a place a secret could be, and `doctor` reports "Ready to ship Android" rather than implying more. Not validated against a real Linux builder end to end. |
 
 Detection still resolves `persistentRunner` — misclassifying a self-hosted
 runner as disposable would be worse than naming it — but the work that makes
@@ -220,12 +220,12 @@ Sequenced so each step is independently useful, rather than one XL landing:
 
 1. **`RunEnvironment` + environment-aware secret resolution.** Everything else
    depends on it, and it is what makes the rest testable without a runner.
-2. **`taxiway secrets list` / `check`.** Immediately useful on a laptop, and the
+2. **`shipway secrets list` / `check`.** Immediately useful on a laptop, and the
    thing that makes CI failures cheap.
 3. **The keychain manager**, with guaranteed teardown and the run lock.
-4. **`taxiway setup ios-signing` / `android-signing`**, the wizard proper — by
+4. **`shipway setup ios-signing` / `android-signing`**, the wizard proper — by
    which point it is filling in a model that already works headlessly.
-5. **`taxiway generate ci`** and `secrets export`. *Done.* `export` derives its
+5. **`shipway generate ci`** and `secrets export`. *Done.* `export` derives its
    list for `ci` whatever machine it runs on, and a test asserts it names
    exactly the secrets the generated workflow reads.
 6. **Linux/Android-only support** in `doctor` and `build`. *Done.* The host OS
@@ -237,7 +237,7 @@ Sequenced so each step is independently useful, rather than one XL landing:
 
 - **No hosted secret backends.** No Vault, no AWS Secrets Manager, no 1Password.
   The `*_ref` indirection means someone can wire one up by exporting variables
-  before invoking taxiway, which is the integration point that already exists
+  before invoking shipway, which is the integration point that already exists
   and does not need code.
 - **No CI providers beyond GitHub Actions initially.** The generated workflow is
   a convenience; the lanes are the product, and they run anywhere. GitLab and

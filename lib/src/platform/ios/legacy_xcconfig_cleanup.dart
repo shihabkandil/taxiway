@@ -4,7 +4,7 @@ import 'package:path/path.dart' as p;
 
 import '../../core/managed/lock_file.dart';
 
-/// Removes the per-flavor xcconfigs taxiway used to write.
+/// Removes the per-flavor xcconfigs shipway used to write.
 ///
 /// An earlier version generated `ios/Flutter/<flavor>.xcconfig` and attached it
 /// to each `<BuildType>-<flavor>` configuration as its base configuration. That
@@ -15,8 +15,8 @@ import '../../core/managed/lock_file.dart';
 /// deletes the files they used to point at, so a repaired project is left with
 /// no misleading leftovers.
 ///
-/// Deliberately narrow. It removes a file only when taxiway generated it, it is
-/// still byte-for-byte what taxiway wrote, and it sits at exactly the legacy
+/// Deliberately narrow. It removes a file only when shipway generated it, it is
+/// still byte-for-byte what shipway wrote, and it sits at exactly the legacy
 /// path for a flavor in this config. Anything else — a file the user has since
 /// edited, or one that was theirs to begin with — is left alone and reported,
 /// because deleting somebody's build settings is far worse than leaving a stale
@@ -47,7 +47,7 @@ abstract final class LegacyXcconfigCleanup {
         continue;
       }
 
-      // Edited since taxiway wrote it, so it now holds somebody's decision.
+      // Edited since shipway wrote it, so it now holds somebody's decision.
       if (lock.hasDrifted(relative, await file.readAsString())) {
         kept.add(relative);
         continue;
@@ -65,7 +65,7 @@ abstract final class LegacyXcconfigCleanup {
 class LegacyXcconfigResult {
   const LegacyXcconfigResult({required this.removed, required this.kept});
 
-  /// Paths deleted because taxiway wrote them and nobody had changed them.
+  /// Paths deleted because shipway wrote them and nobody had changed them.
   final List<String> removed;
 
   /// Paths left in place, and now referenced by nothing.

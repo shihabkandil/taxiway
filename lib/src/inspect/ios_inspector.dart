@@ -57,7 +57,7 @@ class IosInspector {
           reason: e.message,
           remedy:
               e.remedy ??
-              'Fix the Ruby toolchain and re-run; `taxiway doctor` checks it.',
+              'Fix the Ruby toolchain and re-run; `shipway doctor` checks it.',
           severity: UncertaintySeverity.defect,
           source: projectPath,
         ),
@@ -282,7 +282,7 @@ class IosInspector {
               'build configuration${missing.length == 1 ? '' : 's'}.',
           remedy:
               'Add ${missing.length == 1 ? 'it' : 'them'} in Xcode, or run '
-              '`taxiway generate flavors` once this project is adopted.',
+              '`shipway generate flavors` once this project is adopted.',
           source: projectPath,
         );
       }

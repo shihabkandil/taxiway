@@ -13,9 +13,9 @@ import '../../platform/ios/xcode_project_mutator.dart';
 import '../exit_codes.dart';
 import '../run_context.dart';
 
-/// `taxiway generate` — config to files.
+/// `shipway generate` — config to files.
 ///
-/// Refuses to touch anything taxiway does not own. That refusal is the feature:
+/// Refuses to touch anything shipway does not own. That refusal is the feature:
 /// on a real project the Gradle build file and the Xcode project were there
 /// first, and generating over them would replace a working build.
 class GenerateCommand extends Command<int> {
@@ -30,14 +30,14 @@ class GenerateCommand extends Command<int> {
         'force',
         negatable: false,
         help:
-            'Overwrite content you have edited inside a taxiway block. '
+            'Overwrite content you have edited inside a shipway block. '
             'Never overrides an unadopted file.',
       )
       ..addFlag(
         'prune',
         defaultsTo: true,
         help:
-            'Remove files taxiway generated that the config no longer '
+            'Remove files shipway generated that the config no longer '
             'describes. Never touches one you have edited.',
       );
   }
@@ -50,11 +50,11 @@ class GenerateCommand extends Command<int> {
   String get name => 'generate';
 
   @override
-  String get description => 'Write the files taxiway.yaml describes.';
+  String get description => 'Write the files shipway.yaml describes.';
 
   @override
   String get invocation =>
-      'taxiway generate [${GeneratorRegistry.groups.keys.join('|')}]';
+      'shipway generate [${GeneratorRegistry.groups.keys.join('|')}]';
 
   @override
   Future<int> run() async {
@@ -71,7 +71,7 @@ class GenerateCommand extends Command<int> {
         'Unknown generator "$selector". '
         'Try one of: ${GeneratorRegistry.names.join(', ')}',
       );
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
     final config = await context.requireConfig();
@@ -89,7 +89,7 @@ class GenerateCommand extends Command<int> {
         'Nothing to generate. This config declares no flavors, so there are '
         'no per-flavor files to write.',
       );
-      return TaxiwayExit.success;
+      return ShipwayExit.success;
     }
 
     final lock = await context.loadLockFile();
@@ -133,10 +133,10 @@ class GenerateCommand extends Command<int> {
       final mutation = await _configureXcodeProject(
         app,
         dryRun: dryRun,
-        skipped: exit != TaxiwayExit.success,
+        skipped: exit != ShipwayExit.success,
       );
       if (mutation != null && !mutation.succeeded) {
-        return TaxiwayExit.environmentError;
+        return ShipwayExit.environmentError;
       }
     }
 
@@ -228,7 +228,7 @@ class GenerateCommand extends Command<int> {
     final scriptPath = XcodeprojBridge.locateScript();
     if (scriptPath == null) {
       logger.err(
-        'taxiway could not find its own Xcode bridge. This is a packaging '
+        'shipway could not find its own Xcode bridge. This is a packaging '
         'bug, not a problem with your project.',
       );
       return const MutationResult(
@@ -299,7 +299,7 @@ class GenerateCommand extends Command<int> {
     return mutation;
   }
 
-  /// Deletes the per-flavor xcconfigs an earlier taxiway attached to the
+  /// Deletes the per-flavor xcconfigs an earlier shipway attached to the
   /// flavored configurations, now that they are pointed back at the stock ones.
   Future<void> _cleanUpLegacyXcconfigs(ResolvedApp app) async {
     final context = _context;
@@ -323,7 +323,7 @@ class GenerateCommand extends Command<int> {
     }
     for (final path in result.kept) {
       logger.info(
-        '  $path is no longer referenced by any build configuration. taxiway '
+        '  $path is no longer referenced by any build configuration. shipway '
         'left it alone because you have edited it.',
       );
     }
@@ -428,21 +428,21 @@ class GenerateCommand extends Command<int> {
       logger.info('');
       if (unadopted.isNotEmpty) {
         logger.info(
-          '${yellow.wrap('Blocked')} — taxiway does not own '
+          '${yellow.wrap('Blocked')} — shipway does not own '
           '${unadopted.length} of these files.',
         );
         logger.info(
-          'Run `taxiway adopt ${unadopted.length == 1 ? unadopted.single.path : 'all'}` '
+          'Run `shipway adopt ${unadopted.length == 1 ? unadopted.single.path : 'all'}` '
           'to review the difference and hand them over.',
         );
       }
       // A conflict is a decision the user has to make, so it is a user error
       // rather than a silent partial success.
-      return TaxiwayExit.userError;
+      return ShipwayExit.userError;
     }
 
-    if (failures.isNotEmpty) return TaxiwayExit.environmentError;
-    return TaxiwayExit.success;
+    if (failures.isNotEmpty) return ShipwayExit.environmentError;
+    return ShipwayExit.success;
   }
 
   String _label(WriteResult result, {required bool dryRun}) =>

@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# The one Ruby file taxiway ships.
+# The one Ruby file shipway ships.
 #
 # Dart never parses `project.pbxproj`. That format is undocumented, changes
 # between Xcode releases, and has exactly one trustworthy parser — the
@@ -18,7 +18,7 @@
 # `configure` is declarative and idempotent: it is handed the build
 # configurations and run-script phase that should exist, and makes the project
 # match. Running it twice changes nothing the second time, which is what lets
-# `taxiway generate` be safe to re-run. Backing up and restoring
+# `shipway generate` be safe to re-run. Backing up and restoring
 # `project.pbxproj` is the Dart side's job, not this script's.
 
 require 'json'
@@ -253,7 +253,7 @@ def configure_project(project, request)
       # version numbers; a configuration pointed anywhere else builds the
       # default entrypoint with no defines and ships an Info.plist with no
       # CFBundleVersion. Re-asserted on every run rather than only at creation,
-      # because taxiway used to attach a per-flavor xcconfig here and those
+      # because shipway used to attach a per-flavor xcconfig here and those
       # projects have to be repaired.
       if spec['inheritBaseConfiguration']
         source = candidate.build_configuration_list
@@ -284,7 +284,7 @@ def configure_project(project, request)
   changes
 end
 
-# Adds or updates one taxiway-owned shell script phase, matched by name.
+# Adds or updates one shipway-owned shell script phase, matched by name.
 #
 # Matched by name so re-running updates the same phase instead of appending a
 # second one, and so a user's own script phases are never touched.
@@ -344,7 +344,7 @@ when 'configure'
     fail_with(
       'configure_failed',
       "Could not configure #{project_path}: #{e.message}",
-      remedy: 'taxiway restored the original project file. Open it in Xcode ' \
+      remedy: 'shipway restored the original project file. Open it in Xcode ' \
               'to check it is intact.'
     )
   end

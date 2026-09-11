@@ -35,7 +35,7 @@ first and prints `Codesigning disabled with --no-codesign, skipping IPA.`
    is passed straight through; `--export-method` generates a plist instead, and
    the two flags are mutually exclusive.
 
-So `gym` has nothing to add to the archive step, and taxiway generates the
+So `gym` has nothing to add to the archive step, and shipway generates the
 `ExportOptions-<flavor>.plist` that `--export-options-plist` consumes.
 
 ## Why letting `gym` drive the build breaks
@@ -150,8 +150,8 @@ Two details a generated lane must get right:
   `CFBundleName = e2eapp` with `CFBundleDisplayName = E2E Staging` exported
   `e2eapp.ipa`.
 
-  This matters more than it looks. taxiway varies only `CFBundleDisplayName`
-  per flavor, so **every flavor of a taxiway project exports to the same
+  This matters more than it looks. shipway varies only `CFBundleDisplayName`
+  per flavor, so **every flavor of a shipway project exports to the same
   filename** and overwrites the last. A lane that globs and takes any match
   will cheerfully upload the previous flavor's build, so the generated lanes
   take only an `.ipa` written after their own build started.
@@ -204,7 +204,7 @@ runtime, from `SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING`, and gym's
 `export_options:` takes it directly. A static `ExportOptions-<flavor>.plist` has
 to have the name written into it ahead of time.
 
-**Decision: taxiway generates B by default, and supports A behind
+**Decision: shipway generates B by default, and supports A behind
 `ios.export`.** B is what a real shipping project uses, and its advantage is the
 one that matters in practice — under `match` the profile name exists only at
 lane runtime, so a name written into a plist in advance is silently wrong the
@@ -222,7 +222,7 @@ Two things only surfaced by running the generated lane, not by reading it:
   with more than one scheme prompts `Ambiguous choice` and a non-interactive
   run hangs forever rather than failing.
 
-taxiway generates `flutter build ipa --no-codesign` for B rather than letting
+shipway generates `flutter build ipa --no-codesign` for B rather than letting
 Flutter export and then exporting again, as the real project does. The second
 export is the one that counts, and the first costs a signing round trip and
 fails outright before any distribution profile is installed.
